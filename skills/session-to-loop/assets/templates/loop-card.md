@@ -49,6 +49,10 @@ Max items per cycle:
 
 {{managed_max_items_per_cycle}}
 
+Max iterations per run:
+
+{{managed_max_iterations_per_run}}
+
 Change policy:
 
 {{managed_change_policy}}

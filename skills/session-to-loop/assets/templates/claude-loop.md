@@ -26,6 +26,10 @@ Pick at most {{max_items_per_cycle}} item(s) per cycle.
 
 {{selection_policy}}
 
+## Iteration Budget
+
+Stop after {{max_iterations_per_run}} iteration(s) in one run unless verification passes earlier.
+
 ## Cycle Steps
 
 {{cycle_steps}}

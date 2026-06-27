@@ -35,6 +35,7 @@ Each proposal says:
 - Cycle: what the agent observes, does, and checks.
 - Verification: how success is known.
 - Stop conditions: when the agent must stop.
+- Iteration cap: the maximum number of rounds before it reports a blocker.
 - Approval boundary: what still needs a human.
 - Why this loop: the reason plus the evidence basis.
 
@@ -49,8 +50,29 @@ Cycle: identify changed routes, run checks, open the route in a browser,
 capture screenshots, fix at most 1-3 confirmed regressions, record state.
 Verification: target routes render, screenshots confirm the main path, i18n passes.
 Stop: auth/data blocks verification, visual direction needs approval, or routes pass.
+Iteration cap: 8 rounds.
 Approval boundary: product copy, visual direction, auth/data fixture changes.
 ```
+
+## When A Loop Is Worth It
+
+A loop is not just a prompt that repeats. A useful loop needs four things:
+
+- Repetition: the task happens often enough to repay setup cost.
+- Rejection: bad output can be rejected by tests, type checks, lint, screenshots, logs, assertions, or a rubric.
+- Completion: the agent can carry the work far enough without handing most of it back to you.
+- Objectivity: "done" can be checked by observable criteria.
+
+If those are missing, Session-to-Loop should recommend a prompt, rule, skill, checklist, approval gate, or reject instead.
+
+A real loop also needs five moves: discovery, handoff, verification, persistence, and scheduling. If one is missing, the loop usually becomes one of five failures: blind, tangled, nodding, amnesiac, or manual.
+
+The safest build order is:
+
+1. Prove one manual run works.
+2. Save the reusable instructions as a skill or checklist.
+3. Add loop mechanics: verifier, state file, iteration cap, and stop conditions.
+4. Only then add scheduled or lifecycle automation.
 
 ## Why Not Just Ask Codex To Notice Patterns?
 

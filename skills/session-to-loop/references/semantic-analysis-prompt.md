@@ -48,7 +48,7 @@ Only recommend `loop` when the result can be handed to an agent as a managed goa
 explicit user approval. A loop must say how the agent can keep going without repeated user prompts,
 what it should inspect each cycle, how it picks the 1-3 highest-value items, what it may attempt,
 how it isolates low-risk changes, how it verifies, where it records state, how the next run resumes,
-and when it must stop.
+the hard iteration limit for one run, and when it must stop.
 
 If a candidate has repeated steps but no state file, resume policy, verification, or stop condition,
 recommend `skill` or `checklist` instead of `loop`.
@@ -107,6 +107,7 @@ Write only JSON:
         ],
         "selection_policy": ["Prefer failures blocking merge.", "Ignore flakes without new evidence."],
         "max_items_per_cycle": 3,
+        "max_iterations_per_run": 8,
         "change_policy": "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval.",
         "deliverables": ["Status summary", "Patch or branch/PR draft when verification passes", "Updated state file"],
         "resume_policy": "On the next run, read the state file and continue unresolved failures before new ones.",

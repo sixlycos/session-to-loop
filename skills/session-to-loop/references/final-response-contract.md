@@ -14,6 +14,7 @@ For each proposal, include:
 - Cycle: the observe-act-check steps.
 - Verification: how the loop knows it worked.
 - Stop conditions: when the agent must stop.
+- Iteration cap: the maximum number of rounds before it reports a blocker.
 - Approval boundary: what still needs human approval.
 - Why this loop: the product reason plus the evidence basis.
 
@@ -41,4 +42,3 @@ When source quality is limited, say it plainly:
 - Native Codex or Claude transcript: strong source for user-language patterns.
 - Project auxiliary evidence: good source for draft development loops, weaker source for user preference.
 - Generic JSONL: usable only when the semantic shape is clear.
-

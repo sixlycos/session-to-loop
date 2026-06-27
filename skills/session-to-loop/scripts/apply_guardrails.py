@@ -86,6 +86,7 @@ def normalize_managed_loop(
         "selection_policy": strings(source.get("selection_policy"))
         or ["Select at most 1-3 items that are high impact, evidenced, and reversible."],
         "max_items_per_cycle": positive_int(source.get("max_items_per_cycle"), 3),
+        "max_iterations_per_run": positive_int(source.get("max_iterations_per_run"), 8),
         "change_policy": str(
             source.get("change_policy")
             or "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files. Do not push, merge, deploy, or mutate production without approval."
@@ -227,6 +228,7 @@ def loop_eligibility(candidate: dict) -> dict:
         "has_state_file": bool(managed_loop.get("state_file")),
         "has_cycle_steps": len(managed_loop.get("cycle_steps", [])) >= 3,
         "has_selection_policy": bool(managed_loop.get("selection_policy")),
+        "has_iteration_cap": positive_int(managed_loop.get("max_iterations_per_run"), 0) > 0,
         "has_change_policy": bool(managed_loop.get("change_policy")),
         "has_resume_policy": bool(managed_loop.get("resume_policy")),
         "has_failure_policy": bool(managed_loop.get("failure_policy")),

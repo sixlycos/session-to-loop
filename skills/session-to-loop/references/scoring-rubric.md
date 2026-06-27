@@ -49,7 +49,7 @@ Artifactability:
 
 Loop closure:
 
-- High: has objective, trigger or cadence, input discovery, prioritization, bounded actions, change policy, verification, state file, resume policy, failure policy, and stop conditions.
+- High: has objective, trigger or cadence, input discovery, prioritization, bounded actions, change policy, verification, state file, resume policy, failure policy, hard iteration cap, and stop conditions.
 - Medium: has most cycle mechanics but needs user review before delegation.
 - Low: repeats steps but cannot run unattended after initial approval.
 
@@ -73,7 +73,7 @@ Project-person fit:
 - If it appears only once, do not recommend a loop.
 - If it appears only in project auxiliary evidence, keep the result as `draft` and explain that it is weaker than repeated user transcript evidence.
 - If there is no observable feedback signal, do not recommend a loop.
-- If it lacks state persistence, resume policy, verification, or stop conditions, do not recommend a loop.
+- If it lacks state persistence, resume policy, verification, hard iteration cap, or stop conditions, do not recommend a loop.
 - If it is only a stable preference, recommend a rule or memory.
 - If it involves irreversible or production-impacting action, require human approval.
 - If evidence contains secrets, redact and lower confidence if evidence cannot be safely cited.

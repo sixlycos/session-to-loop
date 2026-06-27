@@ -49,6 +49,7 @@ managed_loop:
     - "Prefer failures blocking merge."
     - "Ignore flakes without new evidence."
   max_items_per_cycle: 3
+  max_iterations_per_run: 8
   change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
   deliverables:
     - "Status summary"
@@ -194,6 +195,7 @@ managed_loop:
   selection_policy:
     - "Prefer blockers with clear logs."
   max_items_per_cycle: 3
+  max_iterations_per_run: 8
   change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
   deliverables:
     - "Status summary"

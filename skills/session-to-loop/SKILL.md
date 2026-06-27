@@ -49,6 +49,7 @@ The user-facing product is a small set of project-specific loop proposals that t
 
 4. Apply deterministic hard gates.
    - Read `references/signal-taxonomy.md` when categorizing repeated prompts, failures, verifications, context repairs, polling loops, risk gates, and one-off events.
+   - Read `references/loop-foundations.md` before recommending `loop` or scheduled automation.
    - Count recurrence across sessions, not only repeated lines inside one session.
    - Read `references/scoring-rubric.md` before assigning confidence or recommending automation.
    - Apply hard downgrades for one-off patterns, unverifiable loops, irreversible actions, or secret-heavy evidence.
@@ -99,6 +100,7 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 - Use a skill when the finding is an on-demand workflow with repeatable steps.
 - Use a hook when the finding must run deterministically at a lifecycle point.
 - Use a loop when the finding can become a managed goal loop: objective, trigger or cadence, input discovery, prioritization, bounded actions, verification, state file, resume policy, and stop conditions.
+- Include a hard iteration cap for every loop. Without an iteration cap, recommend a skill or checklist instead.
 - Use a checklist when the finding is useful but not safe or deterministic enough to automate.
 - Use an approval gate when the finding involves deployment, deletion, schema migration, permissions, payments, or other high-impact actions.
 - Use no automation when evidence is weak or the cost of automation exceeds the repeated friction.

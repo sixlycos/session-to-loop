@@ -41,6 +41,7 @@ For user-facing output, keep:
 - 1-3 loop proposals.
 - 1-3 smaller mechanism suggestions.
 - Rejected items summarized only when they explain the recommendation.
+- A hard iteration cap for every loop proposal.
 
 For implementation, generate concrete artifacts only for user-confirmed candidates.
 
@@ -51,4 +52,3 @@ Load a related skill only when:
 - the candidate domain is clear,
 - the user confirmed adoption or asked for implementation, or
 - the current task requires that skill to verify a recommendation.
-
