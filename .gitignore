@@ -1,0 +1,15 @@
+.session-to-loop/private/
+.session-to-loop/raw/
+.session-to-loop/tmp/
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+.venv/
+venv/
+env/
+
+.DS_Store
+Thumbs.db

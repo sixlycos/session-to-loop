@@ -1,0 +1,5 @@
+{"session_id":"synthetic-ci-1","type":"user","text":"CI is red again. Please inspect the failed job logs before guessing."}
+{"session_id":"synthetic-ci-1","type":"assistant","text":"I checked the failing test command, made a minimal fix, and reran the local test."}
+{"session_id":"synthetic-ci-2","type":"user","text":"Same pattern as last time: wait for CI, read the failed log, then patch only the failing test."}
+{"session_id":"synthetic-ci-2","type":"tool","name":"ci-status","text":"failed: unit-tests"}
+{"session_id":"synthetic-ci-3","type":"user","text":"Do not push yet. First verify locally and tell me whether the CI failure is actionable."}

@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "analysis_model": "ai-semantic-v1",
+  "candidates": [
+    {
+      "id": "ci-babysitter",
+      "name": "CI Babysitter Loop",
+      "decision": "draft",
+      "confidence": "high",
+      "mechanisms": ["loop", "skill"],
+      "score": 90,
+      "summary": "Repeated user requests to inspect CI logs before patching and to avoid pushing before verification.",
+      "evidence": [
+        {
+          "source": "session:synthetic-ci-1#event-1",
+          "kind": "verification-request",
+          "role": "user",
+          "intent": "inspect_failed_ci_before_guessing",
+          "snippet": "CI is red again. Please inspect the failed job logs before guessing."
+        },
+        {
+          "source": "session:synthetic-ci-2#event-3",
+          "kind": "verification-request",
+          "role": "user",
+          "intent": "wait_read_log_patch_failing_test",
+          "snippet": "Same pattern as last time: wait for CI, read the failed log, then patch only the failing test."
+        },
+        {
+          "source": "session:synthetic-ci-2#event-4",
+          "kind": "tool-status",
+          "role": "tool",
+          "intent": "ci_failed_status",
+          "snippet": "failed: unit-tests"
+        },
+        {
+          "source": "session:synthetic-ci-3#event-5",
+          "kind": "risk-boundary",
+          "role": "user",
+          "intent": "do_not_push_before_verification",
+          "snippet": "Do not push yet. First verify locally and tell me whether the CI failure is actionable."
+        }
+      ],
+      "trigger": ["CI is pending or failed."],
+      "inputs": ["CI status", "failed job logs", "git diff"],
+      "actions": ["Check CI status.", "Read failed job logs.", "Patch only evidenced failures.", "Run local verification."],
+      "verification": ["Relevant local test passes.", "CI becomes green or is clearly blocked."],
+      "stop_conditions": ["CI is green.", "Same failure repeats twice.", "Push or merge is required."],
+      "safety": {
+        "autonomy_level": "draft-only",
+        "requires_approval_for": ["push", "merge"]
+      },
+      "artifacts": ["loop-card", "draft-skill"]
+    }
+  ]
+}

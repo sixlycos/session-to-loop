@@ -1,0 +1,3 @@
+{"session_id":"synthetic-deploy-1","type":"user","text":"Check whether production deploy finished, but do not trigger a deploy without asking me."}
+{"session_id":"synthetic-deploy-2","type":"user","text":"Before deploy, I need to approve the release notes and database migration."}
+{"session_id":"synthetic-deploy-3","type":"assistant","text":"Deployment is a repeated workflow, but release and migration decisions require human approval."}

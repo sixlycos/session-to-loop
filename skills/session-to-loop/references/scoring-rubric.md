@@ -1,0 +1,71 @@
+# Scoring Rubric
+
+Score only after extracting concrete evidence. Prefer conservative recommendations when evidence is thin.
+
+## Weighted Score
+
+```text
+Loop Score =
+  25% frequency
++ 20% pain
++ 20% verifiability
++ 15% safety / reversibility
++ 10% artifactability
++ 10% project-person fit
+```
+
+## Dimensions
+
+Frequency:
+
+- High: appears across three or more sessions or task episodes.
+- Medium: appears twice with clear similarity.
+- Low: appears once.
+
+Pain:
+
+- High: caused failed completion, repeated user rescue, long wait cycles, broken CI, or production risk.
+- Medium: caused extra clarification or reruns.
+- Low: minor preference or style correction.
+
+Verifiability:
+
+- High: has deterministic commands, logs, status checks, screenshots, or assertions.
+- Medium: can be checked with a human-readable checklist.
+- Low: mostly subjective.
+
+Safety / reversibility:
+
+- High: local, reversible, no data mutation.
+- Medium: changes code but can be reviewed before merge.
+- Low: deploys, deletes, migrations, permissions, secrets, payments, or production calls.
+
+Artifactability:
+
+- High: can become a concrete rule, skill, hook, loop prompt, eval, or script.
+- Medium: can become a checklist or documented convention.
+- Low: too vague to encode.
+
+Project-person fit:
+
+- High: specific to this user's repeated workflow or this repo's recurring constraints.
+- Medium: useful but generic.
+- Low: generic advice with little local evidence.
+
+## Decision Bands
+
+- `commit`: strong evidence, safe mechanism, clear artifact.
+- `draft`: good evidence but needs user review or implementation.
+- `rule-only`: stable instruction, not a loop.
+- `checklist-only`: useful but not safe or deterministic enough to automate.
+- `needs-human`: high-impact or ambiguous decision boundary.
+- `reject`: one-off, unverifiable, unsafe, or too costly to automate.
+
+## Hard Downgrades
+
+- If it appears only once, do not recommend a loop.
+- If there is no observable feedback signal, do not recommend a loop.
+- If it is only a stable preference, recommend a rule or memory.
+- If it involves irreversible or production-impacting action, require human approval.
+- If evidence contains secrets, redact and lower confidence if evidence cannot be safely cited.
+- If transcript evidence conflicts with current project files, mark the finding stale until reverified.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Session-to-Loop"
+  short_description: "Compile coding sessions into agent loops"
+  default_prompt: "Use $session-to-loop to mine local AI coding sessions and draft evidence-backed loop engineering artifacts."
