@@ -9,6 +9,7 @@ Start with 1-3 concrete proposals the user can say yes or no to. Do not lead wit
 For each proposal, include:
 
 - Name: short and action-oriented.
+- Decision card: can use now, can confirm, can delegate, and next action.
 - Goal: what the loop improves for this project.
 - Work shape: why this deserves a loop instead of a script, skill, checklist, or gate.
 - Heartbeat: session, goal, scheduled, or event.
@@ -18,6 +19,7 @@ For each proposal, include:
 - Verification: how the loop knows it worked.
 - Stop conditions: when the agent must stop.
 - Iteration cap: the maximum number of rounds before it reports a blocker.
+- Acceptance contract: success criteria, verifier, pass evidence, reject conditions, and no-progress policy.
 - Approval boundary: what still needs human approval.
 - Why this loop: the product reason plus the evidence basis.
 

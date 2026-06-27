@@ -306,12 +306,61 @@ def weighted_score(levels: dict) -> int:
     return round(score * 100)
 
 
+def default_state_schema() -> dict:
+    return {
+        "items": "Tracked work items with status: inbox, active, blocked, done.",
+        "attempts": "Attempt log with action, verification result, and timestamp.",
+        "failures": "Failure signatures, repeat count, and blocker reason.",
+        "next_cursor": "Where the next run should resume.",
+        "human_decisions": "Approvals, rejections, or decisions that changed the loop boundary.",
+    }
+
+
+def reject_conditions_from(stop_conditions: list[str]) -> list[str]:
+    success_terms = ("green", "pass", "passes", "passed", "done", "complete", "completed", "succeed", "success")
+    rejected = [item for item in stop_conditions if not any(term in item.lower() for term in success_terms)]
+    return rejected or stop_conditions
+
+
+def default_completion_contract(profile: dict) -> dict:
+    return {
+        "success_criteria": profile.get("verification", []),
+        "verifier_commands": ["Run the focused project checks listed in the verification section."],
+        "evaluator_agent": "Use deterministic checks first; use a read-only checker when commands cannot decide.",
+        "pass_evidence_required": ["Command output, status check, screenshot, schema result, or explicit verifier note."],
+        "reject_conditions": reject_conditions_from(profile.get("stop_conditions", [])),
+        "no_progress_policy": "Stop when the same failure repeats twice, no files or evidence change across two iterations, or the iteration cap is reached.",
+    }
+
+
+def enrich_profile(candidate_id: str, base_profile: dict) -> dict:
+    profile = dict(base_profile)
+    if not isinstance(base_profile.get("managed_loop"), dict):
+        return profile
+    managed_loop = dict(base_profile["managed_loop"])
+    managed_loop.setdefault("discovery_sources", profile.get("inputs", []) or profile.get("trigger", []))
+    managed_loop.setdefault("state_schema", default_state_schema())
+    managed_loop.setdefault("completion_contract", default_completion_contract(profile))
+    managed_loop.setdefault(
+        "promotion_criteria",
+        ["Promote only after repeated runs pass verification and human review accepts the output."],
+    )
+    managed_loop.setdefault(
+        "demotion_criteria",
+        ["Demote when outputs are rejected, verification is inconclusive, cost grows, or human judgment is repeatedly required."],
+    )
+    managed_loop.setdefault("state_file", f".session-to-loop/state/{candidate_id}.json")
+    profile["managed_loop"] = managed_loop
+    return profile
+
+
 def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict:
     terms = set(signal.get("terms", []))
     role_counts = signal.get("role_counts", {})
     provider_counts = signal.get("provider_counts", {})
     candidate_id = signal["id"]
     managed_loop = profile.get("managed_loop", {})
+    completion_contract = managed_loop.get("completion_contract", {})
     has_project_context_evidence = provider_counts.get("auxiliary", 0) > 0
     criteria = {
         "requested_loop_mechanism": "loop" in mechanisms,
@@ -329,12 +378,22 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_stop_conditions": bool(profile.get("stop_conditions")),
         "has_safety_gate": bool(profile.get("requires_approval_for")) or candidate_id not in {"deploy-approval-gate"},
         "has_state_file": bool(managed_loop.get("state_file")),
+        "has_state_schema": bool(managed_loop.get("state_schema")),
+        "has_discovery_sources": bool(managed_loop.get("discovery_sources") or managed_loop.get("cadence_or_trigger")),
         "has_cycle_steps": len(managed_loop.get("cycle_steps", [])) >= 3,
         "has_selection_policy": bool(managed_loop.get("selection_policy")),
         "has_iteration_cap": bool(managed_loop.get("max_iterations_per_run")),
+        "has_completion_contract": bool(
+            completion_contract.get("success_criteria")
+            and completion_contract.get("reject_conditions")
+            and completion_contract.get("evaluator_agent")
+            and completion_contract.get("no_progress_policy")
+        ),
         "has_change_policy": bool(managed_loop.get("change_policy")),
         "has_resume_policy": bool(managed_loop.get("resume_policy")),
         "has_failure_policy": bool(managed_loop.get("failure_policy")),
+        "has_human_checkpoint": bool(profile.get("requires_approval_for")),
+        "has_budget_cap": bool(managed_loop.get("max_iterations_per_run")),
     }
     required_keys = [
         "requested_loop_mechanism",
@@ -346,12 +405,17 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_stop_conditions",
         "has_safety_gate",
         "has_state_file",
+        "has_state_schema",
+        "has_discovery_sources",
         "has_cycle_steps",
         "has_selection_policy",
         "has_iteration_cap",
+        "has_completion_contract",
         "has_change_policy",
         "has_resume_policy",
         "has_failure_policy",
+        "has_human_checkpoint",
+        "has_budget_cap",
     ]
     missing = [key for key in required_keys if not criteria[key]]
     return {
@@ -368,9 +432,13 @@ def apply_hard_downgrades(signal: dict, profile: dict, mechanisms: list[str], lo
     downgrades: list[str] = []
     auxiliary_context = signal.get("provider_counts", {}).get("auxiliary", 0) > 0
 
+    if "loop" in mechanisms and profile.get("work_shape") == "process-shaped":
+        mechanisms = [mechanism for mechanism in mechanisms if mechanism != "loop"]
+        downgrades.append("Removed loop mechanism because process-shaped work should use a script or hook before a managed loop.")
+
     if "loop" in mechanisms and not loop_gate["eligible"]:
         mechanisms = [mechanism for mechanism in mechanisms if mechanism != "loop"]
-        downgrades.append("Removed loop mechanism because managed goal loop eligibility criteria were not met.")
+        downgrades.append("Removed loop mechanism because the managed loop acceptance contract was incomplete.")
 
     if signal.get("session_count", 0) < 2 and signal["id"] != "transcript-redaction-boundary":
         if auxiliary_context and signal["id"] in {"provider-acceptance-soak", "browser-audit-loop"} and signal.get("event_count", 0) >= 2:
@@ -412,8 +480,27 @@ def decision_trace(signal: dict, mechanisms: list[str], downgrades: list[str]) -
     }
 
 
+def decision_card(decision: str, mechanisms: list[str], loop_gate: dict, verification: list[str]) -> dict:
+    if decision == "reject":
+        can_use_now = "no"
+        next_action = "reject"
+    elif decision in {"rule-only", "checklist-only", "needs-human"}:
+        can_use_now = "limited"
+        next_action = "shrink"
+    else:
+        can_use_now = "limited" if decision == "draft" else "yes"
+        next_action = "adopt"
+    return {
+        "can_use_now": can_use_now,
+        "can_confirm": "yes" if verification else "no",
+        "can_delegate": "yes" if "loop" in mechanisms and loop_gate.get("eligible") else "no",
+        "missing_before_delegate": loop_gate.get("missing", []),
+        "next_action": next_action,
+    }
+
+
 def score_signal(signal: dict) -> dict:
-    profile = PROFILES.get(signal["id"], PROFILES["one-off-bugfix"])
+    profile = enrich_profile(signal["id"], PROFILES.get(signal["id"], PROFILES["one-off-bugfix"]))
     levels = dimension_levels(signal, profile)
     pre_gate_score = weighted_score(levels)
     mechanisms = list(profile["mechanisms"])
@@ -461,9 +548,17 @@ def score_signal(signal: dict) -> dict:
         "safety": {
             "autonomy_level": "draft-only" if decision != "reject" else "none",
             "requires_approval_for": profile["requires_approval_for"],
+            "human_checkpoint": profile["requires_approval_for"],
+            "budget_caps": [
+                f"Stop after {profile.get('managed_loop', {}).get('max_iterations_per_run', 8)} iterations per run.",
+                f"Handle at most {profile.get('managed_loop', {}).get('max_items_per_cycle', 3)} items per cycle.",
+            ]
+            if profile.get("managed_loop")
+            else [],
         },
         "artifacts": artifacts,
         "loop_eligibility": loop_gate,
+        "decision_card": decision_card(decision, mechanisms, loop_gate, profile["verification"]),
         "decision_trace": decision_trace(signal, mechanisms, downgrades),
         "downgrade_notes": downgrade_notes,
     }

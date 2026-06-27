@@ -47,6 +47,8 @@ For each candidate, decide:
 - Which heartbeat is cheapest and sufficient: `session`, `goal`, `scheduled`, or `event`.
 - Which adoption level should be recommended first: `read-only-report`, `goal-loop`,
   `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
+- Whether the loop has an acceptance contract: success criteria, verifier commands or checks,
+  evaluator, required pass evidence, reject conditions, no-progress policy, state schema, and human checkpoint.
 
 ## Loop Standard
 
@@ -57,8 +59,9 @@ how it isolates low-risk changes, how it verifies, where it records state, how t
 the hard iteration limit for one run, when it must stop, which heartbeat should start it, and the
 lowest adoption level that would be useful.
 
-If a candidate has repeated steps but no state file, resume policy, verification, or stop condition,
-recommend `skill` or `checklist` instead of `loop`.
+If a candidate has repeated steps but no acceptance contract, state schema, resume policy,
+verification, stop condition, budget cap, or human checkpoint, recommend `skill` or `checklist`
+instead of `loop`.
 
 If the work is process-shaped and has no meaningful agent decision, recommend a script, hook, or
 traditional automation instead of a loop. If the work is tool-assisted but still needs frequent human
@@ -112,7 +115,14 @@ Write only JSON:
         "heartbeat": "goal",
         "recommended_maturity": "verified-pr-draft",
         "cadence_or_trigger": ["When CI is pending or failed on the current branch."],
+        "discovery_sources": ["CI status", "failed job logs", "git diff"],
         "state_file": ".session-to-loop/state/ci-babysitter.json",
+        "state_schema": {
+          "items": "Tracked failures with status: inbox, active, blocked, done.",
+          "attempts": "Attempt log with action, verification result, and timestamp.",
+          "failures": "Failure signatures, repeat count, and blocker reason.",
+          "next_cursor": "Where the next run should resume."
+        },
         "cycle_steps": [
           "Read the previous state file if it exists.",
           "Inspect CI status, failed logs, and current git diff.",
@@ -123,14 +133,33 @@ Write only JSON:
         "selection_policy": ["Prefer failures blocking merge.", "Ignore flakes without new evidence."],
         "max_items_per_cycle": 3,
         "max_iterations_per_run": 8,
+        "completion_contract": {
+          "success_criteria": ["Relevant local test passes.", "CI becomes green or is clearly blocked."],
+          "verifier_commands": ["Run the focused project checks listed in verification."],
+          "evaluator_agent": "Use deterministic checks first; use a read-only checker when commands cannot decide.",
+          "pass_evidence_required": ["Command output, CI status, or explicit verifier note."],
+          "reject_conditions": ["Same failure repeats twice.", "Push or merge required."],
+          "no_progress_policy": "Stop when the same failure repeats twice or no evidence changes across two iterations."
+        },
         "change_policy": "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval.",
         "deliverables": ["Status summary", "Patch or branch/PR draft when verification passes", "Updated state file"],
         "resume_policy": "On the next run, read the state file and continue unresolved failures before new ones.",
-        "failure_policy": "If the same failure repeats twice or verification is inconclusive, record the blocker and stop."
+        "failure_policy": "If the same failure repeats twice or verification is inconclusive, record the blocker and stop.",
+        "promotion_criteria": ["Promote only after repeated runs pass verification and human review accepts the output."],
+        "demotion_criteria": ["Demote when outputs are rejected, verification is inconclusive, cost grows, or human judgment is repeatedly required."]
       },
       "safety": {
         "autonomy_level": "draft-only",
-        "requires_approval_for": ["push", "merge"]
+        "requires_approval_for": ["push", "merge"],
+        "human_checkpoint": ["Review patch or PR draft before push or merge."],
+        "budget_caps": ["Stop after 8 iterations per run.", "Handle at most 3 items per cycle."]
+      },
+      "decision_card": {
+        "can_use_now": "limited",
+        "can_confirm": "yes",
+        "can_delegate": "yes",
+        "missing_before_delegate": [],
+        "next_action": "adopt"
       },
       "artifacts": ["loop-card", "draft-skill"],
       "downgrade_notes": ""

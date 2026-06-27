@@ -8,6 +8,9 @@ Use these structures when producing machine-readable artifacts. Markdown reports
 - `loop_archetype`: short label such as `engineering-maintenance`, `frontend-verification`, `monitoring-research`, `document-batch`, or `delivery-governance`.
 - `managed_loop.heartbeat`: `session`, `goal`, `scheduled`, or `event`.
 - `managed_loop.recommended_maturity`: `read-only-report`, `goal-loop`, `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
+- `decision_card`: user-facing readiness summary: `can_use_now`, `can_confirm`, `can_delegate`, `missing_before_delegate`, and `next_action`.
+- `managed_loop.completion_contract`: mandatory for real loops; defines success criteria, verifier commands, evaluator, pass evidence, reject conditions, and no-progress policy.
+- `managed_loop.state_schema`: minimal durable state ledger the loop must update before stopping.
 
 ## Loop Candidate
 
@@ -49,7 +52,17 @@ managed_loop:
   recommended_maturity: "verified-pr-draft"
   cadence_or_trigger:
     - "When CI is pending or failed on the current branch."
+  discovery_sources:
+    - "CI status"
+    - "failed job logs"
+    - "git diff"
   state_file: ".session-to-loop/state/ci-babysitter.json"
+  state_schema:
+    items: "Tracked CI failures with status: inbox, active, blocked, done."
+    attempts: "Attempt log with action, verification result, and timestamp."
+    failures: "Failure signatures, repeat count, and blocker reason."
+    next_cursor: "Where the next run should resume."
+    human_decisions: "Approvals, rejections, or merge decisions."
   cycle_steps:
     - "Read the previous state file if it exists."
     - "Inspect CI status, failed logs, and current git diff."
@@ -61,6 +74,19 @@ managed_loop:
     - "Ignore flakes without new evidence."
   max_items_per_cycle: 3
   max_iterations_per_run: 8
+  completion_contract:
+    success_criteria:
+      - "Relevant local test passes."
+      - "CI status becomes green or remaining failure is clearly blocked."
+    verifier_commands:
+      - "Run the focused project checks listed in the verification section."
+    evaluator_agent: "Use deterministic checks first; use a read-only checker when commands cannot decide."
+    pass_evidence_required:
+      - "Command output, CI status, or explicit verifier note."
+    reject_conditions:
+      - "Same failure repeats twice."
+      - "Push or merge is required."
+    no_progress_policy: "Stop when the same failure repeats twice or no evidence changes across two iterations."
   change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
   deliverables:
     - "Status summary"
@@ -68,6 +94,10 @@ managed_loop:
     - "Updated state file"
   resume_policy: "On the next run, read the state file and continue unresolved failures before new ones."
   failure_policy: "If the same failure repeats twice or verification is inconclusive, record the blocker and stop."
+  promotion_criteria:
+    - "Promote only after repeated runs pass verification and human review accepts the output."
+  demotion_criteria:
+    - "Demote when outputs are rejected, verification is inconclusive, cost grows, or human judgment is repeatedly required."
 safety:
   autonomy_level: "draft-only"
   requires_approval_for:
@@ -75,6 +105,17 @@ safety:
     - "merge"
     - "dependency upgrade"
     - "schema migration"
+  human_checkpoint:
+    - "Review patch or PR draft before push or merge."
+  budget_caps:
+    - "Stop after 8 iterations per run."
+    - "Handle at most 3 items per cycle."
+decision_card:
+  can_use_now: "limited"
+  can_confirm: "yes"
+  can_delegate: "yes"
+  missing_before_delegate: []
+  next_action: "adopt"
 artifacts:
   - "loop-card"
   - "draft-skill"
@@ -200,7 +241,14 @@ managed_loop:
   recommended_maturity: "verified-pr-draft"
   cadence_or_trigger:
     - "When CI is pending or failed."
+  discovery_sources:
+    - "CI status"
+    - "failed job logs"
   state_file: ".session-to-loop/state/ci-babysitter.json"
+  state_schema:
+    items: "Tracked CI failures with status."
+    attempts: "Attempt log with action and verification result."
+    next_cursor: "Where the next run should resume."
   cycle_steps:
     - "Read previous state."
     - "Inspect current CI and logs."
@@ -211,6 +259,18 @@ managed_loop:
     - "Prefer blockers with clear logs."
   max_items_per_cycle: 3
   max_iterations_per_run: 8
+  completion_contract:
+    success_criteria:
+      - "Relevant local test passes."
+    verifier_commands:
+      - "Run the focused project checks listed in the verification section."
+    evaluator_agent: "Use deterministic checks first; use a read-only checker when commands cannot decide."
+    pass_evidence_required:
+      - "Command output or explicit verifier note."
+    reject_conditions:
+      - "CI green."
+      - "Same failure repeats twice."
+    no_progress_policy: "Stop when the same failure repeats twice or no evidence changes across two iterations."
   change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
   deliverables:
     - "Status summary"
@@ -223,6 +283,16 @@ safety:
   requires_approval_for:
     - "push"
     - "merge"
+  human_checkpoint:
+    - "Review patch or PR draft before push or merge."
+  budget_caps:
+    - "Stop after 8 iterations per run."
+decision_card:
+  can_use_now: "limited"
+  can_confirm: "yes"
+  can_delegate: "yes"
+  missing_before_delegate: []
+  next_action: "adopt"
 artifacts:
   - "loop-card"
 ```

@@ -36,8 +36,9 @@ Those lessons should not live only in one chat. SixLoops turns them into durable
 
 The first screen is a small set of proposals, not an evidence dump.
 
-Each proposal says:
+Each proposal is a Loop Card. It says:
 
+- Decision card: can use now, can confirm, can delegate, and next action.
 - Goal: what gets better.
 - Work shape: why this should be a loop instead of a script, skill, checklist, or gate.
 - Heartbeat: whether it should start as a session loop, goal loop, scheduled run, or event trigger.
@@ -47,6 +48,7 @@ Each proposal says:
 - Verification: how success is known.
 - Stop conditions: when the agent must stop.
 - Iteration cap: the maximum number of rounds before it reports a blocker.
+- Acceptance contract: success criteria, verifier, pass evidence, reject conditions, and no-progress policy.
 - Approval boundary: what still needs a human.
 - Why this loop: the reason plus the evidence basis.
 
@@ -55,11 +57,13 @@ Example:
 ```text
 Browser Audit Loop
 
+Decision card: can use now = limited, can confirm = yes, can delegate = yes.
 Goal: Catch frontend route, copy, and i18n regressions before handoff.
 Trigger: After frontend, routing, copy, auth UI, or i18n changes.
 Cycle: identify changed routes, run checks, open the route in a browser,
 capture screenshots, fix at most 1-3 confirmed regressions, record state.
 Verification: target routes render, screenshots confirm the main path, i18n passes.
+Acceptance contract: DONE only when checks and screenshots pass; BLOCKED on auth/data/design judgment.
 Stop: auth/data blocks verification, visual direction needs approval, or routes pass.
 Iteration cap: 8 rounds.
 Approval boundary: product copy, visual direction, auth/data fixture changes.
@@ -143,7 +147,19 @@ Planned or partial:
 
 ## Quick Start
 
-From this repository:
+Try SixLoops without private logs first:
+
+```bash
+python skills/session-to-loop/scripts/session_to_loop.py \
+  --input evals/fixtures/repeated-ci-failure.jsonl \
+  --out-root .session-to-loop/tmp/repeated-ci \
+  --approve \
+  --rule-fallback
+```
+
+Open `.session-to-loop/tmp/repeated-ci/public/loop-playbook.md` to see the generated Loop Card.
+
+For real local logs:
 
 ```bash
 python skills/session-to-loop/scripts/session_to_loop.py --input <session-log-file-or-dir>
@@ -170,16 +186,6 @@ python skills/session-to-loop/scripts/session_to_loop.py \
   --semantic-candidates .session-to-loop/private/semantic-candidates.json
 ```
 
-For offline development against synthetic fixtures:
-
-```bash
-python skills/session-to-loop/scripts/session_to_loop.py \
-  --input evals/fixtures/repeated-ci-failure.jsonl \
-  --out-root .session-to-loop/tmp/repeated-ci \
-  --approve \
-  --rule-fallback
-```
-
 ## Install For Codex
 
 Copy or link the skill folder into your Codex skills directory:
@@ -193,7 +199,7 @@ Copy-Item -Path .\skills\session-to-loop\* -Destination $dest -Recurse -Force
 Then start a new Codex thread and invoke:
 
 ```text
-Use $session-to-loop (SixLoops) to find 1-3 loop engineering opportunities for this repo.
+Use $session-to-loop (SixLoops) to find the first loop in this repo worth trying. Reject weak patterns, stay read-only, and return 1-3 Loop Cards with verifier, state, stop condition, and human gate.
 ```
 
 ## Interaction Model

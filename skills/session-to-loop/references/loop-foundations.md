@@ -99,6 +99,21 @@ Only recommend a managed loop when these gates are present:
 
 If any gate is missing, prefer a prompt, rule, skill, checklist, or approval gate.
 
+## Acceptance Contract
+
+A managed loop must compile these gates into an acceptance contract:
+
+- Success criteria: observable conditions that can say DONE.
+- Verifier: deterministic commands first, read-only checker when commands cannot decide.
+- Pass evidence: command output, status, screenshot, schema result, or explicit verifier note.
+- Reject conditions: what makes the loop stop, downgrade, or ask for a human.
+- State schema: what the loop writes before stopping so the next run can resume.
+- No-progress policy: how repeated failures or unchanged evidence stop the run.
+- Human checkpoint: actions that always remain outside autonomous execution.
+
+Do not render a goal-ready loop artifact when the acceptance contract is missing. Render a rule,
+skill, checklist, approval gate, or rejection instead.
+
 ## Common Loop Failures
 
 - Nodding loop: verification is skipped and the maker approves its own work.

@@ -42,6 +42,12 @@ def bullet_block(items: list[str]) -> str:
     return "- " + "\n- ".join(items)
 
 
+def mapping_block(value: dict) -> str:
+    if not value:
+        return "None."
+    return "\n".join(f"- {key}: {item}" for key, item in value.items())
+
+
 def first(items: list[str], default: str = "None.") -> str:
     return items[0] if items else default
 
@@ -91,6 +97,17 @@ def approval_boundary(candidate: dict) -> str:
     return "No extra approval boundary recorded beyond normal repo review."
 
 
+def decision_card(candidate: dict) -> dict:
+    card = candidate.get("decision_card") or {}
+    return {
+        "can_use_now": card.get("can_use_now", "limited" if candidate.get("decision") != "reject" else "no"),
+        "can_confirm": card.get("can_confirm", "yes" if candidate.get("verification") else "no"),
+        "can_delegate": card.get("can_delegate", "yes" if "loop" in candidate.get("mechanisms", []) else "no"),
+        "missing_before_delegate": card.get("missing_before_delegate", []),
+        "next_action": card.get("next_action", "adopt" if candidate.get("decision") != "reject" else "reject"),
+    }
+
+
 def proposal_candidates(candidates: list[dict]) -> list[dict]:
     loops = [item for item in candidates if item.get("decision") != "reject" and "loop" in item.get("mechanisms", [])]
     if loops:
@@ -121,6 +138,7 @@ def render_loop_proposals(candidates: list[dict]) -> str:
     blocks = []
     for index, candidate in enumerate(selected, start=1):
         managed_loop = candidate.get("managed_loop", {})
+        card = decision_card(candidate)
         mechanisms = ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")])
         work_shape = candidate.get("work_shape", "goal-driven" if "loop" in candidate.get("mechanisms", []) else "not recorded")
         loop_archetype = candidate.get("loop_archetype", "not recorded")
@@ -135,6 +153,10 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     f"### {index}. {candidate['name']}",
                     "",
                     f"Decision: `{candidate['decision']}` | Mechanism: `{mechanisms}` | Confidence: `{candidate['confidence']}`",
+                    "",
+                    f"Can use now: `{card['can_use_now']}` | Can confirm: `{card['can_confirm']}` | Can delegate: `{card['can_delegate']}`",
+                    "",
+                    f"Next action: `{card['next_action']}`",
                     "",
                     f"Goal: {managed_loop.get('objective', candidate.get('summary', 'No objective recorded.'))}",
                     "",
@@ -161,6 +183,10 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     f"Iteration cap: {managed_loop.get('max_iterations_per_run', 8)} run iteration(s)",
                     "",
                     f"Approval boundary: {approval_boundary(candidate)}",
+                    "",
+                    "Acceptance contract:",
+                    "",
+                    bullet_block(managed_loop.get("completion_contract", {}).get("success_criteria", [])),
                     "",
                     f"Why this loop: {why_this_loop(candidate)}",
                 ]
@@ -201,6 +227,8 @@ def candidate_card(candidate: dict) -> str:
     evidence = candidate.get("evidence", [{}])
     first_evidence = evidence[0] if evidence else {}
     managed_loop = candidate.get("managed_loop", {})
+    contract = managed_loop.get("completion_contract", {})
+    card = decision_card(candidate)
     values = {
         "name": candidate["name"],
         "id": candidate["id"],
@@ -209,6 +237,11 @@ def candidate_card(candidate: dict) -> str:
         "mechanism": ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")]),
         "work_shape": candidate.get("work_shape", "goal-driven" if "loop" in candidate.get("mechanisms", []) else "not recorded"),
         "loop_archetype": candidate.get("loop_archetype", "not recorded"),
+        "can_use_now": card["can_use_now"],
+        "can_confirm": card["can_confirm"],
+        "can_delegate": card["can_delegate"],
+        "missing_before_delegate": bullet(card.get("missing_before_delegate", [])),
+        "next_action": card["next_action"],
         "summary": candidate["summary"],
         "source": first_evidence.get("source", "n/a"),
         "signal_kind": (
@@ -226,22 +259,34 @@ def candidate_card(candidate: dict) -> str:
         "stop_condition": bullet(candidate.get("stop_conditions", [])),
         "managed_objective": managed_loop.get("objective", candidate["summary"]),
         "managed_trigger": bullet_block(managed_loop.get("cadence_or_trigger", candidate.get("trigger", []))),
+        "managed_discovery_sources": bullet_block(managed_loop.get("discovery_sources", candidate.get("inputs", []))),
         "managed_heartbeat": managed_loop.get("heartbeat", "goal"),
         "managed_recommended_maturity": managed_loop.get(
             "recommended_maturity",
             candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         ),
         "managed_state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
+        "managed_state_schema": mapping_block(managed_loop.get("state_schema", {})),
         "managed_cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
         "managed_selection_policy": bullet_block(managed_loop.get("selection_policy", [])),
         "managed_max_items_per_cycle": str(managed_loop.get("max_items_per_cycle", 3)),
         "managed_max_iterations_per_run": str(managed_loop.get("max_iterations_per_run", 8)),
+        "contract_success_criteria": bullet_block(contract.get("success_criteria", [])),
+        "contract_verifier_commands": bullet_block(contract.get("verifier_commands", [])),
+        "contract_evaluator_agent": contract.get("evaluator_agent", "Not recorded."),
+        "contract_pass_evidence_required": bullet_block(contract.get("pass_evidence_required", [])),
+        "contract_reject_conditions": bullet_block(contract.get("reject_conditions", [])),
+        "contract_no_progress_policy": contract.get("no_progress_policy", "Not recorded."),
         "managed_change_policy": managed_loop.get("change_policy", "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files."),
         "managed_deliverables": bullet_block(managed_loop.get("deliverables", [])),
         "managed_resume_policy": managed_loop.get("resume_policy", "Read the state file first and continue unresolved items before starting new work."),
         "managed_failure_policy": managed_loop.get("failure_policy", "Record the blocker and stop when verification fails or human judgment is required."),
+        "managed_promotion_criteria": bullet_block(managed_loop.get("promotion_criteria", [])),
+        "managed_demotion_criteria": bullet_block(managed_loop.get("demotion_criteria", [])),
         "autonomy_level": candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         "approval_required_action": bullet(candidate.get("safety", {}).get("requires_approval_for", [])),
+        "human_checkpoint": bullet(candidate.get("safety", {}).get("human_checkpoint", [])),
+        "budget_caps": bullet(candidate.get("safety", {}).get("budget_caps", [])),
         "downgrade_notes": candidate.get("downgrade_notes", "None."),
     }
     return fill(load_template("loop-card.md"), values) + "\n" + render_trace(candidate)
@@ -249,6 +294,7 @@ def candidate_card(candidate: dict) -> str:
 
 def claude_loop(candidate: dict) -> str:
     managed_loop = candidate.get("managed_loop", {})
+    contract = managed_loop.get("completion_contract", {})
     values = {
         "loop_name": candidate["name"],
         "goal": managed_loop.get("objective", candidate["summary"]),
@@ -258,8 +304,16 @@ def claude_loop(candidate: dict) -> str:
             "recommended_maturity",
             candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         ),
+        "discovery_sources": bullet_block(managed_loop.get("discovery_sources", candidate.get("inputs", []))),
         "context_source": bullet_block(candidate.get("inputs", [])),
         "state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
+        "state_schema": mapping_block(managed_loop.get("state_schema", {})),
+        "contract_success_criteria": bullet_block(contract.get("success_criteria", [])),
+        "contract_verifier_commands": bullet_block(contract.get("verifier_commands", [])),
+        "contract_evaluator_agent": contract.get("evaluator_agent", "Not recorded."),
+        "contract_pass_evidence_required": bullet_block(contract.get("pass_evidence_required", [])),
+        "contract_reject_conditions": bullet_block(contract.get("reject_conditions", [])),
+        "contract_no_progress_policy": contract.get("no_progress_policy", "Not recorded."),
         "cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
         "selection_policy": bullet_block(managed_loop.get("selection_policy", [])),
         "max_items_per_cycle": str(managed_loop.get("max_items_per_cycle", 3)),
@@ -270,8 +324,12 @@ def claude_loop(candidate: dict) -> str:
         "resume_policy": managed_loop.get("resume_policy", "Read the state file first and continue unresolved items before starting new work."),
         "failure_policy": managed_loop.get("failure_policy", "Record the blocker and stop when verification fails or human judgment is required."),
         "stop_condition": bullet_block(candidate.get("stop_conditions", [])),
+        "promotion_criteria": bullet_block(managed_loop.get("promotion_criteria", [])),
+        "demotion_criteria": bullet_block(managed_loop.get("demotion_criteria", [])),
         "autonomy_level": candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         "approval_required_action": bullet_block(candidate.get("safety", {}).get("requires_approval_for", [])),
+        "human_checkpoint": bullet_block(candidate.get("safety", {}).get("human_checkpoint", [])),
+        "budget_caps": bullet_block(candidate.get("safety", {}).get("budget_caps", [])),
     }
     return fill(load_template("claude-loop.md"), values)
 

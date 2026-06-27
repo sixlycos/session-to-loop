@@ -58,6 +58,44 @@ def integer(value: Any, default: int) -> int:
         return default
 
 
+def normalize_state_schema(value: Any) -> dict:
+    if isinstance(value, dict):
+        return value
+    return {
+        "items": "Tracked work items with status: inbox, active, blocked, done.",
+        "attempts": "Attempt log with action, verification result, and timestamp.",
+        "failures": "Failure signatures, repeat count, and blocker reason.",
+        "next_cursor": "Where the next run should resume.",
+        "human_decisions": "Approvals, rejections, or decisions that changed the loop boundary.",
+    }
+
+
+def reject_conditions_from(stop_conditions: list[str]) -> list[str]:
+    success_terms = ("green", "pass", "passes", "passed", "done", "complete", "completed", "succeed", "success")
+    rejected = [item for item in stop_conditions if not any(term in item.lower() for term in success_terms)]
+    return rejected or stop_conditions
+
+
+def normalize_completion_contract(source: dict, verification: list[str], stop_conditions: list[str]) -> dict:
+    raw = source.get("completion_contract") if isinstance(source.get("completion_contract"), dict) else {}
+    return {
+        "success_criteria": strings(raw.get("success_criteria")) or verification,
+        "verifier_commands": strings(raw.get("verifier_commands"))
+        or ["Run the focused project checks listed in the verification section."],
+        "evaluator_agent": str(
+            raw.get("evaluator_agent")
+            or "Use deterministic checks first; use a read-only checker when commands cannot decide."
+        ),
+        "pass_evidence_required": strings(raw.get("pass_evidence_required"))
+        or ["Command output, status check, screenshot, schema result, or explicit verifier note."],
+        "reject_conditions": strings(raw.get("reject_conditions")) or reject_conditions_from(stop_conditions),
+        "no_progress_policy": str(
+            raw.get("no_progress_policy")
+            or "Stop when the same failure repeats twice, no files or evidence change across two iterations, or the iteration cap is reached."
+        ),
+    }
+
+
 def normalize_managed_loop(
     raw: dict,
     candidate_id: str,
@@ -87,12 +125,15 @@ def normalize_managed_loop(
             or "goal-loop"
         ),
         "cadence_or_trigger": strings(source.get("cadence_or_trigger")) or trigger,
+        "discovery_sources": strings(source.get("discovery_sources")) or inputs or trigger,
         "state_file": state_file,
+        "state_schema": normalize_state_schema(source.get("state_schema")),
         "cycle_steps": strings(source.get("cycle_steps")) or default_cycle,
         "selection_policy": strings(source.get("selection_policy"))
         or ["Select at most 1-3 items that are high impact, evidenced, and reversible."],
         "max_items_per_cycle": positive_int(source.get("max_items_per_cycle"), 3),
         "max_iterations_per_run": positive_int(source.get("max_iterations_per_run"), 8),
+        "completion_contract": normalize_completion_contract(source, verification, stop_conditions),
         "change_policy": str(
             source.get("change_policy")
             or "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files. Do not push, merge, deploy, or mutate production without approval."
@@ -107,6 +148,10 @@ def normalize_managed_loop(
             source.get("failure_policy")
             or "Record the blocker and stop when verification fails, evidence is inconclusive, or human judgment is required."
         ),
+        "promotion_criteria": strings(source.get("promotion_criteria"))
+        or ["Promote only after repeated runs pass verification and human review accepts the output."],
+        "demotion_criteria": strings(source.get("demotion_criteria"))
+        or ["Demote when outputs are rejected, verification is inconclusive, cost grows, or human judgment is repeatedly required."],
     }
 
 
@@ -206,6 +251,14 @@ def normalize_candidate(raw: dict) -> dict:
                 str(item)
                 for item in as_list(raw.get("safety", {}).get("requires_approval_for") if isinstance(raw.get("safety"), dict) else [])
             ],
+            "human_checkpoint": [
+                str(item)
+                for item in as_list(raw.get("safety", {}).get("human_checkpoint") if isinstance(raw.get("safety"), dict) else [])
+            ],
+            "budget_caps": [
+                str(item)
+                for item in as_list(raw.get("safety", {}).get("budget_caps") if isinstance(raw.get("safety"), dict) else [])
+            ],
         },
         "artifacts": [str(item) for item in as_list(raw.get("artifacts"))],
         "downgrade_notes": str(raw.get("downgrade_notes", "")),
@@ -218,6 +271,8 @@ def loop_eligibility(candidate: dict) -> dict:
     counts = role_counts(evidence)
     project_context_count = project_context_event_count(evidence)
     managed_loop = candidate.get("managed_loop", {})
+    completion_contract = managed_loop.get("completion_contract", {})
+    safety = candidate.get("safety", {})
     risky = any(
         word in " ".join(candidate.get("mechanisms", []) + candidate.get("trigger", []) + candidate.get("actions", [])).lower()
         for word in ("deploy", "production", "migration", "delete", "permission", "payment")
@@ -234,12 +289,22 @@ def loop_eligibility(candidate: dict) -> dict:
         "has_stop_conditions": bool(candidate.get("stop_conditions")),
         "has_safety_gate": bool(candidate.get("safety", {}).get("requires_approval_for")) or not risky,
         "has_state_file": bool(managed_loop.get("state_file")),
+        "has_state_schema": bool(managed_loop.get("state_schema")),
+        "has_discovery_sources": bool(managed_loop.get("discovery_sources") or managed_loop.get("cadence_or_trigger")),
         "has_cycle_steps": len(managed_loop.get("cycle_steps", [])) >= 3,
         "has_selection_policy": bool(managed_loop.get("selection_policy")),
         "has_iteration_cap": positive_int(managed_loop.get("max_iterations_per_run"), 0) > 0,
+        "has_completion_contract": bool(
+            completion_contract.get("success_criteria")
+            and completion_contract.get("reject_conditions")
+            and completion_contract.get("evaluator_agent")
+            and completion_contract.get("no_progress_policy")
+        ),
         "has_change_policy": bool(managed_loop.get("change_policy")),
         "has_resume_policy": bool(managed_loop.get("resume_policy")),
         "has_failure_policy": bool(managed_loop.get("failure_policy")),
+        "has_human_checkpoint": bool(safety.get("human_checkpoint") or safety.get("requires_approval_for")),
+        "has_budget_cap": bool(safety.get("budget_caps") or managed_loop.get("max_iterations_per_run")),
     }
     missing = [
         key
@@ -249,15 +314,40 @@ def loop_eligibility(candidate: dict) -> dict:
     return {"eligible": not missing, "criteria": criteria, "missing": missing}
 
 
+def decision_card(candidate: dict, mechanisms: list[str], loop_gate: dict) -> dict:
+    decision = candidate.get("decision", "draft")
+    verification = candidate.get("verification", [])
+    if decision == "reject":
+        can_use_now = "no"
+        next_action = "reject"
+    elif decision in {"rule-only", "checklist-only", "needs-human"}:
+        can_use_now = "limited"
+        next_action = "shrink"
+    else:
+        can_use_now = "limited" if decision == "draft" else "yes"
+        next_action = "adopt"
+    return {
+        "can_use_now": can_use_now,
+        "can_confirm": "yes" if verification else "no",
+        "can_delegate": "yes" if "loop" in mechanisms and loop_gate.get("eligible") else "no",
+        "missing_before_delegate": loop_gate.get("missing", []),
+        "next_action": next_action,
+    }
+
+
 def apply_gates(candidate: dict) -> dict:
     downgrades = []
     loop_gate = loop_eligibility(candidate)
     mechanisms = list(candidate.get("mechanisms", []))
     project_context_count = project_context_event_count(candidate.get("evidence", []))
 
+    if "loop" in mechanisms and candidate.get("work_shape") == "process-shaped":
+        mechanisms = [item for item in mechanisms if item != "loop"]
+        downgrades.append("Removed loop mechanism because process-shaped work should use a script or hook before a managed loop.")
+
     if "loop" in mechanisms and not loop_gate["eligible"]:
         mechanisms = [item for item in mechanisms if item != "loop"]
-        downgrades.append("Removed loop mechanism because managed goal loop eligibility criteria were not met.")
+        downgrades.append("Removed loop mechanism because the managed loop acceptance contract was incomplete.")
 
     if (
         session_count(candidate.get("evidence", [])) < 2
@@ -284,6 +374,7 @@ def apply_gates(candidate: dict) -> dict:
     candidate["mechanisms"] = mechanisms
     candidate["mechanism"] = mechanisms[0] if mechanisms else "none"
     candidate["loop_eligibility"] = loop_gate
+    candidate["decision_card"] = decision_card(candidate, mechanisms, loop_gate)
     candidate["decision_trace"] = {
         "analysis_basis": "AI semantic candidate with deterministic scope, recurrence, loop, and safety gates applied.",
         "primary_role": "user" if role_counts(candidate.get("evidence", [])).get("user", 0) else "unknown",
