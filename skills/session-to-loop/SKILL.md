@@ -108,7 +108,7 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 ## Output Requirements
 
 - Lead with 1-3 concrete loop proposals, not with evidence inventory.
-- For each proposal, show goal, trigger, cycle, verification, stop conditions, approval boundary, and why this loop should exist.
+- For each proposal, show goal, work shape, heartbeat, recommended starting level, trigger, cycle, verification, stop conditions, approval boundary, and why this loop should exist.
 - Ask the user to confirm which proposal(s) to adopt, convert to a smaller mechanism, or reject.
 - Match the user's language in the final response. Keep internal schemas and deterministic script fields in English.
 - Separate private raw evidence from shareable summaries.

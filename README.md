@@ -39,6 +39,9 @@ The first screen is a small set of proposals, not an evidence dump.
 Each proposal says:
 
 - Goal: what gets better.
+- Work shape: why this should be a loop instead of a script, skill, checklist, or gate.
+- Heartbeat: whether it should start as a session loop, goal loop, scheduled run, or event trigger.
+- Starting level: read-only report, goal loop, isolated draft, PR draft, or scheduled draft.
 - Trigger: when the loop starts.
 - Cycle: what the agent observes, does, and checks.
 - Verification: how success is known.
@@ -81,6 +84,8 @@ The safest build order is:
 2. Save the reusable instructions as a skill or checklist.
 3. Add loop mechanics: verifier, state file, iteration cap, and stop conditions.
 4. Only then add scheduled or lifecycle automation.
+
+SixLoops should recommend the lowest useful level first. A good proposal may start as a read-only report or goal loop before it earns isolated edits, PR drafts, or scheduled execution.
 
 ## Why Not Just Ask Codex To Notice Patterns?
 

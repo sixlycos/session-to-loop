@@ -35,12 +35,18 @@ For each candidate, decide:
 - What repeated behavior or friction exists.
 - Whether it appears across sessions or only once.
 - Whether tool usage confirms a recurring observe-act-check cycle.
+- Whether the work shape is `process-shaped`, `tool-assisted`, or `goal-driven`.
+- Which practical archetype it fits, such as `engineering-maintenance`,
+  `frontend-verification`, `monitoring-research`, `document-batch`, or `delivery-governance`.
 - Whether auxiliary project evidence reveals a useful frontend, backend, full-stack, review,
   verification, or delivery loop even when no complete transcript is available.
 - Whether the mechanism should be `rule`, `memory`, `skill`, `hook`, `loop`, `checklist`,
   `approval-gate`, or no automation.
 - Whether loop eligibility is justified: trigger or cadence, observable state, prioritization,
   repeatable actions, verification, state persistence, resume policy, stop conditions, and safety gate.
+- Which heartbeat is cheapest and sufficient: `session`, `goal`, `scheduled`, or `event`.
+- Which adoption level should be recommended first: `read-only-report`, `goal-loop`,
+  `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
 
 ## Loop Standard
 
@@ -48,10 +54,15 @@ Only recommend `loop` when the result can be handed to an agent as a managed goa
 explicit user approval. A loop must say how the agent can keep going without repeated user prompts,
 what it should inspect each cycle, how it picks the 1-3 highest-value items, what it may attempt,
 how it isolates low-risk changes, how it verifies, where it records state, how the next run resumes,
-the hard iteration limit for one run, and when it must stop.
+the hard iteration limit for one run, when it must stop, which heartbeat should start it, and the
+lowest adoption level that would be useful.
 
 If a candidate has repeated steps but no state file, resume policy, verification, or stop condition,
 recommend `skill` or `checklist` instead of `loop`.
+
+If the work is process-shaped and has no meaningful agent decision, recommend a script, hook, or
+traditional automation instead of a loop. If the work is tool-assisted but still needs frequent human
+direction, recommend a skill, checklist, or approval gate before a managed loop.
 
 Be decisive when evidence is repeated and actionable. Do not over-index on privacy language; the
 scripts already run locally, redact packets, and apply hard gates. Focus your judgment on whether
@@ -76,6 +87,8 @@ Write only JSON:
       "confidence": "high",
       "mechanisms": ["loop", "skill"],
       "score": 90,
+      "work_shape": "goal-driven",
+      "loop_archetype": "engineering-maintenance",
       "summary": "Repeated user requests to inspect CI logs before patching.",
       "evidence": [
         {
@@ -96,6 +109,8 @@ Write only JSON:
       "stop_conditions": ["CI green.", "Same failure repeats twice.", "Push or merge required."],
       "managed_loop": {
         "objective": "Keep CI failures moving toward a verified fix without guessing.",
+        "heartbeat": "goal",
+        "recommended_maturity": "verified-pr-draft",
         "cadence_or_trigger": ["When CI is pending or failed on the current branch."],
         "state_file": ".session-to-loop/state/ci-babysitter.json",
         "cycle_steps": [

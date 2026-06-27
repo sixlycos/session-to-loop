@@ -20,6 +20,8 @@ PROFILES = {
         "mechanisms": ["loop", "skill"],
         "decision": "draft",
         "confidence": "high",
+        "work_shape": "goal-driven",
+        "loop_archetype": "engineering-maintenance",
         "trigger": ["Open PR or branch has pending or failed CI."],
         "inputs": ["git diff", "CI status", "failed job logs", "relevant local test command"],
         "actions": [
@@ -32,6 +34,8 @@ PROFILES = {
         "stop_conditions": ["CI is green.", "No actionable failure remains.", "The same failure repeats twice.", "A push or merge is required."],
         "managed_loop": {
             "objective": "Keep CI failures moving toward a verified fix without guessing.",
+            "heartbeat": "goal",
+            "recommended_maturity": "verified-pr-draft",
             "cadence_or_trigger": ["When CI is pending or failed on the current branch."],
             "state_file": ".session-to-loop/state/ci-babysitter.json",
             "cycle_steps": [
@@ -72,6 +76,8 @@ PROFILES = {
         "mechanisms": ["checklist", "approval-gate"],
         "decision": "needs-human",
         "confidence": "high",
+        "work_shape": "tool-assisted",
+        "loop_archetype": "delivery-governance",
         "trigger": ["Before production deploys, release notes approval, or database migrations."],
         "inputs": ["deployment status", "release notes", "migration plan", "rollback path"],
         "actions": ["Check deploy status.", "Prepare release and migration checklist.", "Ask for explicit approval before acting."],
@@ -86,6 +92,8 @@ PROFILES = {
         "mechanisms": ["loop", "skill"],
         "decision": "draft",
         "confidence": "medium",
+        "work_shape": "goal-driven",
+        "loop_archetype": "backend-verification",
         "trigger": ["Before adding or releasing a provider, channel, model alias, or relay behavior change."],
         "inputs": ["provider configuration", "relay request matrix", "HTTP status", "schema checks", "semantic assertions", "latency samples"],
         "actions": [
@@ -106,6 +114,8 @@ PROFILES = {
         ],
         "managed_loop": {
             "objective": "Keep provider acceptance work moving from raw request results to a verified release decision.",
+            "heartbeat": "goal",
+            "recommended_maturity": "isolated-draft",
             "cadence_or_trigger": ["Before provider, channel, model alias, or relay release candidates."],
             "state_file": ".session-to-loop/state/provider-acceptance-soak.json",
             "cycle_steps": [
@@ -135,6 +145,8 @@ PROFILES = {
         "mechanisms": ["loop", "skill"],
         "decision": "draft",
         "confidence": "medium",
+        "work_shape": "goal-driven",
+        "loop_archetype": "frontend-verification",
         "trigger": ["After frontend route, UI copy, auth flow, or i18n changes."],
         "inputs": ["changed frontend files", "route list", "browser audit script", "screenshots or snapshots", "i18n check output"],
         "actions": [
@@ -155,6 +167,8 @@ PROFILES = {
         ],
         "managed_loop": {
             "objective": "Catch frontend route, copy, and i18n regressions before handoff.",
+            "heartbeat": "goal",
+            "recommended_maturity": "isolated-draft",
             "cadence_or_trigger": ["After frontend, routing, copy, auth UI, or i18n changes."],
             "state_file": ".session-to-loop/state/browser-audit-loop.json",
             "cycle_steps": [
@@ -422,6 +436,8 @@ def score_signal(signal: dict) -> dict:
         "score": score,
         "pre_gate_score": pre_gate_score,
         "score_dimensions": levels,
+        "work_shape": profile.get("work_shape", "goal-driven" if "loop" in mechanisms else "tool-assisted"),
+        "loop_archetype": profile.get("loop_archetype", "engineering-maintenance" if "loop" in mechanisms else "none"),
         "summary": profile["summary"],
         "evidence": [
             {

@@ -10,6 +10,9 @@ For each proposal, include:
 
 - Name: short and action-oriented.
 - Goal: what the loop improves for this project.
+- Work shape: why this deserves a loop instead of a script, skill, checklist, or gate.
+- Heartbeat: session, goal, scheduled, or event.
+- Recommended starting level: read-only, goal loop, isolated draft, PR draft, or scheduled draft.
 - Trigger: when the user or agent should run it.
 - Cycle: the observe-act-check steps.
 - Verification: how the loop knows it worked.

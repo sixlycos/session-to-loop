@@ -37,6 +37,53 @@ The six parts that usually realize those moves are:
 - Sub-agent or evaluator: a skeptical checker separate from the generator.
 - Memory: state on disk, in a board, or in another durable store.
 
+## Work Shape Triage
+
+Classify the work before recommending a loop:
+
+- Process-shaped work: steps and order are known, results are predictable. Prefer a script, hook, or traditional automation.
+- Tool-assisted work: the goal is known but the path varies and the human still chooses direction. Prefer a skill, checklist, or approval gate.
+- Goal-driven work: the user can define the objective, boundaries, checks, and escalation rules, while the agent can decide the next step. This is the real loop candidate.
+
+Do not recommend a managed loop just because a task repeats. Recommend it when the repeated work needs an agent to observe, decide, act, verify, and resume.
+
+## Heartbeat Options
+
+Every loop needs a heartbeat. Pick the cheapest heartbeat that fits the risk:
+
+- Session: repeat inside the current chat while the user is watching. Good for a long task with fast feedback.
+- Goal: run until objective criteria pass or the iteration cap is hit. Good for test-fixing, migration queues, and document batches.
+- Scheduled: run at a cadence such as daily or hourly. Good only after read-only or draft runs have earned trust.
+- Event: run when CI fails, a PR opens, a changelog changes, or an issue arrives. Good when the trigger is specific and observable.
+
+Frequency is the main cost driver. Lower frequency often saves more than shorter prompts.
+
+## Adoption Ladder
+
+Recommend the lowest adoption level that would be useful:
+
+- `read-only-report`: inspect and summarize only.
+- `goal-loop`: run in the current session until the success criteria pass or the cap is hit.
+- `isolated-draft`: use an isolated branch or worktree for low-risk fixes, then stop for review.
+- `verified-pr-draft`: verify, prepare a PR draft, and leave merge to the human.
+- `scheduled-readonly`: run unattended but only report and update state.
+- `scheduled-draft`: run unattended, draft low-risk changes, notify the human, and never merge without approval.
+
+Do not jump directly to scheduled or autonomous action. A loop should earn trust one rung at a time.
+
+## Practical Archetypes
+
+Use these archetypes to make proposals concrete:
+
+- Engineering maintenance: CI triage, issue triage, dependency updates, recurring bug classes, framework migrations.
+- Frontend verification: route audits, i18n checks, screenshots, visual regressions, browser-console checks.
+- Monitoring and research: logs, service health, API changelogs, pricing pages, competitor signals.
+- Document batch work: PDF summaries, structured report generation, proposal drafts, stale-doc updates.
+- Personal or office operations: inbox triage, recurring reports, customer ticket cleanup.
+- Business operations: pricing signals, churn signals, sales or HR review loops, quarterly decisions made continuous.
+
+SixLoops is mainly for software development, but these archetypes help explain the loop shape in terms a user can approve or reject.
+
 ## Required Loop Gates
 
 Only recommend a managed loop when these gates are present:

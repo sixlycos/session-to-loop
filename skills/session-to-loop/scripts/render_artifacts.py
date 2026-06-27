@@ -122,6 +122,13 @@ def render_loop_proposals(candidates: list[dict]) -> str:
     for index, candidate in enumerate(selected, start=1):
         managed_loop = candidate.get("managed_loop", {})
         mechanisms = ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")])
+        work_shape = candidate.get("work_shape", "goal-driven" if "loop" in candidate.get("mechanisms", []) else "not recorded")
+        loop_archetype = candidate.get("loop_archetype", "not recorded")
+        heartbeat = managed_loop.get("heartbeat", "goal")
+        maturity = managed_loop.get(
+            "recommended_maturity",
+            candidate.get("safety", {}).get("autonomy_level", "draft-only"),
+        )
         blocks.append(
             "\n".join(
                 [
@@ -130,6 +137,10 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     f"Decision: `{candidate['decision']}` | Mechanism: `{mechanisms}` | Confidence: `{candidate['confidence']}`",
                     "",
                     f"Goal: {managed_loop.get('objective', candidate.get('summary', 'No objective recorded.'))}",
+                    "",
+                    f"Work shape: `{work_shape}` | Archetype: `{loop_archetype}`",
+                    "",
+                    f"Heartbeat: `{heartbeat}` | Recommended starting level: `{maturity}`",
                     "",
                     "Trigger:",
                     "",
@@ -196,6 +207,8 @@ def candidate_card(candidate: dict) -> str:
         "decision": candidate["decision"],
         "confidence": candidate["confidence"],
         "mechanism": ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")]),
+        "work_shape": candidate.get("work_shape", "goal-driven" if "loop" in candidate.get("mechanisms", []) else "not recorded"),
+        "loop_archetype": candidate.get("loop_archetype", "not recorded"),
         "summary": candidate["summary"],
         "source": first_evidence.get("source", "n/a"),
         "signal_kind": (
@@ -213,6 +226,11 @@ def candidate_card(candidate: dict) -> str:
         "stop_condition": bullet(candidate.get("stop_conditions", [])),
         "managed_objective": managed_loop.get("objective", candidate["summary"]),
         "managed_trigger": bullet_block(managed_loop.get("cadence_or_trigger", candidate.get("trigger", []))),
+        "managed_heartbeat": managed_loop.get("heartbeat", "goal"),
+        "managed_recommended_maturity": managed_loop.get(
+            "recommended_maturity",
+            candidate.get("safety", {}).get("autonomy_level", "draft-only"),
+        ),
         "managed_state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
         "managed_cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
         "managed_selection_policy": bullet_block(managed_loop.get("selection_policy", [])),
@@ -235,6 +253,11 @@ def claude_loop(candidate: dict) -> str:
         "loop_name": candidate["name"],
         "goal": managed_loop.get("objective", candidate["summary"]),
         "cadence_or_trigger": bullet_block(managed_loop.get("cadence_or_trigger", candidate.get("trigger", []))),
+        "heartbeat": managed_loop.get("heartbeat", "goal"),
+        "recommended_maturity": managed_loop.get(
+            "recommended_maturity",
+            candidate.get("safety", {}).get("autonomy_level", "draft-only"),
+        ),
         "context_source": bullet_block(candidate.get("inputs", [])),
         "state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
         "cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),

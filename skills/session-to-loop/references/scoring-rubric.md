@@ -16,6 +16,12 @@ Loop Score =
 
 ## Dimensions
 
+Work shape:
+
+- Process-shaped: steps and order are known, results are predictable. Prefer script, hook, or traditional automation.
+- Tool-assisted: the human still chooses direction often. Prefer skill, checklist, or approval gate.
+- Goal-driven: the agent can choose next actions inside clear boundaries and objective checks. Consider a managed loop.
+
 Frequency:
 
 - High: appears across three or more sessions or task episodes.
@@ -71,6 +77,8 @@ Project-person fit:
 ## Hard Downgrades
 
 - If it appears only once, do not recommend a loop.
+- If it is process-shaped with no meaningful agent decision, recommend script or hook instead of loop.
+- If it is tool-assisted and still needs frequent human direction, recommend skill, checklist, or approval gate before loop.
 - If it appears only in project auxiliary evidence, keep the result as `draft` and explain that it is weaker than repeated user transcript evidence.
 - If there is no observable feedback signal, do not recommend a loop.
 - If it lacks state persistence, resume policy, verification, hard iteration cap, or stop conditions, do not recommend a loop.
@@ -78,3 +86,7 @@ Project-person fit:
 - If it involves irreversible or production-impacting action, require human approval.
 - If evidence contains secrets, redact and lower confidence if evidence cannot be safely cited.
 - If transcript evidence conflicts with current project files, mark the finding stale until reverified.
+
+## Cost Cadence
+
+Frequency drives cost more than wording. Prefer `goal` or `event` heartbeats before scheduled runs. A daily loop with a maker/checker pair can be cheap; the same loop every few minutes can become expensive without improving accepted output.

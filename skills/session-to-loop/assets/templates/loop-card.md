@@ -5,6 +5,8 @@ id: "{{id}}"
 decision: "{{decision}}"
 confidence: "{{confidence}}"
 mechanism: "{{mechanism}}"
+work_shape: "{{work_shape}}"
+loop_archetype: "{{loop_archetype}}"
 ```
 
 ## Summary
@@ -28,6 +30,14 @@ Goal:
 Cadence or trigger:
 
 {{managed_trigger}}
+
+Heartbeat:
+
+`{{managed_heartbeat}}`
+
+Recommended starting level:
+
+`{{managed_recommended_maturity}}`
 
 State file:
 

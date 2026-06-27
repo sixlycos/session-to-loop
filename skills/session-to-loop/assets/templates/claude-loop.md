@@ -10,6 +10,14 @@ Use this as a managed agent goal after the user approves the loop.
 
 {{cadence_or_trigger}}
 
+## Heartbeat
+
+{{heartbeat}}
+
+## Recommended Starting Level
+
+{{recommended_maturity}}
+
 ## State
 
 Read this file first. Create or update it before stopping:

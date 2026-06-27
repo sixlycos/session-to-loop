@@ -2,6 +2,13 @@
 
 Use these structures when producing machine-readable artifacts. Markdown reports may use the same fields as headings.
 
+## Loop Classification Fields
+
+- `work_shape`: `process-shaped`, `tool-assisted`, or `goal-driven`.
+- `loop_archetype`: short label such as `engineering-maintenance`, `frontend-verification`, `monitoring-research`, `document-batch`, or `delivery-governance`.
+- `managed_loop.heartbeat`: `session`, `goal`, `scheduled`, or `event`.
+- `managed_loop.recommended_maturity`: `read-only-report`, `goal-loop`, `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
+
 ## Loop Candidate
 
 ```yaml
@@ -10,6 +17,8 @@ name: "CI Babysitter Loop"
 decision: "draft"
 confidence: "high"
 mechanism: "loop"
+work_shape: "goal-driven"
+loop_archetype: "engineering-maintenance"
 summary: "Diagnose failed CI, propose minimal fixes, and stop when CI is green or blocked."
 evidence:
   - source: "session:2026-06-10#episode-2"
@@ -36,6 +45,8 @@ stop_conditions:
   - "Fix requires product or release decision."
 managed_loop:
   objective: "Keep CI failures moving toward a verified fix without guessing."
+  heartbeat: "goal"
+  recommended_maturity: "verified-pr-draft"
   cadence_or_trigger:
     - "When CI is pending or failed on the current branch."
   state_file: ".session-to-loop/state/ci-babysitter.json"
@@ -160,6 +171,8 @@ mechanisms:
   - "loop"
   - "skill"
 score: 90
+work_shape: "goal-driven"
+loop_archetype: "engineering-maintenance"
 summary: "Repeated user requests to inspect CI logs before patching."
 evidence:
   - source: "session:synthetic-ci-1#event-1"
@@ -183,6 +196,8 @@ stop_conditions:
   - "CI green."
 managed_loop:
   objective: "Keep CI failures moving toward a verified fix without guessing."
+  heartbeat: "goal"
+  recommended_maturity: "verified-pr-draft"
   cadence_or_trigger:
     - "When CI is pending or failed."
   state_file: ".session-to-loop/state/ci-babysitter.json"

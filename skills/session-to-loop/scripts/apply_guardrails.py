@@ -80,6 +80,12 @@ def normalize_managed_loop(
     state_file = str(source.get("state_file") or f".session-to-loop/state/{candidate_id}.json")
     return {
         "objective": objective,
+        "heartbeat": str(source.get("heartbeat") or raw.get("heartbeat") or "goal"),
+        "recommended_maturity": str(
+            source.get("recommended_maturity")
+            or raw.get("recommended_maturity")
+            or "goal-loop"
+        ),
         "cadence_or_trigger": strings(source.get("cadence_or_trigger")) or trigger,
         "state_file": state_file,
         "cycle_steps": strings(source.get("cycle_steps")) or default_cycle,
@@ -182,6 +188,8 @@ def normalize_candidate(raw: dict) -> dict:
         "mechanisms": mechanisms,
         "score": integer(raw.get("score"), 70),
         "pre_gate_score": integer(raw.get("score"), 70),
+        "work_shape": str(raw.get("work_shape") or ("goal-driven" if "loop" in mechanisms else "tool-assisted")),
+        "loop_archetype": str(raw.get("loop_archetype") or ("engineering-maintenance" if "loop" in mechanisms else "none")),
         "summary": summary,
         "evidence": evidence,
         "trigger": trigger,
