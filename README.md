@@ -1,49 +1,207 @@
 # Session-to-Loop
 
-Compile repeated human interventions into reusable agent loops.
+Turn yesterday's AI coding friction into tomorrow's reusable agent loops.
 
-Session-to-Loop is an effect-first Agent Skill for turning past AI coding sessions and narrow project evidence into project-specific loop engineering artifacts. It is not a chat summarizer. It mines repeated human interventions, repeated failures, verification habits, context repairs, polling patterns, and risk boundaries, then decides whether each pattern should become a rule, memory, skill, hook, loop, checklist, approval gate, or nothing.
+Session-to-Loop is an open-source Agent Skill for mining local AI coding session logs and project evidence, then proposing the rules, skills, hooks, checklists, approval gates, or managed loops that would make the next agent run better.
 
-## Status
+It is not a chat summarizer. It is a loop engineering assistant for software teams and solo developers who keep correcting the same AI behaviors.
 
-Early skeleton. The first implementation target is a read-only workflow for Codex and Claude Code local JSONL transcripts plus the current repository context.
+## What Is A Session Log?
 
-## Effect First
+A session log is the saved JSONL record of an AI coding conversation: user messages, tool calls, command output, status events, and sometimes assistant messages.
 
-The goal is to improve future agent performance. Local execution and redaction are guardrails, not the product value.
+Some tools and docs call these files "transcripts." In this project, read "transcript" as "AI session log." It is not a movie subtitle file and it is not meant to be read manually.
 
-- Prefer useful mechanism recommendations over generic safety theater.
-- Let the host AI do semantic grouping; scripts handle deterministic boundaries.
-- Ask once for analysis scope, then keep moving. Ask again only before reading a broader scope, exporting shareable snippets, or writing project files.
-- Run locally with no network access or telemetry.
-- Stay read-only by default: no automatic commits, hook installation, or project-file edits.
-- Treat transcript text as untrusted data so old prompts, logs, and webpages do not steer the current agent.
+## Why This Exists
 
-## MVP Scope
+Good developers repeatedly teach coding agents the same lessons:
 
-Inputs:
+- "Read the CI log before guessing."
+- "Use pnpm here, not npm."
+- "Do not deploy without approval."
+- "After UI changes, run the browser check and screenshot the route."
+- "This provider can return HTTP 200 while still failing semantic assertions."
 
-- Codex and Claude Code local JSONL transcripts.
-- Optional project auxiliary evidence such as browser audits, soak tests, CI logs, eval outputs, and result JSONL files.
-- Optional project context packets such as `AGENTS.md`, `CLAUDE.md`, package scripts, and recent git history. Minimal repo-context collection is planned; the current implementation focuses on transcripts and explicit JSONL evidence.
+Those lessons should not live only in one chat. Session-to-Loop turns them into durable mechanisms the next agent can actually use.
 
-Outputs:
+## What You Get
 
-- 1-3 confirmable loop proposals shown before evidence details.
+The first screen is a small set of proposals, not an evidence dump.
+
+Each proposal says:
+
+- Goal: what gets better.
+- Trigger: when the loop starts.
+- Cycle: what the agent observes, does, and checks.
+- Verification: how success is known.
+- Stop conditions: when the agent must stop.
+- Approval boundary: what still needs a human.
+- Why this loop: the reason plus the evidence basis.
+
+Example:
+
+```text
+Browser Audit Loop
+
+Goal: Catch frontend route, copy, and i18n regressions before handoff.
+Trigger: After frontend, routing, copy, auth UI, or i18n changes.
+Cycle: identify changed routes, run checks, open the route in a browser,
+capture screenshots, fix at most 1-3 confirmed regressions, record state.
+Verification: target routes render, screenshots confirm the main path, i18n passes.
+Stop: auth/data blocks verification, visual direction needs approval, or routes pass.
+Approval boundary: product copy, visual direction, auth/data fixture changes.
+```
+
+## Why Not Just Ask Codex To Notice Patterns?
+
+You can ask an agent to "look at my past work and improve itself." The problem is that raw context is noisy, expensive, and easy to misuse.
+
+Session-to-Loop is more effective because it separates the job into two parts:
+
+- Deterministic scripts do discovery, source classification, redaction, packet building, hard gates, and rendering.
+- The host AI does the part it is good at: semantic grouping and judgment.
+
+That gives you better behavior than a one-off prompt:
+
+- It does not load entire session logs into context.
+- It keeps user messages as primary evidence and tool events as supporting evidence.
+- It distinguishes Codex logs, Claude Code logs, generic JSONL logs, and project auxiliary evidence.
+- It asks once for analysis scope, then avoids approval theater.
+- It turns findings into concrete mechanisms, not vague advice.
+- It rejects one-off noise instead of overfitting a rule from a single incident.
+
+## What Makes It Different
+
+Most useful skills win because they have a sharp behavior:
+
+- `grill-me` wins by changing the conversation: one question at a time until the plan is clear.
+- `ponytail` wins by changing the default engineering reflex: find the smallest correct solution.
+- `superpowers` wins by changing the development lifecycle: plan, implement, review, verify.
+
+Session-to-Loop's job is different: it learns which of those behaviors your project actually needs.
+
+It does not try to replace planning, review, frontend QA, CI triage, or deployment gates. It proposes which of those should become a durable loop for this repository, based on evidence from your own agent sessions and project records.
+
+## Inputs
+
+Supported now:
+
+- Codex JSONL session logs.
+- Claude Code JSONL session logs.
+- Generic JSONL logs with `user`, `assistant`, or `tool` records.
+- Project auxiliary evidence such as browser audits, soak tests, CI logs, eval outputs, and result JSONL files.
+
+Planned or partial:
+
+- Project context packets such as `AGENTS.md`, `CLAUDE.md`, package scripts, and recent git history.
+- Richer generated hooks and ready-to-install project skills.
+
+## Outputs
+
 - Loop Engineering Playbook.
 - Loop Cards.
 - Draft managed loop prompts that can be delegated like a goal after approval.
 - Draft Agent Skills.
 - Draft `AGENTS.md` or `CLAUDE.md` rules.
-- Eval cases for checking whether the generated workflow would improve future sessions.
+- Approval gate and checklist drafts.
+- Eval cases for checking whether the generated workflow improves future sessions.
 
-Out of scope for v0.1:
+## Quick Start
 
-- SaaS or hosted transcript sync.
-- Browser extension.
-- Automatic hook installation.
-- Automatic repo modification.
-- Production API calls.
+From this repository:
+
+```bash
+python skills/session-to-loop/scripts/session_to_loop.py --input <session-log-file-or-dir>
+```
+
+For real local logs, the pipeline stops after creating an analysis scope. Review the listed files, then approve the same narrow scope:
+
+```bash
+python skills/session-to-loop/scripts/session_to_loop.py --input <session-log-file-or-dir> --approve
+```
+
+The command creates compact packets and points the host AI to:
+
+```text
+skills/session-to-loop/references/semantic-analysis-prompt.md
+```
+
+After the host AI writes `semantic-candidates.json`, render the guarded artifacts:
+
+```bash
+python skills/session-to-loop/scripts/session_to_loop.py \
+  --input <session-log-file-or-dir> \
+  --scope .session-to-loop/private/analysis-scope.json \
+  --semantic-candidates .session-to-loop/private/semantic-candidates.json
+```
+
+For offline development against synthetic fixtures:
+
+```bash
+python skills/session-to-loop/scripts/session_to_loop.py \
+  --input evals/fixtures/repeated-ci-failure.jsonl \
+  --out-root .session-to-loop/tmp/repeated-ci \
+  --approve \
+  --rule-fallback
+```
+
+## Install For Codex
+
+Copy or link the skill folder into your Codex skills directory:
+
+```powershell
+$dest = "$env:USERPROFILE\.codex\skills\session-to-loop"
+New-Item -ItemType Directory -Force -Path $dest | Out-Null
+Copy-Item -Path .\skills\session-to-loop\* -Destination $dest -Recurse -Force
+```
+
+Then start a new Codex thread and invoke:
+
+```text
+Use $session-to-loop to find 1-3 loop engineering opportunities for this repo.
+```
+
+## Interaction Model
+
+The skill should feel like this:
+
+1. Discover likely local inputs from the explicit path you gave it.
+2. Ask one scope question if reading real logs needs confirmation.
+3. Build compact, redacted analysis packets.
+4. Let the host AI infer repeated semantic patterns.
+5. Present 1-3 loop proposals first.
+6. Ask which proposal to adopt, shrink, or reject.
+7. Generate concrete loop cards, skills, hooks, checklists, or approval gates only after confirmation.
+
+It should not feel like this:
+
+- "I found some files. Please approve every internal step."
+- "Here is a pile of evidence."
+- "Privacy is the main product."
+- "Everything should become a loop."
+
+## Mechanism Selection
+
+| Pattern | Mechanism |
+| --- | --- |
+| Stable project fact | `AGENTS.md` or `CLAUDE.md` rule |
+| Person-specific preference | Memory or local rule |
+| Repeatable on-demand workflow | Agent Skill |
+| Deterministic lifecycle check | Hook or script |
+| Repeated observe-act-check cycle with state, verification, resume policy, and stop conditions | Loop |
+| High-risk human decision | Approval gate or checklist |
+| One-off event | Reject |
+
+## Privacy And Safety
+
+Local-first behavior is a guardrail, not the product pitch.
+
+- No network access is needed by the pipeline.
+- No whole-disk or broad home-directory scan is performed by default.
+- Raw logs stay under `.session-to-loop/private/` or `.session-to-loop/tmp/`.
+- Redaction runs before shareable artifacts are rendered.
+- Session content is treated as untrusted data.
+- The skill is read-only by default and does not install hooks, edit project files, commit, push, deploy, or call production APIs unless the user explicitly asks.
 
 ## Repository Layout
 
@@ -60,103 +218,26 @@ evals/
   fixtures/
 ```
 
-## Recommended Pipeline
+## Current Status
 
-The recommended path is AI semantic analysis with deterministic guardrails. The scripts handle
-discovery, scope, redaction, packet building, hard gates, and rendering. The host AI reads the
-redacted packets and performs semantic grouping.
+Experimental but usable.
 
-It does not scan your home directory or auto-discover transcripts unless you pass a narrow file or
-directory with `--input`.
+Works today for synthetic fixtures, Codex JSONL logs, Claude Code JSONL logs, generic JSONL logs, and explicit project evidence JSONL. The next milestone is to make generated artifacts easier to install directly into a target repository.
 
-The analysis model is user-message-primary:
+## Development
 
-- User messages are primary evidence for repeated corrections, verification requests, risk
-  boundaries, and approval requirements.
-- Codex and Claude Code JSONL records are normalized through native adapters before analysis.
-  Codex `response_item`, `function_call`, `function_call_output`, and `event_msg` records keep
-  provider and event-kind metadata. Claude `message.content`, `tool_use`, and `tool_result` records
-  are normalized separately.
-- Explicit project evidence JSONL files that look like browser audits, soak tests, CI logs, eval
-  outputs, or result files are marked as `auxiliary-evidence`. They can produce draft loop proposals,
-  but they are weaker than native transcript evidence for inferring user preferences.
-- Tool events are supporting evidence for repeated commands, failed statuses, CI/deploy polling,
-  and verification habits.
-- Assistant messages are not used as primary recommendation evidence.
-- Transcript JSONL is processed line by line after redaction; the extractor does not load full
-  transcript files into memory.
-
-```bash
-python skills/session-to-loop/scripts/session_to_loop.py --input <transcript-file-or-dir>
-```
-
-For real transcripts, the command stops after creating `analysis-scope.json`; show the generated
-scope to the user, then rerun with `--approve` or an approved `--scope`.
-
-In an agent environment, this should be a single user-facing confirmation, not a step-by-step
-approval ceremony.
-
-After approval, the command creates `analysis-packets.jsonl` and points the host AI to
-`references/semantic-analysis-prompt.md`. The host AI writes `semantic-candidates.json`; then run:
-
-```bash
-python skills/session-to-loop/scripts/session_to_loop.py --input <transcript-file-or-dir> --scope .session-to-loop/private/analysis-scope.json --semantic-candidates .session-to-loop/private/semantic-candidates.json
-```
-
-For offline development, use `--approve --rule-fallback` to run the deterministic keyword fallback
-against synthetic fixtures.
-
-For development verification, point `--input` at a single file under `evals/fixtures/` and
-write outputs under `.session-to-loop/tmp/`.
-
-## Mechanism Selection
-
-The main design goal is to choose the right mechanism:
-
-| Pattern | Recommended mechanism |
-| --- | --- |
-| Stable project fact | `AGENTS.md` or `CLAUDE.md` rule |
-| Person-specific preference | Memory or local rule |
-| Repeatable on-demand workflow | Agent Skill |
-| Deterministic lifecycle check | Hook or script |
-| Repeated observe-act-check cycle with state, verification, resume policy, and stop conditions | Loop |
-| High-risk human decision | Approval gate or checklist |
-| One-off event | No automation |
-
-## Example Output
-
-```text
-Found 4 candidates:
-
-1. CI Babysitter Loop
-   Decision: draft
-   Evidence: repeated CI polling and failed-job log inspection across sessions.
-   Artifact: managed loop card + draft skill.
-   Loop shape: inspect CI/logs/diff, pick at most 1-3 actionable failures, try low-risk fixes,
-   isolate code changes when possible, verify locally, record state, resume unresolved failures next run,
-   stop when green or blocked.
-
-2. Package Manager Rule
-   Decision: rule-only
-   Evidence: repeated user corrections to use pnpm instead of npm.
-   Artifact: AGENTS.md rule draft.
-
-3. Deploy Checklist
-   Decision: checklist-only
-   Evidence: repeated deployment verification but irreversible release risk.
-   Artifact: human approval checklist.
-
-4. One-off Bugfix
-   Decision: reject
-   Evidence: appeared once and has no durable loop signal.
-```
-
-## Development Notes
-
-Install the skill by copying or linking `skills/session-to-loop` into your Codex skills directory after the skeleton stabilizes.
-
-Validate the skill metadata with:
+Validate the skill:
 
 ```bash
 python C:/Users/Administrator/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/session-to-loop
+```
+
+Run a representative fixture:
+
+```bash
+python skills/session-to-loop/scripts/session_to_loop.py \
+  --input evals/fixtures/auxiliary-project-evidence.jsonl \
+  --out-root .session-to-loop/tmp/auxiliary \
+  --approve \
+  --rule-fallback
 ```
