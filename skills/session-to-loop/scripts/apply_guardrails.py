@@ -39,6 +39,63 @@ def as_list(value: Any) -> list:
     return [value]
 
 
+def strings(value: Any) -> list[str]:
+    return [str(item) for item in as_list(value) if str(item)]
+
+
+def positive_int(value: Any, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return parsed if parsed > 0 else default
+
+
+def normalize_managed_loop(
+    raw: dict,
+    candidate_id: str,
+    summary: str,
+    trigger: list[str],
+    inputs: list[str],
+    actions: list[str],
+    verification: list[str],
+    stop_conditions: list[str],
+) -> dict:
+    source = raw.get("managed_loop") if isinstance(raw.get("managed_loop"), dict) else {}
+    default_cycle = [
+        "Read the previous state file if it exists.",
+        "Inspect current inputs and observable status.",
+        "Pick at most 1-3 high-value items by impact, confidence, and reversibility.",
+        "Run only bounded actions supported by the evidence.",
+        "Verify the result and record state for the next run.",
+    ]
+    objective = str(source.get("objective") or summary)
+    state_file = str(source.get("state_file") or f".session-to-loop/state/{candidate_id}.json")
+    return {
+        "objective": objective,
+        "cadence_or_trigger": strings(source.get("cadence_or_trigger")) or trigger,
+        "state_file": state_file,
+        "cycle_steps": strings(source.get("cycle_steps")) or default_cycle,
+        "selection_policy": strings(source.get("selection_policy"))
+        or ["Select at most 1-3 items that are high impact, evidenced, and reversible."],
+        "max_items_per_cycle": positive_int(source.get("max_items_per_cycle"), 3),
+        "change_policy": str(
+            source.get("change_policy")
+            or "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files. Do not push, merge, deploy, or mutate production without approval."
+        ),
+        "deliverables": strings(source.get("deliverables"))
+        or ["Status summary", "Patch, branch, or PR draft when verification passes", "Updated state file"],
+        "resume_policy": str(
+            source.get("resume_policy")
+            or f"Read {state_file} first and continue unresolved items before starting new work."
+        ),
+        "failure_policy": str(
+            source.get("failure_policy")
+            or "Record the blocker and stop when verification fails, evidence is inconclusive, or human judgment is required."
+        ),
+    }
+
+
 def source_session(source: str) -> str:
     return source.split("#", 1)[0].removeprefix("session:")
 
@@ -85,8 +142,15 @@ def normalize_candidate(raw: dict) -> dict:
     decision = str(raw.get("decision", "draft"))
     if decision not in VALID_DECISIONS:
         decision = "draft"
+    candidate_id = slug(str(raw.get("id") or name))
+    summary = str(raw.get("summary", ""))
+    trigger = strings(raw.get("trigger"))
+    inputs = strings(raw.get("inputs"))
+    actions = strings(raw.get("actions"))
+    verification = strings(raw.get("verification"))
+    stop_conditions = strings(raw.get("stop_conditions"))
     return {
-        "id": slug(str(raw.get("id") or name)),
+        "id": candidate_id,
         "name": name,
         "decision": decision,
         "confidence": str(raw.get("confidence", "medium")),
@@ -94,13 +158,14 @@ def normalize_candidate(raw: dict) -> dict:
         "mechanisms": mechanisms,
         "score": int(raw.get("score", 70)),
         "pre_gate_score": int(raw.get("score", 70)),
-        "summary": str(raw.get("summary", "")),
+        "summary": summary,
         "evidence": evidence,
-        "trigger": [str(item) for item in as_list(raw.get("trigger"))],
-        "inputs": [str(item) for item in as_list(raw.get("inputs"))],
-        "actions": [str(item) for item in as_list(raw.get("actions"))],
-        "verification": [str(item) for item in as_list(raw.get("verification"))],
-        "stop_conditions": [str(item) for item in as_list(raw.get("stop_conditions"))],
+        "trigger": trigger,
+        "inputs": inputs,
+        "actions": actions,
+        "verification": verification,
+        "stop_conditions": stop_conditions,
+        "managed_loop": normalize_managed_loop(raw, candidate_id, summary, trigger, inputs, actions, verification, stop_conditions),
         "safety": {
             "autonomy_level": str(raw.get("safety", {}).get("autonomy_level", "draft-only"))
             if isinstance(raw.get("safety"), dict)
@@ -119,6 +184,7 @@ def loop_eligibility(candidate: dict) -> dict:
     mechanisms = candidate.get("mechanisms", [])
     evidence = candidate.get("evidence", [])
     counts = role_counts(evidence)
+    managed_loop = candidate.get("managed_loop", {})
     risky = any(
         word in " ".join(candidate.get("mechanisms", []) + candidate.get("trigger", []) + candidate.get("actions", [])).lower()
         for word in ("deploy", "production", "migration", "delete", "permission", "payment")
@@ -132,6 +198,12 @@ def loop_eligibility(candidate: dict) -> dict:
         "has_verification_signal": bool(candidate.get("verification")),
         "has_stop_conditions": bool(candidate.get("stop_conditions")),
         "has_safety_gate": bool(candidate.get("safety", {}).get("requires_approval_for")) or not risky,
+        "has_state_file": bool(managed_loop.get("state_file")),
+        "has_cycle_steps": len(managed_loop.get("cycle_steps", [])) >= 3,
+        "has_selection_policy": bool(managed_loop.get("selection_policy")),
+        "has_change_policy": bool(managed_loop.get("change_policy")),
+        "has_resume_policy": bool(managed_loop.get("resume_policy")),
+        "has_failure_policy": bool(managed_loop.get("failure_policy")),
     }
     missing = [key for key, value in criteria.items() if not value]
     return {"eligible": not missing, "criteria": criteria, "missing": missing}
@@ -144,7 +216,7 @@ def apply_gates(candidate: dict) -> dict:
 
     if "loop" in mechanisms and not loop_gate["eligible"]:
         mechanisms = [item for item in mechanisms if item != "loop"]
-        downgrades.append("Removed loop mechanism because loop eligibility criteria were not met.")
+        downgrades.append("Removed loop mechanism because managed goal loop eligibility criteria were not met.")
 
     if session_count(candidate.get("evidence", [])) < 2 and not {"checklist", "approval-gate"}.intersection(mechanisms):
         mechanisms = []

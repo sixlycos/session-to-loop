@@ -29,8 +29,19 @@ For each candidate, decide:
 - Whether tool usage confirms a recurring observe-act-check cycle.
 - Whether the mechanism should be `rule`, `memory`, `skill`, `hook`, `loop`, `checklist`,
   `approval-gate`, or no automation.
-- Whether loop eligibility is justified: trigger, observable state, repeatable actions,
-  verification, stop conditions, and safety gate.
+- Whether loop eligibility is justified: trigger or cadence, observable state, prioritization,
+  repeatable actions, verification, state persistence, resume policy, stop conditions, and safety gate.
+
+## Loop Standard
+
+Only recommend `loop` when the result can be handed to an agent as a managed goal loop after one
+explicit user approval. A loop must say how the agent can keep going without repeated user prompts,
+what it should inspect each cycle, how it picks the 1-3 highest-value items, what it may attempt,
+how it isolates low-risk changes, how it verifies, where it records state, how the next run resumes,
+and when it must stop.
+
+If a candidate has repeated steps but no state file, resume policy, verification, or stop condition,
+recommend `skill` or `checklist` instead of `loop`.
 
 Be decisive when evidence is repeated and actionable. Do not over-index on privacy language; the
 scripts already run locally, redact packets, and apply hard gates. Focus your judgment on whether
@@ -67,6 +78,24 @@ Write only JSON:
       "actions": ["Check status.", "Read failed logs.", "Patch only evidenced failures."],
       "verification": ["Relevant local test passes.", "CI becomes green or is blocked."],
       "stop_conditions": ["CI green.", "Same failure repeats twice.", "Push or merge required."],
+      "managed_loop": {
+        "objective": "Keep CI failures moving toward a verified fix without guessing.",
+        "cadence_or_trigger": ["When CI is pending or failed on the current branch."],
+        "state_file": ".session-to-loop/state/ci-babysitter.json",
+        "cycle_steps": [
+          "Read the previous state file if it exists.",
+          "Inspect CI status, failed logs, and current git diff.",
+          "Pick at most 1-3 actionable failures by impact and confidence.",
+          "Attempt only low-risk local fixes with direct evidence.",
+          "Run focused verification and record the result."
+        ],
+        "selection_policy": ["Prefer failures blocking merge.", "Ignore flakes without new evidence."],
+        "max_items_per_cycle": 3,
+        "change_policy": "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval.",
+        "deliverables": ["Status summary", "Patch or branch/PR draft when verification passes", "Updated state file"],
+        "resume_policy": "On the next run, read the state file and continue unresolved failures before new ones.",
+        "failure_policy": "If the same failure repeats twice or verification is inconclusive, record the blocker and stop."
+      },
       "safety": {
         "autonomy_level": "draft-only",
         "requires_approval_for": ["push", "merge"]

@@ -14,6 +14,7 @@ Compile past AI coding sessions into evidence-backed loop engineering artifacts.
 - Prefer evidence-backed recommendations over generic workflow advice.
 - Let the host AI perform semantic grouping; use scripts for deterministic discovery, redaction, packet building, hard gates, and rendering.
 - Choose the smallest mechanism that would actually reduce repeated friction.
+- Reserve `loop` for managed goal loops that a user can delegate after one explicit approval.
 - Recommend no automation when a pattern is rare, unverifiable, unsafe, or mostly a human judgment call.
 - Ask once for analysis scope, then continue. Ask again only before expanding scope, exporting shareable snippets, or modifying project files.
 - Run locally and remain read-only unless the user explicitly asks to modify project files.
@@ -49,7 +50,7 @@ Compile past AI coding sessions into evidence-backed loop engineering artifacts.
 5. Compile artifacts.
    - Use `assets/templates/loop-card.md` for each candidate.
    - Use `assets/templates/loop-playbook.md` for the overall report.
-   - Use `assets/templates/claude-loop.md` only for candidates that truly need repeated observation or scheduled execution.
+   - Use `assets/templates/claude-loop.md` only for candidates that can be handed to an agent as a managed goal loop.
    - Use `assets/templates/generated-skill.md` only for on-demand workflows with reusable steps.
    - Read `references/output-schemas.md` when producing machine-readable JSON or YAML summaries.
 
@@ -89,7 +90,7 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 - Use memory when the finding is person-specific and likely useful across projects.
 - Use a skill when the finding is an on-demand workflow with repeatable steps.
 - Use a hook when the finding must run deterministically at a lifecycle point.
-- Use a loop when the finding requires repeated observe-act-check cycles.
+- Use a loop when the finding can become a managed goal loop: objective, trigger or cadence, input discovery, prioritization, bounded actions, verification, state file, resume policy, and stop conditions.
 - Use a checklist when the finding is useful but not safe or deterministic enough to automate.
 - Use an approval gate when the finding involves deployment, deletion, schema migration, permissions, payments, or other high-impact actions.
 - Use no automation when evidence is weak or the cost of automation exceeds the repeated friction.
@@ -99,5 +100,6 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 - Lead with the recommended mechanisms and the evidence strength.
 - Separate private raw evidence from shareable summaries.
 - Quote only short redacted snippets when necessary.
-- Include trigger conditions, stop conditions, safety gates, verification signals, and rejection reasons.
+- Include trigger conditions, stop conditions, safety gates, verification signals, state persistence, resume behavior, and rejection reasons.
+- For every `loop` candidate, include a goal-ready `managed_loop` spec that a future agent could run without repeated user prompting after initial approval.
 - Mark every candidate as `commit`, `draft`, `checklist-only`, `rule-only`, `needs-human`, or `reject`.

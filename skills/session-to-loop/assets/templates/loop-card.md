@@ -25,23 +25,55 @@ mechanism: "{{mechanism}}"
 
 - {{artifact}}
 
-## Loop or Workflow Spec
+## Managed Goal Loop Spec
 
 Goal:
 
-- {{goal}}
+{{managed_objective}}
+
+Cadence or trigger:
+
+{{managed_trigger}}
+
+State file:
+
+`{{managed_state_file}}`
 
 Inputs:
 
 - {{input}}
 
-Actions:
+Cycle steps:
 
-- {{action}}
+{{managed_cycle_steps}}
+
+Selection policy:
+
+{{managed_selection_policy}}
+
+Max items per cycle:
+
+{{managed_max_items_per_cycle}}
+
+Change policy:
+
+{{managed_change_policy}}
+
+Deliverables:
+
+{{managed_deliverables}}
 
 Verification:
 
 - {{verification}}
+
+Resume policy:
+
+{{managed_resume_policy}}
+
+Failure policy:
+
+{{managed_failure_policy}}
 
 Stop conditions:
 

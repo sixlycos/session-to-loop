@@ -42,9 +42,15 @@ Safety / reversibility:
 
 Artifactability:
 
-- High: can become a concrete rule, skill, hook, loop prompt, eval, or script.
+- High: can become a concrete rule, skill, hook, managed loop, eval, or script.
 - Medium: can become a checklist or documented convention.
 - Low: too vague to encode.
+
+Loop closure:
+
+- High: has objective, trigger or cadence, input discovery, prioritization, bounded actions, change policy, verification, state file, resume policy, failure policy, and stop conditions.
+- Medium: has most cycle mechanics but needs user review before delegation.
+- Low: repeats steps but cannot run unattended after initial approval.
 
 Project-person fit:
 
@@ -65,6 +71,7 @@ Project-person fit:
 
 - If it appears only once, do not recommend a loop.
 - If there is no observable feedback signal, do not recommend a loop.
+- If it lacks state persistence, resume policy, verification, or stop conditions, do not recommend a loop.
 - If it is only a stable preference, recommend a rule or memory.
 - If it involves irreversible or production-impacting action, require human approval.
 - If evidence contains secrets, redact and lower confidence if evidence cannot be safely cited.

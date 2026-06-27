@@ -42,7 +42,7 @@ Likely mechanism:
 
 - Deterministic lifecycle command: hook.
 - On-demand verification workflow: skill.
-- Repeated external status check: loop.
+- Repeated external status check with state, resume policy, and stop conditions: loop.
 
 ## Repeated Context Repair
 
@@ -65,7 +65,7 @@ Signals:
 
 Likely mechanism:
 
-- Loop when the cycle is reversible and has clear stop conditions.
+- Loop when the cycle is reversible, can run after one approval, records state, resumes cleanly, verifies outcomes, and has clear stop conditions.
 - Checklist when the cycle includes irreversible decisions.
 
 ## Repeated Human Decision

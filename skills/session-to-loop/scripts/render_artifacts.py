@@ -36,6 +36,12 @@ def bullet(items: list[str]) -> str:
     return "\n- ".join(items)
 
 
+def bullet_block(items: list[str]) -> str:
+    if not items:
+        return "None."
+    return "- " + "\n- ".join(items)
+
+
 def first(items: list[str], default: str = "None.") -> str:
     return items[0] if items else default
 
@@ -81,6 +87,7 @@ def render_trace(candidate: dict) -> str:
 def candidate_card(candidate: dict) -> str:
     evidence = candidate.get("evidence", [{}])
     first_evidence = evidence[0] if evidence else {}
+    managed_loop = candidate.get("managed_loop", {})
     values = {
         "name": candidate["name"],
         "id": candidate["id"],
@@ -98,6 +105,16 @@ def candidate_card(candidate: dict) -> str:
         "action": bullet(candidate.get("actions", [])),
         "verification": bullet(candidate.get("verification", [])),
         "stop_condition": bullet(candidate.get("stop_conditions", [])),
+        "managed_objective": managed_loop.get("objective", candidate["summary"]),
+        "managed_trigger": bullet_block(managed_loop.get("cadence_or_trigger", candidate.get("trigger", []))),
+        "managed_state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
+        "managed_cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
+        "managed_selection_policy": bullet_block(managed_loop.get("selection_policy", [])),
+        "managed_max_items_per_cycle": str(managed_loop.get("max_items_per_cycle", 3)),
+        "managed_change_policy": managed_loop.get("change_policy", "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files."),
+        "managed_deliverables": bullet_block(managed_loop.get("deliverables", [])),
+        "managed_resume_policy": managed_loop.get("resume_policy", "Read the state file first and continue unresolved items before starting new work."),
+        "managed_failure_policy": managed_loop.get("failure_policy", "Record the blocker and stop when verification fails or human judgment is required."),
         "autonomy_level": candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         "approval_required_action": bullet(candidate.get("safety", {}).get("requires_approval_for", [])),
         "downgrade_notes": candidate.get("downgrade_notes", "None."),
@@ -106,19 +123,24 @@ def candidate_card(candidate: dict) -> str:
 
 
 def claude_loop(candidate: dict) -> str:
+    managed_loop = candidate.get("managed_loop", {})
     values = {
         "loop_name": candidate["name"],
-        "goal": candidate["summary"],
-        "context_source": bullet(candidate.get("inputs", [])),
-        "action_1": first(candidate.get("actions", []), "Inspect current status."),
-        "action_2": candidate.get("actions", ["", "Report findings."])[1]
-        if len(candidate.get("actions", [])) > 1
-        else "Report findings.",
-        "action_3": candidate.get("actions", ["", "", "Stop when blocked."])[2]
-        if len(candidate.get("actions", [])) > 2
-        else "Stop when blocked.",
-        "verification_signal": bullet(candidate.get("verification", [])),
-        "stop_condition": bullet(candidate.get("stop_conditions", [])),
+        "goal": managed_loop.get("objective", candidate["summary"]),
+        "cadence_or_trigger": bullet_block(managed_loop.get("cadence_or_trigger", candidate.get("trigger", []))),
+        "context_source": bullet_block(candidate.get("inputs", [])),
+        "state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
+        "cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
+        "selection_policy": bullet_block(managed_loop.get("selection_policy", [])),
+        "max_items_per_cycle": str(managed_loop.get("max_items_per_cycle", 3)),
+        "change_policy": managed_loop.get("change_policy", "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files."),
+        "deliverables": bullet_block(managed_loop.get("deliverables", [])),
+        "verification_signal": bullet_block(candidate.get("verification", [])),
+        "resume_policy": managed_loop.get("resume_policy", "Read the state file first and continue unresolved items before starting new work."),
+        "failure_policy": managed_loop.get("failure_policy", "Record the blocker and stop when verification fails or human judgment is required."),
+        "stop_condition": bullet_block(candidate.get("stop_conditions", [])),
+        "autonomy_level": candidate.get("safety", {}).get("autonomy_level", "draft-only"),
+        "approval_required_action": bullet_block(candidate.get("safety", {}).get("requires_approval_for", [])),
     }
     return fill(load_template("claude-loop.md"), values)
 

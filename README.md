@@ -30,7 +30,7 @@ Outputs:
 
 - Loop Engineering Playbook.
 - Loop Cards.
-- Draft `.claude/loop.md` prompts.
+- Draft managed loop prompts that can be delegated like a goal after approval.
 - Draft Agent Skills.
 - Draft `AGENTS.md` or `CLAUDE.md` rules.
 - Eval cases for checking whether the generated workflow would improve future sessions.
@@ -110,7 +110,7 @@ The main design goal is to choose the right mechanism:
 | Person-specific preference | Memory or local rule |
 | Repeatable on-demand workflow | Agent Skill |
 | Deterministic lifecycle check | Hook or script |
-| Repeated observe-act-check cycle | Loop |
+| Repeated observe-act-check cycle with state, verification, resume policy, and stop conditions | Loop |
 | High-risk human decision | Approval gate or checklist |
 | One-off event | No automation |
 
@@ -122,7 +122,10 @@ Found 4 candidates:
 1. CI Babysitter Loop
    Decision: draft
    Evidence: repeated CI polling and failed-job log inspection across sessions.
-   Artifact: draft loop card + draft skill.
+   Artifact: managed loop card + draft skill.
+   Loop shape: inspect CI/logs/diff, pick at most 1-3 actionable failures, try low-risk fixes,
+   isolate code changes when possible, verify locally, record state, resume unresolved failures next run,
+   stop when green or blocked.
 
 2. Package Manager Rule
    Decision: rule-only

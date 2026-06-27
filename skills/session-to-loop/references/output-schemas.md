@@ -34,6 +34,28 @@ stop_conditions:
   - "No actionable failure remains."
   - "Same failure repeats twice."
   - "Fix requires product or release decision."
+managed_loop:
+  objective: "Keep CI failures moving toward a verified fix without guessing."
+  cadence_or_trigger:
+    - "When CI is pending or failed on the current branch."
+  state_file: ".session-to-loop/state/ci-babysitter.json"
+  cycle_steps:
+    - "Read the previous state file if it exists."
+    - "Inspect CI status, failed logs, and current git diff."
+    - "Pick at most 1-3 actionable failures by impact and confidence."
+    - "Attempt only low-risk local fixes with direct evidence."
+    - "Run focused verification and record the result."
+  selection_policy:
+    - "Prefer failures blocking merge."
+    - "Ignore flakes without new evidence."
+  max_items_per_cycle: 3
+  change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
+  deliverables:
+    - "Status summary"
+    - "Patch or branch/PR draft when verification passes"
+    - "Updated state file"
+  resume_policy: "On the next run, read the state file and continue unresolved failures before new ones."
+  failure_policy: "If the same failure repeats twice or verification is inconclusive, record the blocker and stop."
 safety:
   autonomy_level: "draft-only"
   requires_approval_for:
@@ -140,6 +162,27 @@ verification:
   - "Relevant local test passes."
 stop_conditions:
   - "CI green."
+managed_loop:
+  objective: "Keep CI failures moving toward a verified fix without guessing."
+  cadence_or_trigger:
+    - "When CI is pending or failed."
+  state_file: ".session-to-loop/state/ci-babysitter.json"
+  cycle_steps:
+    - "Read previous state."
+    - "Inspect current CI and logs."
+    - "Pick at most 1-3 high-value failures."
+    - "Attempt low-risk fixes."
+    - "Verify and record state."
+  selection_policy:
+    - "Prefer blockers with clear logs."
+  max_items_per_cycle: 3
+  change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
+  deliverables:
+    - "Status summary"
+    - "Draft PR or patch when verified"
+    - "Updated state file"
+  resume_policy: "Continue unresolved items from the state file before new work."
+  failure_policy: "Record blocker and stop when verification fails twice or needs human judgment."
 safety:
   autonomy_level: "draft-only"
   requires_approval_for:

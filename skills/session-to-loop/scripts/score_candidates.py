@@ -30,6 +30,24 @@ PROFILES = {
         ],
         "verification": ["Relevant local test passes.", "CI status becomes green or the remaining failure is clearly blocked."],
         "stop_conditions": ["CI is green.", "No actionable failure remains.", "The same failure repeats twice.", "A push or merge is required."],
+        "managed_loop": {
+            "objective": "Keep CI failures moving toward a verified fix without guessing.",
+            "cadence_or_trigger": ["When CI is pending or failed on the current branch."],
+            "state_file": ".session-to-loop/state/ci-babysitter.json",
+            "cycle_steps": [
+                "Read the previous state file if it exists.",
+                "Inspect CI status, failed logs, and current git diff.",
+                "Pick at most 1-3 actionable failures by impact and confidence.",
+                "Attempt only low-risk local fixes with direct evidence.",
+                "Run focused verification and record the result.",
+            ],
+            "selection_policy": ["Prefer failures blocking merge.", "Ignore flakes without new evidence."],
+            "max_items_per_cycle": 3,
+            "change_policy": "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval.",
+            "deliverables": ["Status summary", "Patch or branch/PR draft when verification passes", "Updated state file"],
+            "resume_policy": "On the next run, read the state file and continue unresolved failures before new ones.",
+            "failure_policy": "If the same failure repeats twice or verification is inconclusive, record the blocker and stop.",
+        },
         "requires_approval_for": ["push", "merge"],
         "artifacts": ["loop-card", "draft-skill", "eval-case"],
         "downgrade_notes": "Keep draft-only because push and merge require explicit approval.",
@@ -179,6 +197,7 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
     terms = set(signal.get("terms", []))
     role_counts = signal.get("role_counts", {})
     candidate_id = signal["id"]
+    managed_loop = profile.get("managed_loop", {})
     criteria = {
         "requested_loop_mechanism": "loop" in mechanisms,
         "recurs_across_sessions": signal.get("session_count", 0) >= 2,
@@ -191,6 +210,12 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_verification_signal": bool(profile.get("verification")),
         "has_stop_conditions": bool(profile.get("stop_conditions")),
         "has_safety_gate": bool(profile.get("requires_approval_for")) or candidate_id not in {"deploy-approval-gate"},
+        "has_state_file": bool(managed_loop.get("state_file")),
+        "has_cycle_steps": len(managed_loop.get("cycle_steps", [])) >= 3,
+        "has_selection_policy": bool(managed_loop.get("selection_policy")),
+        "has_change_policy": bool(managed_loop.get("change_policy")),
+        "has_resume_policy": bool(managed_loop.get("resume_policy")),
+        "has_failure_policy": bool(managed_loop.get("failure_policy")),
     }
     required_keys = [
         "requested_loop_mechanism",
@@ -201,6 +226,12 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_verification_signal",
         "has_stop_conditions",
         "has_safety_gate",
+        "has_state_file",
+        "has_cycle_steps",
+        "has_selection_policy",
+        "has_change_policy",
+        "has_resume_policy",
+        "has_failure_policy",
     ]
     missing = [key for key in required_keys if not criteria[key]]
     return {
@@ -218,7 +249,7 @@ def apply_hard_downgrades(signal: dict, profile: dict, mechanisms: list[str], lo
 
     if "loop" in mechanisms and not loop_gate["eligible"]:
         mechanisms = [mechanism for mechanism in mechanisms if mechanism != "loop"]
-        downgrades.append("Removed loop mechanism because loop eligibility criteria were not met.")
+        downgrades.append("Removed loop mechanism because managed goal loop eligibility criteria were not met.")
 
     if signal.get("session_count", 0) < 2 and signal["id"] != "transcript-redaction-boundary":
         mechanisms = []
@@ -291,6 +322,7 @@ def score_signal(signal: dict) -> dict:
         "actions": profile["actions"],
         "verification": profile["verification"],
         "stop_conditions": profile["stop_conditions"],
+        "managed_loop": profile.get("managed_loop", {}),
         "safety": {
             "autonomy_level": "draft-only" if decision != "reject" else "none",
             "requires_approval_for": profile["requires_approval_for"],
