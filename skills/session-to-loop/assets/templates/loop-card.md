@@ -11,12 +11,6 @@ mechanism: "{{mechanism}}"
 
 {{summary}}
 
-## Evidence
-
-| Source | Signal | Redacted evidence |
-| --- | --- | --- |
-| {{source}} | {{signal_kind}} | {{snippet}} |
-
 ## Trigger
 
 - {{trigger}}
@@ -90,3 +84,9 @@ Requires approval for:
 ## Rejection or Downgrade Notes
 
 {{downgrade_notes}}
+
+## Evidence
+
+| Source | Signal | Redacted evidence |
+| --- | --- | --- |
+| {{source}} | {{signal_kind}} | {{snippet}} |

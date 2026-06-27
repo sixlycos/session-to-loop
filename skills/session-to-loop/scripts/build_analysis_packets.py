@@ -49,13 +49,23 @@ def snippets_allowed(index: dict) -> bool:
     return bool(index.get("scope_policy", {}).get("allow_redacted_snippets", True))
 
 
-def packet_from_event(event: NormalizedEvent, sequence: int, source_file: str, max_chars: int, allow_text: bool) -> dict:
+def packet_from_event(
+    event: NormalizedEvent,
+    sequence: int,
+    source_file: str,
+    source_type: str,
+    source_confidence: str,
+    max_chars: int,
+    allow_text: bool,
+) -> dict:
     packet_text, truncated = compact_text(event.text, max_chars)
     return {
         "packet_id": f"packet-{sequence:06d}",
         "packet_type": "transcript_event",
         "provider": event.provider,
         "event_kind": event.event_kind,
+        "source_type": source_type,
+        "source_confidence": source_confidence,
         "source": event.source,
         "source_file": source_file,
         "session_id": event.session_id,
@@ -76,11 +86,13 @@ def iter_packets(index: dict, max_chars: int) -> Iterator[dict]:
     for file_info in index.get("files", []):
         path = Path(file_info["path"])
         source_file = file_info.get("source_label", path.name)
-        for event in iter_normalized_events(path):
+        source_type = file_info.get("source_type", "generic-jsonl")
+        source_confidence = file_info.get("classification_confidence", "low")
+        for event in iter_normalized_events(path, source_type=source_type, provider_hint=file_info.get("provider")):
             if event.role not in roles:
                 continue
             sequence += 1
-            yield packet_from_event(event, sequence, source_file, max_chars, allow_text)
+            yield packet_from_event(event, sequence, source_file, source_type, source_confidence, max_chars, allow_text)
 
 
 def parse_args() -> argparse.Namespace:
@@ -108,11 +120,14 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     packet_count = 0
     provider_counts: dict[str, int] = {}
+    source_type_counts: dict[str, int] = {}
     with out.open("w", encoding="utf-8") as handle:
         for packet in iter_packets(index, args.max_chars):
             packet_count += 1
             provider = str(packet.get("provider", "unknown"))
+            source_type = str(packet.get("source_type", "unknown"))
             provider_counts[provider] = provider_counts.get(provider, 0) + 1
+            source_type_counts[source_type] = source_type_counts.get(source_type, 0) + 1
             handle.write(json.dumps(packet, ensure_ascii=False) + "\n")
 
     packet_index = {
@@ -128,6 +143,7 @@ def main() -> int:
             "transcript_files": index.get("file_count", 0),
             "records": index.get("record_count", 0),
             "providers": provider_counts,
+            "source_types": source_type_counts,
         },
         "redaction": {
             "enabled": bool(index.get("redaction_enabled")),

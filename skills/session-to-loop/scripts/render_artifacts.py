@@ -84,6 +84,106 @@ def render_trace(candidate: dict) -> str:
     return "\n".join(lines)
 
 
+def approval_boundary(candidate: dict) -> str:
+    approvals = candidate.get("safety", {}).get("requires_approval_for", [])
+    if approvals:
+        return "; ".join(approvals)
+    return "No extra approval boundary recorded beyond normal repo review."
+
+
+def proposal_candidates(candidates: list[dict]) -> list[dict]:
+    loops = [item for item in candidates if item.get("decision") != "reject" and "loop" in item.get("mechanisms", [])]
+    if loops:
+        return loops[:3]
+    return [item for item in candidates if item.get("decision") != "reject"][:3]
+
+
+def why_this_loop(candidate: dict) -> str:
+    trace = candidate.get("decision_trace", {})
+    role_counts = trace.get("role_counts", {})
+    providers = trace.get("provider_counts", {})
+    if providers.get("auxiliary"):
+        basis = "project auxiliary evidence"
+    elif role_counts.get("user", 0):
+        basis = "repeated user-language evidence"
+    elif role_counts.get("tool", 0):
+        basis = "tool-use evidence"
+    else:
+        basis = "available local evidence"
+    return f"{candidate.get('summary', 'No summary recorded.')} Basis: {basis}."
+
+
+def render_loop_proposals(candidates: list[dict]) -> str:
+    selected = proposal_candidates(candidates)
+    if not selected:
+        return "No loop proposal is ready. The useful outcome is to keep the rejected findings as context and gather better session evidence."
+
+    blocks = []
+    for index, candidate in enumerate(selected, start=1):
+        managed_loop = candidate.get("managed_loop", {})
+        mechanisms = ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")])
+        blocks.append(
+            "\n".join(
+                [
+                    f"### {index}. {candidate['name']}",
+                    "",
+                    f"Decision: `{candidate['decision']}` | Mechanism: `{mechanisms}` | Confidence: `{candidate['confidence']}`",
+                    "",
+                    f"Goal: {managed_loop.get('objective', candidate.get('summary', 'No objective recorded.'))}",
+                    "",
+                    "Trigger:",
+                    "",
+                    bullet_block(managed_loop.get("cadence_or_trigger", candidate.get("trigger", []))),
+                    "",
+                    "Loop cycle:",
+                    "",
+                    bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
+                    "",
+                    "Verification:",
+                    "",
+                    bullet_block(candidate.get("verification", [])),
+                    "",
+                    "Stop conditions:",
+                    "",
+                    bullet_block(candidate.get("stop_conditions", [])),
+                    "",
+                    f"Approval boundary: {approval_boundary(candidate)}",
+                    "",
+                    f"Why this loop: {why_this_loop(candidate)}",
+                ]
+            )
+        )
+    return "\n\n".join(blocks)
+
+
+def confirmation_prompt(candidates: list[dict]) -> str:
+    selected = proposal_candidates(candidates)
+    if not selected:
+        return "Recommended next step: run a narrower transcript analysis or keep these as rejected context."
+    names = ", ".join(f"`{item['name']}`" for item in selected)
+    return (
+        f"Confirm which proposal(s) to adopt from {names}. After confirmation, generate the concrete loop card, "
+        "draft skill or hook/checklist, and the state-file convention for the selected loop."
+    )
+
+
+def source_limitations(data: dict) -> str:
+    source = data.get("source", {})
+    providers = source.get("providers") or {}
+    source_types = source.get("source_types") or {}
+    provider_text = ", ".join(f"{key}={value}" for key, value in providers.items()) if providers else "not recorded"
+    source_type_text = ", ".join(f"{key}={value}" for key, value in source_types.items()) if source_types else "not recorded"
+    parts = [
+        f"Files: {source.get('transcript_files', 0)}",
+        f"records: {source.get('records', 0)}",
+        f"providers: {provider_text}",
+        f"source types: {source_type_text}",
+    ]
+    if source_types.get("auxiliary-evidence") and not (providers.get("codex") or providers.get("claude")):
+        parts.append("This run used project auxiliary evidence, so proposals should stay draft until the user confirms fit.")
+    return "; ".join(str(part) for part in parts)
+
+
 def candidate_card(candidate: dict) -> str:
     evidence = candidate.get("evidence", [{}])
     first_evidence = evidence[0] if evidence else {}
@@ -96,7 +196,11 @@ def candidate_card(candidate: dict) -> str:
         "mechanism": ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")]),
         "summary": candidate["summary"],
         "source": first_evidence.get("source", "n/a"),
-        "signal_kind": f"{first_evidence.get('kind', 'n/a')} / {first_evidence.get('role', 'unknown')} / {first_evidence.get('intent', 'unknown')}",
+        "signal_kind": (
+            f"{first_evidence.get('kind', 'n/a')} / {first_evidence.get('role', 'unknown')} / "
+            f"{first_evidence.get('provider', 'unknown')} / {first_evidence.get('source_type', 'unknown')} / "
+            f"{first_evidence.get('intent', 'unknown')}"
+        ),
         "snippet": first_evidence.get("snippet", "No quote needed."),
         "trigger": bullet(candidate.get("trigger", [])),
         "artifact": bullet(candidate.get("artifacts", [])),
@@ -168,7 +272,8 @@ def generated_skill(candidate: dict) -> str:
 
 def playbook(data: dict, out_dir: Path, rendered_paths: list[str]) -> str:
     candidates = data.get("candidates", [])
-    summary = f"Found {len(candidates)} candidate(s) from redacted local transcript evidence."
+    selected_count = len(proposal_candidates(candidates))
+    summary = f"Prepared {selected_count} user-confirmable loop engineering proposal(s) from local evidence."
     table_rows = "\n".join(
         f"| {item['name']} | {', '.join(item.get('mechanisms') or [item.get('mechanism', 'none')])} | "
         f"{item['decision']} | {item['confidence']} |"
@@ -209,6 +314,8 @@ def playbook(data: dict, out_dir: Path, rendered_paths: list[str]) -> str:
         f"{data.get('source', {}).get('records', 0)} record(s)",
         "redaction_status": "enabled",
         "summary": summary,
+        "loop_proposals": render_loop_proposals(candidates),
+        "confirmation_prompt": confirmation_prompt(candidates),
         "rules_and_memory": "\n".join(by_mechanism["rule"]) or "None.",
         "skill_candidates": "\n".join(by_mechanism["skill"]) or "None.",
         "hook_candidates": "\n".join(by_mechanism["hook"]) or "None.",
@@ -217,6 +324,7 @@ def playbook(data: dict, out_dir: Path, rendered_paths: list[str]) -> str:
         "rejected_candidates": "\n".join(by_mechanism["rejected"]) or "None.",
         "private_output": ".session-to-loop/private/candidates.json",
         "shareable_output": "\n- ".join(rendered_paths) if rendered_paths else str(out_dir / "loop-playbook.md"),
+        "source_limitations": source_limitations(data),
     }
     rendered = fill(template, values)
     scope = data.get("scope_policy") or {}
@@ -276,6 +384,7 @@ def main() -> int:
         "version": data.get("version"),
         "analysis_model": data.get("analysis_model"),
         "scope_policy": data.get("scope_policy"),
+        "source": data.get("source"),
         "redaction": data.get("redaction"),
         "candidates": data.get("candidates", []),
     }

@@ -4,13 +4,19 @@ Project: `{{project}}`
 
 Analysis window: `{{analysis_window}}`
 
-Transcript sources: `{{transcript_source_summary}}`
+Input sources: `{{transcript_source_summary}}`
 
 Redaction: `{{redaction_status}}`
 
-## Executive Summary
+## Loop Proposals
 
 {{summary}}
+
+{{loop_proposals}}
+
+## Decision Needed
+
+{{confirmation_prompt}}
 
 ## Recommended Artifacts
 
@@ -41,6 +47,10 @@ Redaction: `{{redaction_status}}`
 ## Rejected Candidates
 
 {{rejected_candidates}}
+
+## Source Notes
+
+{{source_limitations}}
 
 ## Private Outputs
 

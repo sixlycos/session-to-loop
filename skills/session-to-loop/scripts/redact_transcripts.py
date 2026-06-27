@@ -97,7 +97,7 @@ def parse_jsonl_line(line: str) -> Any:
         return {"type": "raw", "text": line.rstrip("\n")}
 
 
-def redact_file(source: Path, label: str, out_path: Path) -> dict:
+def redact_file(file_info: dict, source: Path, label: str, out_path: Path) -> dict:
     record_count = 0
     redaction_count = 0
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -116,6 +116,10 @@ def redact_file(source: Path, label: str, out_path: Path) -> dict:
         "path": str(out_path),
         "record_count": record_count,
         "redactions": redaction_count,
+        "provider": file_info.get("provider", "generic"),
+        "source_type": file_info.get("source_type", "generic-jsonl"),
+        "classification_confidence": file_info.get("classification_confidence", "low"),
+        "classification_reason": file_info.get("classification_reason", ""),
     }
 
 
@@ -154,7 +158,7 @@ def main() -> int:
     for idx, file_info in enumerate(files, start=1):
         source = Path(file_info["path"])
         safe_name = f"{idx:03d}-{source.name}"
-        results.append(redact_file(source, file_info.get("label", source.name), out_dir / safe_name))
+        results.append(redact_file(file_info, source, file_info.get("label", source.name), out_dir / safe_name))
 
     index = {
         "version": 1,

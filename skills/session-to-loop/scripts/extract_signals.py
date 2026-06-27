@@ -69,6 +69,29 @@ TOOL_PATTERNS = [
         "intent": "deploy_status_check",
         "terms": ("deploy", "deployment", "production", "migration"),
     },
+    {
+        "id": "provider-acceptance-soak",
+        "name": "Provider Acceptance Soak Loop",
+        "signal_kind": "project-auxiliary-evidence",
+        "intent": "provider_acceptance_regression",
+        "terms": (
+            "soak",
+            "latency",
+            "http 200",
+            "semantic",
+            "assertion",
+            "model_echo",
+            "schema",
+            "provider",
+        ),
+    },
+    {
+        "id": "browser-audit-loop",
+        "name": "Browser Audit Loop",
+        "signal_kind": "project-auxiliary-evidence",
+        "intent": "browser_audit_regression",
+        "terms": ("browse", "browser", "screenshot", "snapshot", "goto", "click", "fill", "i18n"),
+    },
 ]
 
 
@@ -129,6 +152,9 @@ def add_event(
     groups: dict[str, dict],
     match: dict,
     role: str,
+    provider: str,
+    event_kind: str,
+    source_type: str,
     source: str,
     source_file: str,
     text: str,
@@ -144,6 +170,8 @@ def add_event(
             "user_sessions": set(),
             "tool_sessions": set(),
             "role_counts": {"user": 0, "tool": 0, "assistant": 0, "unknown": 0},
+            "provider_counts": {},
+            "source_type_counts": {},
             "events": [],
             "terms": set(),
             "intents": set(),
@@ -156,6 +184,8 @@ def add_event(
     elif role == "tool":
         group["tool_sessions"].add(session_id)
     group["role_counts"][role if role in group["role_counts"] else "unknown"] += 1
+    group["provider_counts"][provider] = group["provider_counts"].get(provider, 0) + 1
+    group["source_type_counts"][source_type] = group["source_type_counts"].get(source_type, 0) + 1
     group["terms"].update(match["hit_terms"])
     group["intents"].add(match["intent"])
     group["events"].append(
@@ -163,6 +193,9 @@ def add_event(
             "source": source,
             "source_file": source_file,
             "role": role,
+            "provider": provider,
+            "event_kind": event_kind,
+            "source_type": source_type,
             "intent": match["intent"],
             "kind": match["signal_kind"],
             "snippet": snippet(text) if allow_snippet else "[SNIPPET_DISABLED_BY_SCOPE]",
@@ -179,6 +212,9 @@ def fallback_one_off(first_event: dict | None) -> dict:
         "kind": "one-off-event",
         "snippet": "Single task with no repeated loop signal.",
     }
+    role = event["role"] if event["role"] in {"user", "tool", "assistant"} else "unknown"
+    role_counts = {"user": 0, "tool": 0, "assistant": 0, "unknown": 0}
+    role_counts[role] = 1
     return {
         "id": "one-off-bugfix",
         "name": "One-off Bugfix",
@@ -186,8 +222,10 @@ def fallback_one_off(first_event: dict | None) -> dict:
         "mechanism_hints": [],
         "session_count": 1,
         "event_count": 1,
-        "primary_role": event["role"],
-        "role_counts": {"user": 1 if event["role"] == "user" else 0, "tool": 0, "assistant": 0, "unknown": 0},
+        "primary_role": role,
+        "role_counts": role_counts,
+        "provider_counts": {event.get("provider", "generic"): 1},
+        "source_type_counts": {event.get("source_type", "generic-jsonl"): 1},
         "sessions": [session_from_source(event["source"])],
         "user_sessions": [session_from_source(event["source"])] if event["role"] == "user" else [],
         "tool_sessions": [],
@@ -218,6 +256,8 @@ def signal_from_group(group: dict) -> dict:
         "tool_sessions": tool_sessions,
         "terms": sorted(group["terms"]),
         "intents": sorted(group["intents"]),
+        "provider_counts": dict(sorted(group["provider_counts"].items())),
+        "source_type_counts": dict(sorted(group["source_type_counts"].items())),
         "evidence": group["events"][:5],
     }
 
@@ -236,13 +276,18 @@ def extract(index: dict) -> dict:
     total_events = 0
     first_event: dict | None = None
     provider_counts: dict[str, int] = {}
+    source_type_counts: dict[str, int] = {}
     allowed_roles = allowed_roles_from_index(index)
     allow_snippet = snippets_allowed(index)
     for file_info in index.get("files", []):
         source_file = file_info.get("source_label", Path(file_info["path"]).name)
-        for event in iter_normalized_events(Path(file_info["path"])):
+        source_type = file_info.get("source_type", "generic-jsonl")
+        for event in iter_normalized_events(
+            Path(file_info["path"]), source_type=source_type, provider_hint=file_info.get("provider")
+        ):
             total_events += 1
             provider_counts[event.provider] = provider_counts.get(event.provider, 0) + 1
+            source_type_counts[source_type] = source_type_counts.get(source_type, 0) + 1
             if event.role not in allowed_roles:
                 continue
             if first_event is None:
@@ -250,12 +295,26 @@ def extract(index: dict) -> dict:
                     "source": event.source,
                     "source_file": source_file,
                     "role": event.role,
+                    "provider": event.provider,
+                    "event_kind": event.event_kind,
+                    "source_type": source_type,
                     "intent": "one_off_task",
                     "kind": "one-off-event",
                     "snippet": snippet(event.text) if allow_snippet else "[SNIPPET_DISABLED_BY_SCOPE]",
                 }
             for match in event_matches(event.role, event.text):
-                add_event(groups, match, event.role, event.source, source_file, event.text, allow_snippet)
+                add_event(
+                    groups,
+                    match,
+                    event.role,
+                    event.provider,
+                    event.event_kind,
+                    source_type,
+                    event.source,
+                    source_file,
+                    event.text,
+                    allow_snippet,
+                )
 
     signals = [signal_from_group(group) for group in groups.values()]
     if not signals and total_events:
@@ -280,6 +339,7 @@ def extract(index: dict) -> dict:
             "transcript_files": index.get("file_count", 0),
             "records": index.get("record_count", 0),
             "providers": provider_counts,
+            "source_types": source_type_counts,
         },
         "redaction": {
             "enabled": bool(index.get("redaction_enabled")),

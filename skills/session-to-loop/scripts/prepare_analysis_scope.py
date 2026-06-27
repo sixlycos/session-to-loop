@@ -46,6 +46,10 @@ def build_scope(args: argparse.Namespace) -> dict:
             "size_bytes": item.get("size_bytes"),
             "mtime": item.get("mtime"),
             "format": item.get("format", "jsonl"),
+            "provider": item.get("provider", "generic"),
+            "source_type": item.get("source_type", "generic-jsonl"),
+            "classification_confidence": item.get("classification_confidence", "low"),
+            "classification_reason": item.get("classification_reason", ""),
         }
         for item in manifest.get("files", [])
     ]

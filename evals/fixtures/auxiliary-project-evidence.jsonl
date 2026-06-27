@@ -1,0 +1,6 @@
+{"run_id":"provider-soak-1","kind":"soak","provider":"out-router","case":"chat-completions","http_status":"HTTP 200","latency_ms":8643,"assertion":"semantic assertion failed: model_echo mismatch","schema":"ok"}
+{"run_id":"provider-soak-1","kind":"soak","provider":"out-router","case":"model-alias","http_status":"HTTP 200","latency_ms":3110,"assertion":"semantic assertion failed: evaluator normalization mismatch","schema":"ok"}
+{"run_id":"provider-soak-1","kind":"soak","provider":"out-router","case":"streaming","http_status":"HTTP 200","latency_ms":2280,"assertion":"passed","schema":"ok"}
+{"run_id":"browser-audit-1","kind":"browser-audit","action":"goto","route":"/admin/providers","result":"ok","snapshot":"admin provider table rendered","i18n":"ok"}
+{"run_id":"browser-audit-1","kind":"browser-audit","action":"click","target":"provider edit","result":"ok","screenshot":"provider-edit.png","i18n":"ok"}
+{"run_id":"browser-audit-1","kind":"browser-audit","action":"fill","target":"model alias","result":"ok","screenshot":"alias-form.png","i18n":"ok"}

@@ -10,6 +10,14 @@ from typing import Any, Iterator
 
 
 @dataclass
+class SourceClassification:
+    provider: str
+    source_type: str
+    confidence: str
+    reason: str
+
+
+@dataclass
 class NormalizedEvent:
     provider: str
     session_id: str
@@ -59,6 +67,18 @@ def flatten_text(value: Any) -> str:
             "input",
             "output",
             "result",
+            "kind",
+            "case",
+            "provider",
+            "http_status",
+            "latency_ms",
+            "assertion",
+            "action",
+            "route",
+            "target",
+            "snapshot",
+            "screenshot",
+            "i18n",
             "stdout",
             "stderr",
             "summary",
@@ -112,6 +132,61 @@ def detect_provider(record: Any) -> str:
     if isinstance(message, dict) and isinstance(message.get("role"), str):
         return "claude"
     return "generic"
+
+
+def classify_file(path: Path, sample_size: int = 20) -> SourceClassification:
+    records = []
+    providers: dict[str, int] = {}
+    for _, record in iter_jsonl(path):
+        records.append(record)
+        provider = detect_provider(record)
+        providers[provider] = providers.get(provider, 0) + 1
+        if len(records) >= sample_size:
+            break
+
+    if providers.get("codex", 0):
+        return SourceClassification("codex", "native-transcript", "high", "matched Codex session_meta/response_item/event_msg shape")
+    if providers.get("claude", 0):
+        return SourceClassification("claude", "native-transcript", "high", "matched Claude sessionId/message/tool content shape")
+    if looks_auxiliary_evidence(path, records):
+        return SourceClassification("auxiliary", "auxiliary-evidence", "medium", "matched engineering log/audit/result indicators")
+    return SourceClassification("generic", "generic-jsonl", "low", "JSONL shape did not match native transcript indicators")
+
+
+def looks_auxiliary_evidence(path: Path, records: list[Any]) -> bool:
+    path_text = path.as_posix().lower()
+    name_hints = (
+        "audit",
+        "browse",
+        "soak",
+        "result",
+        "results/raw",
+        "log",
+        "eval",
+        "report",
+        "screenshot",
+        "latency",
+    )
+    if any(hint in path_text for hint in name_hints):
+        return True
+
+    text = " ".join(flatten_text(record).lower() for record in records[:10])
+    content_hints = (
+        "http 200",
+        "status",
+        "latency",
+        "assertion",
+        "screenshot",
+        "snapshot",
+        "goto",
+        "click",
+        "fill",
+        "request",
+        "response",
+        "passed",
+        "failed",
+    )
+    return any(hint in text for hint in content_hints)
 
 
 class CodexAdapter:
@@ -341,6 +416,28 @@ class GenericJsonlAdapter:
         ]
 
 
+class AuxiliaryEvidenceAdapter:
+    provider = "auxiliary"
+
+    def __init__(self, session_id: str) -> None:
+        self.session_id = session_id
+
+    def normalize(self, record: Any, event_index: int) -> list[NormalizedEvent]:
+        return [
+            NormalizedEvent(
+                provider=self.provider,
+                session_id=self.session_id,
+                event_index=event_index,
+                role="tool",
+                event_kind="auxiliary_evidence",
+                text=flatten_text(record),
+                tool_name=tool_name_from(record) if isinstance(record, dict) else None,
+                structured={"record": record} if isinstance(record, dict) else {},
+                raw_type=lower_str(record.get("type")) if isinstance(record, dict) else None,
+            )
+        ]
+
+
 def role_from_generic(record: dict[str, Any]) -> str:
     role = record.get("type") or record.get("role")
     if isinstance(role, str) and role.lower() in {"user", "assistant", "tool"}:
@@ -358,7 +455,14 @@ def tool_name_from(value: dict[str, Any]) -> str | None:
     return None
 
 
-def iter_normalized_events(path: Path) -> Iterator[NormalizedEvent]:
+def iter_normalized_events(path: Path, source_type: str | None = None, provider_hint: str | None = None) -> Iterator[NormalizedEvent]:
+    if source_type == "auxiliary-evidence" or provider_hint == "auxiliary":
+        adapter = AuxiliaryEvidenceAdapter(path.stem)
+        for event_index, record in iter_jsonl(path):
+            for event in adapter.normalize(record, event_index):
+                yield event
+        return
+
     adapters = {
         "codex": CodexAdapter(),
         "claude": ClaudeAdapter(),

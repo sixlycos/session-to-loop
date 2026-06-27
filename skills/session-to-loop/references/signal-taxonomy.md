@@ -44,6 +44,20 @@ Likely mechanism:
 - On-demand verification workflow: skill.
 - Repeated external status check with state, resume policy, and stop conditions: loop.
 
+## Project Auxiliary Evidence
+
+Signals:
+
+- Browser audits, screenshots, snapshots, i18n checks, soak tests, eval outputs, CI logs, or result files show repeated observe-act-check work.
+- The evidence is project-specific but not a complete Codex or Claude transcript.
+- The loop shape is concrete enough to define trigger, inputs, cycle steps, verification, stop conditions, and approval boundary.
+
+Likely mechanism:
+
+- Draft loop when the cycle is reversible, bounded, and verifiable.
+- Skill when the workflow is on-demand but does not need state or resume behavior.
+- Checklist or approval gate when the evidence includes release, production, migration, credentials, billing, or product judgment.
+
 ## Repeated Context Repair
 
 Signals:

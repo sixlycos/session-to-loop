@@ -2,7 +2,7 @@
 
 Compile repeated human interventions into reusable agent loops.
 
-Session-to-Loop is an effect-first Agent Skill for turning past AI coding sessions into project-specific loop engineering artifacts. It is not a chat summarizer. It mines repeated human interventions, repeated failures, verification habits, context repairs, polling patterns, and risk boundaries, then decides whether each pattern should become a rule, memory, skill, hook, loop, checklist, approval gate, or nothing.
+Session-to-Loop is an effect-first Agent Skill for turning past AI coding sessions and narrow project evidence into project-specific loop engineering artifacts. It is not a chat summarizer. It mines repeated human interventions, repeated failures, verification habits, context repairs, polling patterns, and risk boundaries, then decides whether each pattern should become a rule, memory, skill, hook, loop, checklist, approval gate, or nothing.
 
 ## Status
 
@@ -24,10 +24,12 @@ The goal is to improve future agent performance. Local execution and redaction a
 Inputs:
 
 - Codex and Claude Code local JSONL transcripts.
-- Optional project context packets such as `AGENTS.md`, `CLAUDE.md`, package scripts, and recent git history. Minimal repo-context collection is planned; the current implementation focuses on transcript packets.
+- Optional project auxiliary evidence such as browser audits, soak tests, CI logs, eval outputs, and result JSONL files.
+- Optional project context packets such as `AGENTS.md`, `CLAUDE.md`, package scripts, and recent git history. Minimal repo-context collection is planned; the current implementation focuses on transcripts and explicit JSONL evidence.
 
 Outputs:
 
+- 1-3 confirmable loop proposals shown before evidence details.
 - Loop Engineering Playbook.
 - Loop Cards.
 - Draft managed loop prompts that can be delegated like a goal after approval.
@@ -75,6 +77,9 @@ The analysis model is user-message-primary:
   Codex `response_item`, `function_call`, `function_call_output`, and `event_msg` records keep
   provider and event-kind metadata. Claude `message.content`, `tool_use`, and `tool_result` records
   are normalized separately.
+- Explicit project evidence JSONL files that look like browser audits, soak tests, CI logs, eval
+  outputs, or result files are marked as `auxiliary-evidence`. They can produce draft loop proposals,
+  but they are weaker than native transcript evidence for inferring user preferences.
 - Tool events are supporting evidence for repeated commands, failed statuses, CI/deploy polling,
   and verification habits.
 - Assistant messages are not used as primary recommendation evidence.

@@ -9,6 +9,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from transcript_adapters import classify_file
+
 
 DEFAULT_OUT = Path(".session-to-loop/private/discovered-sessions.json")
 SUPPORTED_SUFFIXES = {".jsonl"}
@@ -44,6 +46,7 @@ def build_manifest(paths: list[Path], recursive: bool) -> dict:
     files = []
     for path in iter_session_files(paths, recursive):
         stat = path.stat()
+        classification = classify_file(path)
         files.append(
             {
                 "path": str(path),
@@ -51,6 +54,10 @@ def build_manifest(paths: list[Path], recursive: bool) -> dict:
                 "size_bytes": stat.st_size,
                 "mtime": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
                 "format": "jsonl",
+                "provider": classification.provider,
+                "source_type": classification.source_type,
+                "classification_confidence": classification.confidence,
+                "classification_reason": classification.reason,
             }
         )
     return {

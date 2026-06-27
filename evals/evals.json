@@ -69,5 +69,16 @@
       "include_mechanisms": ["checklist", "approval-gate"],
       "exclude_decisions": ["commit"]
     }
+  },
+  {
+    "id": "auxiliary-project-evidence",
+    "fixture": "evals/fixtures/auxiliary-project-evidence.jsonl",
+    "expected": {
+      "require_packet_provider": "auxiliary",
+      "require_source_type": "auxiliary-evidence",
+      "include_candidates": ["provider-acceptance-soak", "browser-audit-loop"],
+      "include_decision": "draft",
+      "include_mechanisms": ["loop", "skill"]
+    }
   }
 ]

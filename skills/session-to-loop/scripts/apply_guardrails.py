@@ -110,6 +110,9 @@ def normalize_evidence(candidate: dict) -> list[dict]:
                 "source": str(item.get("source", "unknown")),
                 "kind": str(item.get("kind", "semantic-observation")),
                 "role": str(item.get("role", "unknown")),
+                "provider": str(item.get("provider", "unknown")),
+                "event_kind": str(item.get("event_kind", "unknown")),
+                "source_type": str(item.get("source_type", "unknown")),
                 "intent": str(item.get("intent", "semantic_inference")),
                 "snippet": str(item.get("snippet", item.get("text", "No quote needed."))),
             }
@@ -133,6 +136,19 @@ def role_counts(evidence: list[dict]) -> dict:
         role = item.get("role", "unknown")
         counts[role if role in counts else "unknown"] += 1
     return counts
+
+
+def is_project_context_evidence(item: dict) -> bool:
+    return (
+        item.get("provider") == "auxiliary"
+        or item.get("source_type") == "auxiliary-evidence"
+        or item.get("kind") == "project-auxiliary-evidence"
+        or item.get("event_kind") == "auxiliary_evidence"
+    )
+
+
+def project_context_event_count(evidence: list[dict]) -> int:
+    return sum(1 for item in evidence if is_project_context_evidence(item))
 
 
 def normalize_candidate(raw: dict) -> dict:
@@ -184,6 +200,7 @@ def loop_eligibility(candidate: dict) -> dict:
     mechanisms = candidate.get("mechanisms", [])
     evidence = candidate.get("evidence", [])
     counts = role_counts(evidence)
+    project_context_count = project_context_event_count(evidence)
     managed_loop = candidate.get("managed_loop", {})
     risky = any(
         word in " ".join(candidate.get("mechanisms", []) + candidate.get("trigger", []) + candidate.get("actions", [])).lower()
@@ -191,8 +208,10 @@ def loop_eligibility(candidate: dict) -> dict:
     )
     criteria = {
         "requested_loop_mechanism": "loop" in mechanisms,
-        "recurs_across_sessions": user_session_count(evidence) >= 2 or session_count(evidence) >= 2,
+        "recurs_across_sessions": user_session_count(evidence) >= 2 or session_count(evidence) >= 2 or project_context_count >= 2,
         "has_user_primary_evidence": counts.get("user", 0) > 0,
+        "has_project_context_evidence": project_context_count > 0,
+        "has_primary_or_project_evidence": counts.get("user", 0) > 0 or project_context_count > 0,
         "has_observable_state": bool(candidate.get("inputs") or counts.get("tool", 0) > 0),
         "has_repeatable_action": bool(candidate.get("actions")),
         "has_verification_signal": bool(candidate.get("verification")),
@@ -205,7 +224,11 @@ def loop_eligibility(candidate: dict) -> dict:
         "has_resume_policy": bool(managed_loop.get("resume_policy")),
         "has_failure_policy": bool(managed_loop.get("failure_policy")),
     }
-    missing = [key for key, value in criteria.items() if not value]
+    missing = [
+        key
+        for key, value in criteria.items()
+        if not value and key not in {"has_user_primary_evidence", "has_project_context_evidence"}
+    ]
     return {"eligible": not missing, "criteria": criteria, "missing": missing}
 
 
@@ -213,18 +236,29 @@ def apply_gates(candidate: dict) -> dict:
     downgrades = []
     loop_gate = loop_eligibility(candidate)
     mechanisms = list(candidate.get("mechanisms", []))
+    project_context_count = project_context_event_count(candidate.get("evidence", []))
 
     if "loop" in mechanisms and not loop_gate["eligible"]:
         mechanisms = [item for item in mechanisms if item != "loop"]
         downgrades.append("Removed loop mechanism because managed goal loop eligibility criteria were not met.")
 
-    if session_count(candidate.get("evidence", [])) < 2 and not {"checklist", "approval-gate"}.intersection(mechanisms):
+    if (
+        session_count(candidate.get("evidence", [])) < 2
+        and project_context_count < 2
+        and not {"checklist", "approval-gate"}.intersection(mechanisms)
+    ):
         mechanisms = []
         candidate["decision"] = "reject"
         candidate["confidence"] = "low"
         candidate["score"] = min(candidate.get("score", 70), 49)
         candidate["artifacts"] = []
         downgrades.append("Rejected because evidence appears in fewer than two sessions.")
+    elif project_context_count >= 2 and user_session_count(candidate.get("evidence", [])) == 0:
+        candidate["decision"] = "draft" if candidate["decision"] == "commit" else candidate["decision"]
+        candidate["confidence"] = "medium" if candidate.get("confidence") == "high" else candidate.get("confidence", "medium")
+        downgrades.append(
+            "Kept as draft because repeated project auxiliary evidence can justify a loop proposal, but it is weaker than repeated user transcript evidence."
+        )
 
     if {"approval-gate"}.intersection(mechanisms) and candidate["decision"] == "commit":
         candidate["decision"] = "needs-human"

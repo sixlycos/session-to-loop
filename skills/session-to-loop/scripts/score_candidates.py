@@ -80,6 +80,102 @@ PROFILES = {
         "artifacts": ["approval checklist"],
         "downgrade_notes": "Hard downgrade from automation because production deploys and migrations are high-impact actions.",
     },
+    "provider-acceptance-soak": {
+        "summary": "Provider or channel changes need a bounded relay acceptance loop that separates transport success from schema, semantic assertion, and latency quality.",
+        "mechanisms": ["loop", "skill"],
+        "decision": "draft",
+        "confidence": "medium",
+        "trigger": ["Before adding or releasing a provider, channel, model alias, or relay behavior change."],
+        "inputs": ["provider configuration", "relay request matrix", "HTTP status", "schema checks", "semantic assertions", "latency samples"],
+        "actions": [
+            "Run a small repeated relay suite against the changed provider path.",
+            "Classify each result as transport, schema, model echo, semantic assertion, evaluator normalization, or latency.",
+            "Pick at most 1-3 failures by release impact and reproducibility.",
+            "Attempt only local, reversible fixes or record a provider limitation.",
+        ],
+        "verification": [
+            "All required assertions pass or remaining failures are explicitly classified.",
+            "Latency stays within the project threshold or is recorded as a release risk.",
+        ],
+        "stop_conditions": [
+            "Acceptance suite passes.",
+            "A provider limitation needs human product judgment.",
+            "The same failure repeats after one focused fix attempt.",
+            "Release or production routing approval is required.",
+        ],
+        "managed_loop": {
+            "objective": "Keep provider acceptance work moving from raw request results to a verified release decision.",
+            "cadence_or_trigger": ["Before provider, channel, model alias, or relay release candidates."],
+            "state_file": ".session-to-loop/state/provider-acceptance-soak.json",
+            "cycle_steps": [
+                "Read the previous provider acceptance state file if it exists.",
+                "Run or inspect the bounded relay acceptance result set.",
+                "Bucket failures into transport, schema, model echo, semantic assertion, evaluator normalization, and latency.",
+                "Pick at most 1-3 high-impact reproducible failures.",
+                "Apply only low-risk local fixes, then rerun the focused acceptance check and record state.",
+            ],
+            "selection_policy": [
+                "Prefer failures that block release or affect multiple model aliases.",
+                "Do not spend cycles on provider behavior that needs product judgment.",
+            ],
+            "max_items_per_cycle": 3,
+            "change_policy": "Local code or config fixes are allowed when reversible and directly evidenced. Do not change production routing, keys, billing, or provider contracts without approval.",
+            "deliverables": ["Acceptance summary", "Classified failure list", "Patch or PR draft when verification passes", "Updated state file"],
+            "resume_policy": "On the next run, continue unresolved provider failures from the state file before adding new checks.",
+            "failure_policy": "Record the blocker and stop when failures need product judgment, provider escalation, or production approval.",
+        },
+        "requires_approval_for": ["production routing", "provider credential changes", "billing-impacting model changes"],
+        "artifacts": ["loop-card", "draft-skill"],
+        "downgrade_notes": "Draft because project auxiliary evidence is weaker than repeated user transcript evidence.",
+    },
+    "browser-audit-loop": {
+        "summary": "Frontend route, copy, and i18n changes need a browser audit loop that verifies the real UI with scripted navigation and screenshots.",
+        "mechanisms": ["loop", "skill"],
+        "decision": "draft",
+        "confidence": "medium",
+        "trigger": ["After frontend route, UI copy, auth flow, or i18n changes."],
+        "inputs": ["changed frontend files", "route list", "browser audit script", "screenshots or snapshots", "i18n check output"],
+        "actions": [
+            "Run the relevant i18n or static frontend check.",
+            "Open the changed routes with a browser audit script.",
+            "Capture screenshots or snapshots for the main states.",
+            "Pick at most 1-3 visible regressions by user impact.",
+        ],
+        "verification": [
+            "Target routes render without blocking errors.",
+            "Screenshots or snapshots confirm the main user path.",
+            "i18n checks pass or missing copy is explicitly listed.",
+        ],
+        "stop_conditions": [
+            "Changed routes pass the audit.",
+            "Authentication, data, or product judgment blocks verification.",
+            "A visual fix requires design approval.",
+        ],
+        "managed_loop": {
+            "objective": "Catch frontend route, copy, and i18n regressions before handoff.",
+            "cadence_or_trigger": ["After frontend, routing, copy, auth UI, or i18n changes."],
+            "state_file": ".session-to-loop/state/browser-audit-loop.json",
+            "cycle_steps": [
+                "Read the previous browser audit state file if it exists.",
+                "Identify changed routes and the smallest meaningful route set.",
+                "Run i18n/static checks, then navigate target routes in a browser.",
+                "Capture screenshots or snapshots and select at most 1-3 visible regressions.",
+                "Apply low-risk local fixes, rerun the focused audit, and record state.",
+            ],
+            "selection_policy": [
+                "Prefer broken primary flows over cosmetic issues.",
+                "Prefer regressions confirmed by screenshot, snapshot, or console output.",
+            ],
+            "max_items_per_cycle": 3,
+            "change_policy": "Only make local UI fixes that are reversible and verified. Ask before changing product copy, navigation structure, or visual direction.",
+            "deliverables": ["Audit summary", "Screenshots or snapshot pointers", "Patch or PR draft when verification passes", "Updated state file"],
+            "resume_policy": "On the next run, continue unresolved route failures from the state file before expanding coverage.",
+            "failure_policy": "Record the blocker and stop when auth, data, or design judgment is required.",
+        },
+        "requires_approval_for": ["visual direction changes", "product copy decisions", "auth or data fixture changes"],
+        "artifacts": ["loop-card", "draft-skill"],
+        "downgrade_notes": "Draft because project auxiliary evidence is weaker than repeated user transcript evidence.",
+    },
     "transcript-redaction-boundary": {
         "summary": "Transcript evidence included secret-like material and must stay redacted in shareable outputs.",
         "mechanisms": ["checklist"],
@@ -196,12 +292,17 @@ def weighted_score(levels: dict) -> int:
 def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict:
     terms = set(signal.get("terms", []))
     role_counts = signal.get("role_counts", {})
+    provider_counts = signal.get("provider_counts", {})
     candidate_id = signal["id"]
     managed_loop = profile.get("managed_loop", {})
+    has_project_context_evidence = provider_counts.get("auxiliary", 0) > 0
     criteria = {
         "requested_loop_mechanism": "loop" in mechanisms,
-        "recurs_across_sessions": signal.get("session_count", 0) >= 2,
+        "recurs_across_sessions": signal.get("session_count", 0) >= 2
+        or (has_project_context_evidence and signal.get("event_count", 0) >= 2),
         "has_user_primary_evidence": role_counts.get("user", 0) > 0,
+        "has_project_context_evidence": has_project_context_evidence,
+        "has_primary_or_project_evidence": role_counts.get("user", 0) > 0 or has_project_context_evidence,
         "has_observable_state": bool(
             role_counts.get("tool", 0) > 0
             or terms.intersection({"ci", "failed job", "failed log", "verify locally", "local test"})
@@ -220,7 +321,7 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
     required_keys = [
         "requested_loop_mechanism",
         "recurs_across_sessions",
-        "has_user_primary_evidence",
+        "has_primary_or_project_evidence",
         "has_observable_state",
         "has_repeatable_action",
         "has_verification_signal",
@@ -246,17 +347,25 @@ def apply_hard_downgrades(signal: dict, profile: dict, mechanisms: list[str], lo
     confidence = profile["confidence"]
     artifacts = list(profile["artifacts"])
     downgrades: list[str] = []
+    auxiliary_context = signal.get("provider_counts", {}).get("auxiliary", 0) > 0
 
     if "loop" in mechanisms and not loop_gate["eligible"]:
         mechanisms = [mechanism for mechanism in mechanisms if mechanism != "loop"]
         downgrades.append("Removed loop mechanism because managed goal loop eligibility criteria were not met.")
 
     if signal.get("session_count", 0) < 2 and signal["id"] != "transcript-redaction-boundary":
-        mechanisms = []
-        decision = "reject"
-        confidence = "low"
-        artifacts = []
-        downgrades.append("Rejected because the pattern appears in fewer than two user-centered sessions.")
+        if auxiliary_context and signal["id"] in {"provider-acceptance-soak", "browser-audit-loop"} and signal.get("event_count", 0) >= 2:
+            decision = "draft"
+            confidence = "medium"
+            downgrades.append(
+                "Kept as draft because repeated project auxiliary evidence can justify a loop proposal, but it is weaker than repeated user transcript evidence."
+            )
+        else:
+            mechanisms = []
+            decision = "reject"
+            confidence = "low"
+            artifacts = []
+            downgrades.append("Rejected because the pattern appears in fewer than two user-centered sessions.")
 
     if signal["id"] == "deploy-approval-gate" and "loop" in mechanisms:
         mechanisms = [mechanism for mechanism in mechanisms if mechanism != "loop"]
@@ -277,6 +386,8 @@ def decision_trace(signal: dict, mechanisms: list[str], downgrades: list[str]) -
         "tool_session_count": len(signal.get("tool_sessions", [])),
         "event_count": signal.get("event_count", 0),
         "intents": signal.get("intents", []),
+        "provider_counts": signal.get("provider_counts", {}),
+        "source_type_counts": signal.get("source_type_counts", {}),
         "selected_mechanisms": mechanisms,
         "downgrades": downgrades,
     }
@@ -312,6 +423,9 @@ def score_signal(signal: dict) -> dict:
                 "source": item["source"],
                 "kind": item.get("kind", signal["signal_kind"]),
                 "role": item.get("role", "unknown"),
+                "provider": item.get("provider", "unknown"),
+                "event_kind": item.get("event_kind", "unknown"),
+                "source_type": item.get("source_type", "unknown"),
                 "intent": item.get("intent", "unknown"),
                 "snippet": item["snippet"],
             }

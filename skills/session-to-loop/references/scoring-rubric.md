@@ -21,6 +21,7 @@ Frequency:
 - High: appears across three or more sessions or task episodes.
 - Medium: appears twice with clear similarity.
 - Low: appears once.
+- Project auxiliary evidence may count as repeated only when it has multiple observable records in the same bounded engineering workflow; keep confidence at `medium` until the user confirms fit.
 
 Pain:
 
@@ -70,6 +71,7 @@ Project-person fit:
 ## Hard Downgrades
 
 - If it appears only once, do not recommend a loop.
+- If it appears only in project auxiliary evidence, keep the result as `draft` and explain that it is weaker than repeated user transcript evidence.
 - If there is no observable feedback signal, do not recommend a loop.
 - If it lacks state persistence, resume policy, verification, or stop conditions, do not recommend a loop.
 - If it is only a stable preference, recommend a rule or memory.

@@ -9,6 +9,8 @@ description: Analyze local AI coding session transcripts and project context to 
 
 Compile past AI coding sessions into evidence-backed loop engineering artifacts. Optimize first for useful mechanism recommendations that improve future agent performance. Treat local execution, redaction, and approval scope as guardrails around the analysis, not as the main value.
 
+The user-facing product is a small set of project-specific loop proposals that the user can confirm, delegate, or reject. Evidence explains why the proposals are credible; it is not the lead story.
+
 ## Operating Principles
 
 - Prefer evidence-backed recommendations over generic workflow advice.
@@ -37,9 +39,11 @@ Compile past AI coding sessions into evidence-backed loop engineering artifacts.
 
 3. Analyze packets semantically.
    - Read `references/semantic-analysis-prompt.md`.
+   - Read `references/token-budget-policy.md` before broad analysis or large transcript sets.
    - Treat user messages as primary evidence for corrections, verification requests, risk boundaries, approvals, and context repair.
    - Use packet `provider` and `event_kind` to distinguish Codex `response_item`/`event_msg` records from Claude `message.content`/`tool_use`/`tool_result` records.
    - Treat tool events as supporting evidence for repeated commands, failed statuses, polling, and verification habits.
+   - Treat `auxiliary-evidence` records as project-context support for draft loop proposals when no full transcript is available.
    - Treat assistant messages as weak context, not primary recommendation evidence.
    - Group packets into semantic candidates and write `semantic-candidates.json`.
 
@@ -50,6 +54,8 @@ Compile past AI coding sessions into evidence-backed loop engineering artifacts.
    - Apply hard downgrades for one-off patterns, unverifiable loops, irreversible actions, or secret-heavy evidence.
 
 5. Compile artifacts.
+   - Read `references/final-response-contract.md` before presenting results to the user.
+   - Read `references/skill-routing-matrix.md` when candidates cover frontend, backend, full-stack architecture, review, verification, or delivery loops.
    - Use `assets/templates/loop-card.md` for each candidate.
    - Use `assets/templates/loop-playbook.md` for the overall report.
    - Use `assets/templates/claude-loop.md` only for candidates that can be handed to an agent as a managed goal loop.
@@ -99,9 +105,13 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 
 ## Output Requirements
 
-- Lead with the recommended mechanisms and the evidence strength.
+- Lead with 1-3 concrete loop proposals, not with evidence inventory.
+- For each proposal, show goal, trigger, cycle, verification, stop conditions, approval boundary, and why this loop should exist.
+- Ask the user to confirm which proposal(s) to adopt, convert to a smaller mechanism, or reject.
+- Match the user's language in the final response. Keep internal schemas and deterministic script fields in English.
 - Separate private raw evidence from shareable summaries.
 - Quote only short redacted snippets when necessary.
+- Put evidence strength and source limitations after the proposals unless the source quality blocks recommendation.
 - Include trigger conditions, stop conditions, safety gates, verification signals, state persistence, resume behavior, and rejection reasons.
 - For every `loop` candidate, include a goal-ready `managed_loop` spec that a future agent could run without repeated user prompting after initial approval.
 - Mark every candidate as `commit`, `draft`, `checklist-only`, `rule-only`, `needs-human`, or `reject`.
