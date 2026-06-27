@@ -1,9 +1,9 @@
 ---
 name: session-to-loop
-description: Analyze local AI coding session transcripts and project context to identify recurring human interventions, repeated failures, verification habits, risk boundaries, and automation candidates. Use when the user wants to mine past Codex, Claude Code, or coding-agent JSONL sessions, improve agent workflows, design project-specific loops, convert repeated manual prompting into reusable rules, skills, hooks, loop prompts, checklists, or eval cases, or decide whether a repeated pattern should not be automated.
+description: SixLoops analyzes local AI coding session transcripts and project context to identify recurring human interventions, repeated failures, verification habits, risk boundaries, and automation candidates. Use when the user wants to mine past Codex, Claude Code, or coding-agent JSONL sessions, improve agent workflows, design project-specific loops, convert repeated manual prompting into reusable rules, skills, hooks, loop prompts, checklists, or eval cases, or decide whether a repeated pattern should not be automated.
 ---
 
-# Session-to-Loop
+# SixLoops
 
 ## Overview
 

@@ -1,6 +1,6 @@
 # Security
 
-Session-to-Loop analyzes local AI coding transcripts, which may contain secrets, private source code, production logs, credentials, customer data, and prompt-injection text.
+SixLoops analyzes local AI coding transcripts, which may contain secrets, private source code, production logs, credentials, customer data, and prompt-injection text.
 
 ## Defaults
 

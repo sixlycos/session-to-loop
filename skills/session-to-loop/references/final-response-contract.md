@@ -1,6 +1,6 @@
 # Final Response Contract
 
-Use this contract when presenting `session-to-loop` results to a user.
+Use this contract when presenting SixLoops results to a user.
 
 ## Lead With The Loop
 

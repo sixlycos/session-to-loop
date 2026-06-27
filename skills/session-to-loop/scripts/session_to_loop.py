@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-command local pipeline for Session-to-Loop."""
+"""One-command local pipeline for SixLoops."""
 
 from __future__ import annotations
 

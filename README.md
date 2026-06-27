@@ -1,10 +1,18 @@
-# Session-to-Loop
+# SixLoops
 
 Turn yesterday's AI coding friction into tomorrow's reusable agent loops.
 
-Session-to-Loop is an open-source Agent Skill for mining local AI coding session logs and project evidence, then proposing the rules, skills, hooks, checklists, approval gates, or managed loops that would make the next agent run better.
+SixLoops is an open-source Agent Skill for mining local AI coding session logs and project evidence, then proposing the rules, skills, hooks, checklists, approval gates, or managed loops that would make the next agent run better.
 
 It is not a chat summarizer. It is a loop engineering assistant for software teams and solo developers who keep correcting the same AI behaviors.
+
+The installed Codex skill is currently named `$session-to-loop` for compatibility. The product name is SixLoops.
+
+## Why The Name
+
+A serious loop needs six parts: automation, isolation, skill, connector, evaluator, and memory.
+
+SixLoops helps you find which of those parts your project is missing, then turns repeated AI-coding friction into a concrete loop proposal.
 
 ## What Is A Session Log?
 
@@ -22,7 +30,7 @@ Good developers repeatedly teach coding agents the same lessons:
 - "After UI changes, run the browser check and screenshot the route."
 - "This provider can return HTTP 200 while still failing semantic assertions."
 
-Those lessons should not live only in one chat. Session-to-Loop turns them into durable mechanisms the next agent can actually use.
+Those lessons should not live only in one chat. SixLoops turns them into durable mechanisms the next agent can actually use.
 
 ## What You Get
 
@@ -63,7 +71,7 @@ A loop is not just a prompt that repeats. A useful loop needs four things:
 - Completion: the agent can carry the work far enough without handing most of it back to you.
 - Objectivity: "done" can be checked by observable criteria.
 
-If those are missing, Session-to-Loop should recommend a prompt, rule, skill, checklist, approval gate, or reject instead.
+If those are missing, SixLoops should recommend a prompt, rule, skill, checklist, approval gate, or reject instead.
 
 A real loop also needs five moves: discovery, handoff, verification, persistence, and scheduling. If one is missing, the loop usually becomes one of five failures: blind, tangled, nodding, amnesiac, or manual.
 
@@ -78,7 +86,7 @@ The safest build order is:
 
 You can ask an agent to "look at my past work and improve itself." The problem is that raw context is noisy, expensive, and easy to misuse.
 
-Session-to-Loop is more effective because it separates the job into two parts:
+SixLoops is more effective because it separates the job into two parts:
 
 - Deterministic scripts do discovery, source classification, redaction, packet building, hard gates, and rendering.
 - The host AI does the part it is good at: semantic grouping and judgment.
@@ -100,7 +108,7 @@ Most useful skills win because they have a sharp behavior:
 - `ponytail` wins by changing the default engineering reflex: find the smallest correct solution.
 - `superpowers` wins by changing the development lifecycle: plan, implement, review, verify.
 
-Session-to-Loop's job is different: it learns which of those behaviors your project actually needs.
+SixLoops' job is different: it learns which of those behaviors your project actually needs.
 
 It does not try to replace planning, review, frontend QA, CI triage, or deployment gates. It proposes which of those should become a durable loop for this repository, based on evidence from your own agent sessions and project records.
 
@@ -180,7 +188,7 @@ Copy-Item -Path .\skills\session-to-loop\* -Destination $dest -Recurse -Force
 Then start a new Codex thread and invoke:
 
 ```text
-Use $session-to-loop to find 1-3 loop engineering opportunities for this repo.
+Use $session-to-loop (SixLoops) to find 1-3 loop engineering opportunities for this repo.
 ```
 
 ## Interaction Model
@@ -244,7 +252,7 @@ evals/
 
 Experimental but usable.
 
-Works today for synthetic fixtures, Codex JSONL logs, Claude Code JSONL logs, generic JSONL logs, and explicit project evidence JSONL. The next milestone is to make generated artifacts easier to install directly into a target repository.
+SixLoops works today for synthetic fixtures, Codex JSONL logs, Claude Code JSONL logs, generic JSONL logs, and explicit project evidence JSONL. The next milestone is to make generated artifacts easier to install directly into a target repository.
 
 ## Development
 
