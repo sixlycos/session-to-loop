@@ -1,0 +1,8 @@
+{"session_meta":{"payload":{"id":"codex-ci-1"}}}
+{"response_item":{"type":"message","role":"user","content":[{"type":"input_text","text":"CI is red again. Please inspect the failed job logs before guessing."}]}}
+{"response_item":{"type":"function_call","name":"functions.exec_command","arguments":"{\"cmd\":\"gh run view --log-failed\"}"}}
+{"response_item":{"type":"function_call_output","output":"failed: unit-tests"}}
+{"session_meta":{"payload":{"id":"codex-ci-2"}}}
+{"response_item":{"type":"message","role":"user","content":[{"type":"input_text","text":"Same pattern as last time: wait for CI, read the failed log, then patch only the failing test."}]}}
+{"event_msg":{"message":"running command","command":"pnpm test --filter unit"}}
+{"response_item":{"type":"function_call_output","output":"1 failed test"}}

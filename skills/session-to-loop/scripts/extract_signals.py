@@ -88,16 +88,8 @@ def iter_jsonl(path: Path) -> Iterator[tuple[int, Any]]:
                 yield line_number, json.loads(line)
 
 
-def role_of(record: Any) -> str:
-    if not isinstance(record, dict):
-        return "unknown"
-    role = record.get("type") or record.get("role")
-    if isinstance(role, str):
-        return role.lower()
-    message = record.get("message")
-    if isinstance(message, dict) and isinstance(message.get("role"), str):
-        return message["role"].lower()
-    return "unknown"
+def lower_str(value: Any) -> str:
+    return value.lower() if isinstance(value, str) else ""
 
 
 def flatten_text(value: Any) -> str:
@@ -107,13 +99,79 @@ def flatten_text(value: Any) -> str:
         return " ".join(flatten_text(item) for item in value)
     if isinstance(value, dict):
         preferred = []
-        for key in ("text", "content", "message", "name", "command"):
+        for key in (
+            "text",
+            "content",
+            "message",
+            "name",
+            "command",
+            "arguments",
+            "output",
+            "result",
+            "stdout",
+            "stderr",
+            "summary",
+            "msg",
+        ):
             if key in value:
                 preferred.append(flatten_text(value[key]))
         if preferred:
             return " ".join(part for part in preferred if part)
         return " ".join(flatten_text(item) for item in value.values())
     return ""
+
+
+def codex_session_meta_id(record: dict) -> str | None:
+    meta = record.get("session_meta")
+    if not isinstance(meta, dict):
+        return None
+    payload = meta.get("payload")
+    if isinstance(payload, dict):
+        for key in ("id", "session_id", "conversation_id"):
+            if payload.get(key):
+                return str(payload[key])
+    for key in ("id", "session_id", "conversation_id"):
+        if meta.get(key):
+            return str(meta[key])
+    return None
+
+
+def role_of(record: Any) -> str:
+    if not isinstance(record, dict):
+        return "unknown"
+
+    item = record.get("response_item")
+    if isinstance(item, dict):
+        item_type = lower_str(item.get("type"))
+        role = lower_str(item.get("role"))
+        if role in {"user", "assistant"}:
+            return role
+        if item_type in {"function_call", "function_call_output", "tool_call", "tool_result"}:
+            return "tool"
+        if item_type in {"reasoning", "message"}:
+            return "assistant"
+
+    if isinstance(record.get("event_msg"), dict):
+        return "tool"
+
+    role = record.get("type") or record.get("role")
+    if isinstance(role, str):
+        lowered = role.lower()
+        if lowered in {"user", "assistant", "tool"}:
+            return lowered
+    message = record.get("message")
+    if isinstance(message, dict) and isinstance(message.get("role"), str):
+        return message["role"].lower()
+    return "unknown"
+
+
+def event_payload(record: Any) -> Any:
+    if isinstance(record, dict):
+        if isinstance(record.get("response_item"), dict):
+            return record["response_item"]
+        if isinstance(record.get("event_msg"), dict):
+            return record["event_msg"]
+    return record
 
 
 def snippet(text: str, limit: int = 160) -> str:
@@ -123,11 +181,21 @@ def snippet(text: str, limit: int = 160) -> str:
     return compact[: limit - 3].rstrip() + "..."
 
 
-def source_for(record: Any, event_index: int) -> str:
+def session_id_of(record: Any) -> str:
     if isinstance(record, dict):
-        session_id = record.get("session_id") or record.get("conversation_id") or "unknown-session"
-    else:
-        session_id = "unknown-session"
+        meta_id = codex_session_meta_id(record)
+        if meta_id:
+            return meta_id
+        item = record.get("response_item")
+        if isinstance(item, dict):
+            for key in ("session_id", "conversation_id"):
+                if item.get(key):
+                    return str(item[key])
+        return str(record.get("session_id") or record.get("conversation_id") or "unknown-session")
+    return "unknown-session"
+
+
+def source_for(session_id: str, event_index: int) -> str:
     return f"session:{session_id}#event-{event_index}"
 
 
@@ -281,13 +349,21 @@ def extract(index: dict) -> dict:
     allow_snippet = snippets_allowed(index)
     for file_info in index.get("files", []):
         source_file = file_info.get("source_label", Path(file_info["path"]).name)
+        current_session_id = "unknown-session"
         for event_index, record in iter_jsonl(Path(file_info["path"])):
             total_events += 1
+            if isinstance(record, dict):
+                current_session_id = codex_session_meta_id(record) or current_session_id
+                if "session_meta" in record and len(record) == 1:
+                    continue
             role = role_of(record)
             if role not in allowed_roles:
                 continue
-            text = flatten_text(record)
-            source = source_for(record, event_index)
+            text = flatten_text(event_payload(record))
+            session_id = session_id_of(record)
+            if session_id == "unknown-session":
+                session_id = current_session_id
+            source = source_for(session_id, event_index)
             if first_event is None:
                 first_event = {
                     "source": source,

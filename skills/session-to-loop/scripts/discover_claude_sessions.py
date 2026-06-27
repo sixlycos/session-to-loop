@@ -65,7 +65,7 @@ def build_manifest(paths: list[Path], recursive: bool) -> dict:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Discover Claude Code-style JSONL transcripts. This script only scans "
+            "Discover Claude Code, Codex, or coding-agent JSONL transcripts. This script only scans "
             "paths passed with --input; it never scans the home directory by default."
         )
     )

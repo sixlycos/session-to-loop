@@ -6,7 +6,7 @@ Session-to-Loop is an effect-first Agent Skill for turning past AI coding sessio
 
 ## Status
 
-Early skeleton. The first implementation target is a read-only workflow for Claude Code local JSONL transcripts plus the current repository context.
+Early skeleton. The first implementation target is a read-only workflow for Codex and Claude Code local JSONL transcripts plus the current repository context.
 
 ## Effect First
 
@@ -23,7 +23,7 @@ The goal is to improve future agent performance. Local execution and redaction a
 
 Inputs:
 
-- Claude Code local JSONL transcripts.
+- Codex and Claude Code local JSONL transcripts.
 - Optional project context packets such as `AGENTS.md`, `CLAUDE.md`, package scripts, and recent git history. Minimal repo-context collection is planned; the current implementation focuses on transcript packets.
 
 Outputs:
@@ -72,7 +72,8 @@ The analysis model is user-message-primary:
 - User messages are primary evidence for repeated corrections, verification requests, risk
   boundaries, and approval requirements.
 - Tool events are supporting evidence for repeated commands, failed statuses, CI/deploy polling,
-  and verification habits.
+  and verification habits. Codex `response_item` messages are mapped by role; Codex
+  `function_call`, `function_call_output`, and `event_msg` records become supporting tool packets.
 - Assistant messages are not used as primary recommendation evidence.
 - Transcript JSONL is processed line by line after redaction; the extractor does not load full
   transcript files into memory.

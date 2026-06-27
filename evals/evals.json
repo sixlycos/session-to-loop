@@ -10,6 +10,16 @@
     }
   },
   {
+    "id": "codex-response-items",
+    "fixture": "evals/fixtures/codex-response-items.jsonl",
+    "expected": {
+      "include_candidates": ["ci-babysitter"],
+      "include_mechanisms": ["loop", "skill"],
+      "require_packet_roles": ["user", "tool"],
+      "require_session_ids": ["codex-ci-1", "codex-ci-2"]
+    }
+  },
+  {
     "id": "one-off-bugfix",
     "fixture": "evals/fixtures/one-off-bugfix.jsonl",
     "expected": {

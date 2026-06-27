@@ -1,6 +1,6 @@
 ---
 name: session-to-loop
-description: Analyze local AI coding session transcripts and project context to identify recurring human interventions, repeated failures, verification habits, risk boundaries, and automation candidates. Use when the user wants to mine past Claude Code or coding-agent sessions, improve agent workflows, design project-specific loops, convert repeated manual prompting into reusable rules, skills, hooks, loop prompts, checklists, or eval cases, or decide whether a repeated pattern should not be automated.
+description: Analyze local AI coding session transcripts and project context to identify recurring human interventions, repeated failures, verification habits, risk boundaries, and automation candidates. Use when the user wants to mine past Codex, Claude Code, or coding-agent JSONL sessions, improve agent workflows, design project-specific loops, convert repeated manual prompting into reusable rules, skills, hooks, loop prompts, checklists, or eval cases, or decide whether a repeated pattern should not be automated.
 ---
 
 # Session-to-Loop
@@ -37,6 +37,7 @@ Compile past AI coding sessions into evidence-backed loop engineering artifacts.
 3. Analyze packets semantically.
    - Read `references/semantic-analysis-prompt.md`.
    - Treat user messages as primary evidence for corrections, verification requests, risk boundaries, approvals, and context repair.
+   - Treat Codex `response_item` messages as user or assistant packets by role, and Codex `function_call`, `function_call_output`, and `event_msg` records as tool-supporting packets.
    - Treat tool events as supporting evidence for repeated commands, failed statuses, polling, and verification habits.
    - Treat assistant messages as weak context, not primary recommendation evidence.
    - Group packets into semantic candidates and write `semantic-candidates.json`.
