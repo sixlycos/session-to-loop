@@ -9,6 +9,39 @@ work_shape: "{{work_shape}}"
 loop_archetype: "{{loop_archetype}}"
 ```
 
+## Confirm This Loop
+
+Recommended action: `{{recommended_action}}`
+
+Reply with one:
+
+- `{{confirm_as_read_only}}`
+- `{{confirm_as_goal_loop}}`
+- `{{shrink_to_smaller_mechanism}}`
+- `{{reject_candidate}}`
+
+First run prompt:
+
+```text
+Goal:
+{{first_run_goal}}
+
+Success criteria:
+{{first_run_success_criteria}}
+
+Each round:
+1. Observe: {{first_run_observe}}
+2. Act: {{first_run_act}}
+3. Verify: {{first_run_verify}}
+4. Update state: {{managed_state_file}}
+
+Stop after:
+{{first_run_stop_after}}
+
+Human gate:
+{{first_run_human_gate}}
+```
+
 ## Decision Card
 
 Can use now: `{{can_use_now}}`
@@ -34,6 +67,68 @@ Next action: `{{next_action}}`
 ## Proposed Artifact
 
 - {{artifact}}
+
+## Mechanism Decision
+
+Why this mechanism:
+
+{{why_this_mechanism}}
+
+Why not smaller:
+
+{{why_not_smaller}}
+
+Why not more autonomous:
+
+{{why_not_more_autonomous}}
+
+## Verifier Box
+
+Primary verifier:
+
+{{primary_verifier}}
+
+Checker:
+
+{{checker}}
+
+PASS evidence:
+
+{{pass_evidence_required}}
+
+Status protocol:
+
+`DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`
+
+## Adoption Path
+
+Current rung: `{{current_rung}}`
+
+Next rung: `{{next_rung}}`
+
+Promotion criteria:
+
+{{managed_promotion_criteria}}
+
+Demotion criteria:
+
+{{managed_demotion_criteria}}
+
+## Loop Economics
+
+Expected trigger frequency: `{{expected_trigger_frequency}}`
+
+Expected per-run cost: `{{expected_per_run_cost}}`
+
+Automatic rejection signals:
+
+{{automatic_rejection_signals}}
+
+Human review load: `{{human_review_load}}`
+
+Demote if:
+
+{{demote_if}}
 
 ## Managed Goal Loop Spec
 

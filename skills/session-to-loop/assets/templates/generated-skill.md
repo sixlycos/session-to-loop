@@ -21,7 +21,9 @@ description: {{skill_description}}
 
 ## Verification
 
-- {{verification}}
+- Verifier: {{verification}}
+- PASS evidence: command output, status result, screenshot, schema result, or explicit checker note.
+- Stop policy: stop when verification passes, the same failure repeats, evidence stops changing, or human approval is required.
 
 ## Safety
 

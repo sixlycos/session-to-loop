@@ -30,6 +30,7 @@ The user-facing product is a small set of project-specific loop proposals that t
    - Identify the project root, transcript source, time range, and output directory.
    - If transcript paths are ambiguous, list likely candidates and ask the user which to use.
    - Before reading transcript bodies, present the discovered inventory and ask one concise question confirming allowed files, roles, snippet policy, and output visibility.
+   - Treat the approved scope as a lease: do not ask again while files, roles, snippet policy, and output visibility remain unchanged.
 
 2. Discover and protect inputs with bundled scripts.
    - Inventory candidate session files without reading unrelated private locations.
@@ -41,6 +42,7 @@ The user-facing product is a small set of project-specific loop proposals that t
    - Read `references/semantic-analysis-prompt.md`.
    - Read `references/token-budget-policy.md` before broad analysis or large transcript sets.
    - Treat user messages as primary evidence for corrections, verification requests, risk boundaries, approvals, and context repair.
+   - For large runs, select user semantic anchors first, then use small tool windows as supporting evidence.
    - Use packet `provider` and `event_kind` to distinguish Codex `response_item`/`event_msg` records from Claude `message.content`/`tool_use`/`tool_result` records.
    - Treat tool events as supporting evidence for repeated commands, failed statuses, polling, and verification habits.
    - Treat `auxiliary-evidence` records as project-context support for draft loop proposals when no full transcript is available.
@@ -90,6 +92,8 @@ running `prepare_analysis_scope.py --approve`. Do not approve a scope silently f
 For synthetic evals only, `--approve` may be used non-interactively.
 The extractor processes JSONL line by line after redaction and must not load whole transcript
 files into memory for normal analysis.
+For broad transcript sets, pass `--max-packets`, `--target-token-budget`, and optional
+`--role-quota role=count` so semantic review sees the highest-value user/tool packets first.
 
 Use `--rule-fallback` only for offline synthetic evals or when the host AI is unavailable.
 
@@ -108,7 +112,8 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 ## Output Requirements
 
 - Lead with 1-3 concrete Loop Cards, not with evidence inventory.
-- For each proposal, show decision card, goal, work shape, heartbeat, recommended starting level, trigger, cycle, verification, stop conditions, approval boundary, and why this loop should exist.
+- For each proposal, show confirm-this-loop options, first-run packet, decision card, mechanism decision, goal, heartbeat, recommended starting level, trigger, cycle, verifier box, stop conditions, approval boundary, and why this loop should exist.
+- Use exact confirmation strings: `adopt <candidate-id> as read-only`, `adopt <candidate-id> as goal-loop`, `shrink <candidate-id> to skill`, or `reject <candidate-id>`.
 - Only render goal-ready loop artifacts when the candidate has an acceptance contract: success criteria, verifier, state schema, resume policy, stop policy, budget cap, and human checkpoint.
 - Ask the user to confirm which proposal(s) to adopt, convert to a smaller mechanism, or reject.
 - Match the user's language in the final response. Keep internal schemas and deterministic script fields in English.

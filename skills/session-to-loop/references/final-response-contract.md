@@ -8,15 +8,17 @@ Start with 1-3 concrete proposals the user can say yes or no to. Do not lead wit
 
 For each proposal, include:
 
+- Confirm this loop: one recommended action and exact reply strings such as `adopt ci-babysitter as goal-loop`, `shrink ci-babysitter to skill`, or `reject ci-babysitter`.
+- First run packet: a compact starter goal prompt with goal, success criteria, each-round steps, state file, stop rule, and human gate.
 - Name: short and action-oriented.
 - Decision card: can use now, can confirm, can delegate, and next action.
 - Goal: what the loop improves for this project.
-- Work shape: why this deserves a loop instead of a script, skill, checklist, or gate.
+- Mechanism decision: why this deserves a loop, why not a smaller mechanism, and why not a more autonomous scheduled loop yet.
 - Heartbeat: session, goal, scheduled, or event.
 - Recommended starting level: read-only, goal loop, isolated draft, PR draft, or scheduled draft.
 - Trigger: when the user or agent should run it.
 - Cycle: the observe-act-check steps.
-- Verification: how the loop knows it worked.
+- Verifier box: primary verifier, checker, required PASS evidence, and status protocol.
 - Stop conditions: when the agent must stop.
 - Iteration cap: the maximum number of rounds before it reports a blocker.
 - Acceptance contract: success criteria, verifier, pass evidence, reject conditions, and no-progress policy.
@@ -27,10 +29,11 @@ For each proposal, include:
 
 End the proposal section by asking the user to choose one of these actions:
 
-- Adopt the loop and generate the concrete loop card or skill.
-- Convert it to a smaller mechanism, such as a rule, checklist, hook, or approval gate.
-- Reject it for now.
-- Run a narrower analysis with better transcript evidence.
+- `adopt <candidate-id> as read-only`
+- `adopt <candidate-id> as goal-loop`
+- `shrink <candidate-id> to skill`
+- `reject <candidate-id>`
+- `rerun with narrower evidence`
 
 Ask once. Do not make the user approve each internal pipeline step after the scope has been confirmed.
 

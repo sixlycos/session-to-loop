@@ -42,6 +42,14 @@ def bullet_block(items: list[str]) -> str:
     return "- " + "\n- ".join(items)
 
 
+def as_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return [str(value)]
+
+
 def mapping_block(value: dict) -> str:
     if not value:
         return "None."
@@ -54,6 +62,98 @@ def first(items: list[str], default: str = "None.") -> str:
 
 def bool_label(value: bool) -> str:
     return "yes" if value else "no"
+
+
+def next_rung(current: str) -> str:
+    ladder = [
+        "read-only-report",
+        "goal-loop",
+        "isolated-draft",
+        "verified-pr-draft",
+        "scheduled-readonly",
+        "scheduled-draft",
+    ]
+    if current not in ladder:
+        return "goal-loop"
+    index = ladder.index(current)
+    return ladder[min(index + 1, len(ladder) - 1)]
+
+
+def confirmation_options(candidate: dict) -> list[str]:
+    card = candidate.get("decision_card") or {}
+    options = card.get("confirmation_options")
+    if isinstance(options, list) and options:
+        return [str(item) for item in options[:4]]
+    candidate_id = candidate["id"]
+    smaller = "skill" if "skill" in candidate.get("mechanisms", []) else "checklist"
+    return [
+        f"adopt {candidate_id} as read-only",
+        f"adopt {candidate_id} as goal-loop",
+        f"shrink {candidate_id} to {smaller}",
+        f"reject {candidate_id}",
+    ]
+
+
+def first_run_defaults(candidate: dict, managed_loop: dict, contract: dict) -> dict[str, str]:
+    packet = candidate.get("first_run_packet") or {}
+    max_iterations = managed_loop.get("max_iterations_per_run", 8)
+    verifier = first(contract.get("verifier_commands", []), first(candidate.get("verification", []), "Run the focused verifier."))
+    state_file = managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json")
+    approvals = candidate.get("safety", {}).get("requires_approval_for", [])
+    human_gate = packet.get("human_gate") or (
+        f"Ask before {', '.join(approvals)}." if approvals else "Ask before expanding scope, changing risk boundaries, or making irreversible changes."
+    )
+    success_criteria = packet.get("success_criteria")
+    if isinstance(success_criteria, list):
+        success_text = bullet_block([str(item) for item in success_criteria])
+    elif success_criteria:
+        success_text = str(success_criteria)
+    else:
+        success_text = bullet_block(contract.get("success_criteria", candidate.get("verification", [])))
+    maturity = managed_loop.get("recommended_maturity", "goal-loop")
+    default_action = "adopt as read-only" if maturity == "read-only-report" else "adopt as goal-loop"
+    return {
+        "recommended_action": str(packet.get(
+            "recommended_action",
+            default_action,
+        )),
+        "first_run_goal": str(packet.get("goal", managed_loop.get("objective", candidate.get("summary", "Run the loop.")))),
+        "first_run_success_criteria": success_text,
+        "first_run_observe": str(packet.get(
+            "observe",
+            "read the state file, current inputs, and latest verifier evidence",
+        )),
+        "first_run_act": str(packet.get(
+            "act",
+            f"pick at most {managed_loop.get('max_items_per_cycle', 3)} directly evidenced item(s)",
+        )),
+        "first_run_verify": str(packet.get("verify", verifier)),
+        "first_run_stop_after": str(packet.get(
+            "stop_after",
+            f"{max_iterations} iterations, repeated failure, no progress across two iterations, or a human gate",
+        )),
+        "first_run_human_gate": str(human_gate),
+    }
+
+
+def mechanism_decision(candidate: dict, managed_loop: dict) -> dict[str, str]:
+    decision = candidate.get("mechanism_decision") or {}
+    mechanisms = candidate.get("mechanisms", [])
+    if "loop" in mechanisms:
+        why = "This needs repeated observe-act-check behavior with state, verification, stop conditions, and resume behavior."
+        smaller = "A rule, skill, or checklist alone would not preserve state or drive repeated verification."
+    else:
+        why = "This is useful, but the evidence does not justify a managed loop yet."
+        smaller = "A smaller mechanism is recommended first."
+    maturity = managed_loop.get("recommended_maturity", candidate.get("safety", {}).get("autonomy_level", "draft-only"))
+    return {
+        "why_this_mechanism": decision.get("why_this_mechanism", why),
+        "why_not_smaller": decision.get("why_not_smaller", smaller),
+        "why_not_more_autonomous": decision.get(
+            "why_not_more_autonomous",
+            f"Start at `{maturity}` until verifier evidence and accepted outputs justify promotion.",
+        ),
+    }
 
 
 def render_trace(candidate: dict) -> str:
@@ -105,6 +205,7 @@ def decision_card(candidate: dict) -> dict:
         "can_delegate": card.get("can_delegate", "yes" if "loop" in candidate.get("mechanisms", []) else "no"),
         "missing_before_delegate": card.get("missing_before_delegate", []),
         "next_action": card.get("next_action", "adopt" if candidate.get("decision") != "reject" else "reject"),
+        "confirmation_options": confirmation_options(candidate),
     }
 
 
@@ -138,7 +239,11 @@ def render_loop_proposals(candidates: list[dict]) -> str:
     blocks = []
     for index, candidate in enumerate(selected, start=1):
         managed_loop = candidate.get("managed_loop", {})
+        contract = managed_loop.get("completion_contract", {})
         card = decision_card(candidate)
+        options = card["confirmation_options"]
+        first_run = first_run_defaults(candidate, managed_loop, contract)
+        mechanism = mechanism_decision(candidate, managed_loop)
         mechanisms = ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")])
         work_shape = candidate.get("work_shape", "goal-driven" if "loop" in candidate.get("mechanisms", []) else "not recorded")
         loop_archetype = candidate.get("loop_archetype", "not recorded")
@@ -147,6 +252,7 @@ def render_loop_proposals(candidates: list[dict]) -> str:
             "recommended_maturity",
             candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         )
+        state_file = managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json")
         blocks.append(
             "\n".join(
                 [
@@ -158,11 +264,23 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     "",
                     f"Next action: `{card['next_action']}`",
                     "",
+                    "Confirm with one:",
+                    "",
+                    "\n".join(f"- `{option}`" for option in options),
+                    "",
                     f"Goal: {managed_loop.get('objective', candidate.get('summary', 'No objective recorded.'))}",
                     "",
                     f"Work shape: `{work_shape}` | Archetype: `{loop_archetype}`",
                     "",
                     f"Heartbeat: `{heartbeat}` | Recommended starting level: `{maturity}`",
+                    "",
+                    "First run:",
+                    "",
+                    f"- Observe: {first_run['first_run_observe']}",
+                    f"- Act: {first_run['first_run_act']}",
+                    f"- Verify: {first_run['first_run_verify']}",
+                    f"- State: {state_file}",
+                    f"- Stop after: {first_run['first_run_stop_after']}",
                     "",
                     "Trigger:",
                     "",
@@ -186,9 +304,9 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     "",
                     "Acceptance contract:",
                     "",
-                    bullet_block(managed_loop.get("completion_contract", {}).get("success_criteria", [])),
+                    bullet_block(contract.get("success_criteria", [])),
                     "",
-                    f"Why this loop: {why_this_loop(candidate)}",
+                    f"Why this mechanism: {mechanism['why_this_mechanism']} {why_this_loop(candidate)}",
                 ]
             )
         )
@@ -200,9 +318,11 @@ def confirmation_prompt(candidates: list[dict]) -> str:
     if not selected:
         return "Recommended next step: run a narrower transcript analysis or keep these as rejected context."
     names = ", ".join(f"`{item['name']}`" for item in selected)
+    options = "\n".join(f"- `{option}`" for item in selected for option in confirmation_options(item))
     return (
         f"Confirm which proposal(s) to adopt from {names}. After confirmation, generate the concrete loop card, "
-        "draft skill or hook/checklist, and the state-file convention for the selected loop."
+        "draft skill or hook/checklist, and the state-file convention for the selected loop.\n\n"
+        f"{options}"
     )
 
 
@@ -229,6 +349,14 @@ def candidate_card(candidate: dict) -> str:
     managed_loop = candidate.get("managed_loop", {})
     contract = managed_loop.get("completion_contract", {})
     card = decision_card(candidate)
+    options = card["confirmation_options"]
+    first_run = first_run_defaults(candidate, managed_loop, contract)
+    mechanism = mechanism_decision(candidate, managed_loop)
+    economics = candidate.get("economics") or {}
+    maturity = managed_loop.get(
+        "recommended_maturity",
+        candidate.get("safety", {}).get("autonomy_level", "draft-only"),
+    )
     values = {
         "name": candidate["name"],
         "id": candidate["id"],
@@ -242,6 +370,36 @@ def candidate_card(candidate: dict) -> str:
         "can_delegate": card["can_delegate"],
         "missing_before_delegate": bullet(card.get("missing_before_delegate", [])),
         "next_action": card["next_action"],
+        "recommended_action": first_run["recommended_action"],
+        "confirm_as_read_only": options[0] if len(options) > 0 else f"adopt {candidate['id']} as read-only",
+        "confirm_as_goal_loop": options[1] if len(options) > 1 else f"adopt {candidate['id']} as goal-loop",
+        "shrink_to_smaller_mechanism": options[2] if len(options) > 2 else f"shrink {candidate['id']} to skill",
+        "reject_candidate": options[3] if len(options) > 3 else f"reject {candidate['id']}",
+        "first_run_goal": first_run["first_run_goal"],
+        "first_run_success_criteria": first_run["first_run_success_criteria"],
+        "first_run_observe": first_run["first_run_observe"],
+        "first_run_act": first_run["first_run_act"],
+        "first_run_verify": first_run["first_run_verify"],
+        "first_run_stop_after": first_run["first_run_stop_after"],
+        "first_run_human_gate": first_run["first_run_human_gate"],
+        "why_this_mechanism": mechanism["why_this_mechanism"],
+        "why_not_smaller": mechanism["why_not_smaller"],
+        "why_not_more_autonomous": mechanism["why_not_more_autonomous"],
+        "primary_verifier": bullet_block(contract.get("verifier_commands", candidate.get("verification", []))),
+        "checker": contract.get("evaluator_agent", "Use deterministic checks first; use a read-only checker when commands cannot decide."),
+        "pass_evidence_required": bullet_block(contract.get("pass_evidence_required", [])),
+        "current_rung": maturity,
+        "next_rung": next_rung(maturity),
+        "expected_trigger_frequency": str(economics.get("expected_trigger_frequency", "unknown")),
+        "expected_per_run_cost": str(economics.get("expected_per_run_cost", "unknown")),
+        "automatic_rejection_signals": bullet_block(
+            as_list(economics.get("automatic_rejection_signals", candidate.get("verification", [])))
+        ),
+        "human_review_load": str(economics.get("human_review_load", "medium")),
+        "demote_if": str(economics.get(
+            "demote_if",
+            "Demote when fewer than half of reviewed outputs are accepted, verifier evidence stays weak, or human judgment dominates the loop.",
+        )),
         "summary": candidate["summary"],
         "source": first_evidence.get("source", "n/a"),
         "signal_kind": (
@@ -261,10 +419,7 @@ def candidate_card(candidate: dict) -> str:
         "managed_trigger": bullet_block(managed_loop.get("cadence_or_trigger", candidate.get("trigger", []))),
         "managed_discovery_sources": bullet_block(managed_loop.get("discovery_sources", candidate.get("inputs", []))),
         "managed_heartbeat": managed_loop.get("heartbeat", "goal"),
-        "managed_recommended_maturity": managed_loop.get(
-            "recommended_maturity",
-            candidate.get("safety", {}).get("autonomy_level", "draft-only"),
-        ),
+        "managed_recommended_maturity": maturity,
         "managed_state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
         "managed_state_schema": mapping_block(managed_loop.get("state_schema", {})),
         "managed_cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
@@ -357,7 +512,8 @@ def generated_skill(candidate: dict) -> str:
 
 def playbook(data: dict, out_dir: Path, rendered_paths: list[str]) -> str:
     candidates = data.get("candidates", [])
-    selected_count = len(proposal_candidates(candidates))
+    selected = proposal_candidates(candidates)
+    selected_count = len(selected)
     summary = f"Prepared {selected_count} user-confirmable loop engineering proposal(s) from local evidence."
     table_rows = "\n".join(
         f"| {item['name']} | {', '.join(item.get('mechanisms') or [item.get('mechanism', 'none')])} | "
@@ -401,6 +557,7 @@ def playbook(data: dict, out_dir: Path, rendered_paths: list[str]) -> str:
         "summary": summary,
         "loop_proposals": render_loop_proposals(candidates),
         "confirmation_prompt": confirmation_prompt(candidates),
+        "candidate": selected[0]["id"] if selected else "<candidate-id>",
         "rules_and_memory": "\n".join(by_mechanism["rule"]) or "None.",
         "skill_candidates": "\n".join(by_mechanism["skill"]) or "None.",
         "hook_candidates": "\n".join(by_mechanism["hook"]) or "None.",

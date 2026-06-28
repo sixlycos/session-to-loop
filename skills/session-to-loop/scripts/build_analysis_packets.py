@@ -18,6 +18,64 @@ from transcript_adapters import NormalizedEvent, iter_normalized_events
 DEFAULT_INDEX = Path(".session-to-loop/private/redacted-index.json")
 DEFAULT_OUT = Path(".session-to-loop/private/analysis-packets.jsonl")
 DEFAULT_PACKET_INDEX = Path(".session-to-loop/private/analysis-packets-index.json")
+DEFAULT_ROLE_QUOTAS = {"user": 0, "tool": 0}
+
+HIGH_VALUE_TERMS = {
+    "approval": ("approval", "approve", "ask", "confirm", "permission", "批准", "确认", "同意", "许可"),
+    "correction": (
+        "not npm",
+        "pnpm",
+        "wrong",
+        "instead",
+        "do not",
+        "don't",
+        "again",
+        "不要",
+        "别",
+        "不是",
+        "应该",
+        "改成",
+        "又",
+        "重复",
+    ),
+    "risk": (
+        "deploy",
+        "production",
+        "migration",
+        "delete",
+        "secret",
+        "credential",
+        "token",
+        "payment",
+        "上线",
+        "生产",
+        "迁移",
+        "删除",
+        "密钥",
+        "凭证",
+        "支付",
+        "权限",
+    ),
+    "verification": (
+        "verify",
+        "test",
+        "lint",
+        "typecheck",
+        "ci",
+        "failed",
+        "error",
+        "screenshot",
+        "browser",
+        "验证",
+        "测试",
+        "截图",
+        "浏览器",
+        "报错",
+        "失败",
+        "检查",
+        "我来测",
+    ),
+}
 
 
 def now_iso() -> str:
@@ -79,6 +137,52 @@ def packet_from_event(
     }
 
 
+def estimated_tokens(text: str) -> int:
+    # Cheap local estimate. Good enough for packet selection without tokenizer dependencies.
+    return max(1, (len(text) + 3) // 4)
+
+
+def importance(packet: dict) -> tuple[int, list[str]]:
+    score = 0
+    reasons: list[str] = []
+    role = packet.get("role")
+    if role == "user":
+        score += 50
+        reasons.append("user-primary")
+    elif role == "tool":
+        score += 35
+        reasons.append("tool-support")
+    else:
+        score += 5
+        reasons.append("weak-role")
+
+    if packet.get("source_type") == "auxiliary-evidence":
+        score += 20
+        reasons.append("auxiliary-project-evidence")
+
+    text = str(packet.get("text", "")).lower()
+    tool_name = str(packet.get("tool_name") or "").lower()
+    haystack = f"{tool_name} {text}"
+    for reason, terms in HIGH_VALUE_TERMS.items():
+        if any(term in haystack for term in terms):
+            score += 15
+            reasons.append(reason)
+
+    if packet.get("text_truncated"):
+        score -= 5
+        reasons.append("truncated")
+
+    return score, reasons
+
+
+def annotate_packet(packet: dict) -> dict:
+    score, reasons = importance(packet)
+    packet["importance_score"] = score
+    packet["importance_reasons"] = reasons
+    packet["estimated_tokens"] = estimated_tokens(str(packet.get("text", "")))
+    return packet
+
+
 def iter_packets(index: dict, max_chars: int) -> Iterator[dict]:
     roles = allowed_roles(index)
     allow_text = snippets_allowed(index)
@@ -92,7 +196,110 @@ def iter_packets(index: dict, max_chars: int) -> Iterator[dict]:
             if event.role not in roles:
                 continue
             sequence += 1
-            yield packet_from_event(event, sequence, source_file, source_type, source_confidence, max_chars, allow_text)
+            yield annotate_packet(
+                packet_from_event(event, sequence, source_file, source_type, source_confidence, max_chars, allow_text)
+            )
+
+
+def parse_role_quota(values: list[str]) -> dict[str, int]:
+    quotas = dict(DEFAULT_ROLE_QUOTAS)
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"Invalid role quota {value!r}; expected role=count.")
+        role, raw_count = value.split("=", 1)
+        role = role.strip()
+        try:
+            count = int(raw_count)
+        except ValueError as exc:
+            raise ValueError(f"Invalid role quota count in {value!r}.") from exc
+        if count < 0:
+            raise ValueError(f"Invalid role quota {value!r}; count must be non-negative.")
+        quotas[role] = count
+    return quotas
+
+
+def within_limits(packet: dict, kept: list[dict], max_packets: int, target_token_budget: int) -> bool:
+    if max_packets > 0 and len(kept) >= max_packets:
+        return False
+    if target_token_budget > 0:
+        used = sum(int(item.get("estimated_tokens", 0)) for item in kept)
+        return used + int(packet.get("estimated_tokens", 0)) <= target_token_budget
+    return True
+
+
+def select_packets(
+    packets: list[dict],
+    max_packets: int,
+    target_token_budget: int,
+    role_quotas: dict[str, int],
+) -> tuple[list[dict], dict]:
+    if max_packets <= 0 and target_token_budget <= 0:
+        for packet in packets:
+            packet["selection_reason"] = "uncapped"
+        return packets, {
+            "enabled": False,
+            "input_count": len(packets),
+            "kept_count": len(packets),
+            "dropped_count": 0,
+            "estimated_tokens": sum(int(item.get("estimated_tokens", 0)) for item in packets),
+        }
+
+    ranked = sorted(
+        packets,
+        key=lambda item: (-int(item.get("importance_score", 0)), item.get("packet_id", "")),
+    )
+    kept: list[dict] = []
+    kept_ids: set[str] = set()
+
+    for role, quota in role_quotas.items():
+        if quota <= 0:
+            continue
+        role_packets = [item for item in ranked if item.get("role") == role]
+        kept_for_role = 0
+        for packet in role_packets:
+            if kept_for_role >= quota:
+                break
+            if packet["packet_id"] in kept_ids or not within_limits(packet, kept, max_packets, target_token_budget):
+                continue
+            packet["selection_reason"] = f"role-quota:{role}"
+            kept.append(packet)
+            kept_ids.add(packet["packet_id"])
+            kept_for_role += 1
+
+    for packet in ranked:
+        if packet["packet_id"] in kept_ids or not within_limits(packet, kept, max_packets, target_token_budget):
+            continue
+        packet["selection_reason"] = "importance"
+        kept.append(packet)
+        kept_ids.add(packet["packet_id"])
+
+    kept.sort(key=lambda item: item.get("packet_id", ""))
+    dropped = [item for item in packets if item["packet_id"] not in kept_ids]
+    for packet in dropped:
+        packet["selection_reason"] = "dropped-by-budget"
+
+    kept_by_role: dict[str, int] = {}
+    dropped_by_role: dict[str, int] = {}
+    for packet in kept:
+        role = str(packet.get("role", "unknown"))
+        kept_by_role[role] = kept_by_role.get(role, 0) + 1
+    for packet in dropped:
+        role = str(packet.get("role", "unknown"))
+        dropped_by_role[role] = dropped_by_role.get(role, 0) + 1
+
+    return kept, {
+        "enabled": True,
+        "input_count": len(packets),
+        "kept_count": len(kept),
+        "dropped_count": len(dropped),
+        "max_packets": max_packets,
+        "target_token_budget": target_token_budget,
+        "role_quotas": role_quotas,
+        "estimated_tokens": sum(int(item.get("estimated_tokens", 0)) for item in kept),
+        "dropped_estimated_tokens": sum(int(item.get("estimated_tokens", 0)) for item in dropped),
+        "kept_by_role": kept_by_role,
+        "dropped_by_role": dropped_by_role,
+    }
 
 
 def parse_args() -> argparse.Namespace:
@@ -109,6 +316,19 @@ def parse_args() -> argparse.Namespace:
         help=f"Packet index JSON output. Default: {DEFAULT_PACKET_INDEX}",
     )
     parser.add_argument("--max-chars", type=int, default=1200, help="Maximum text chars per event packet.")
+    parser.add_argument("--max-packets", type=int, default=0, help="Maximum packets to keep after importance ranking. 0 keeps all.")
+    parser.add_argument(
+        "--target-token-budget",
+        type=int,
+        default=0,
+        help="Approximate packet token budget after selection. 0 disables token-budget selection.",
+    )
+    parser.add_argument(
+        "--role-quota",
+        action="append",
+        default=[],
+        help="Minimum high-priority packets to reserve by role, e.g. --role-quota user=20 --role-quota tool=10.",
+    )
     return parser.parse_args()
 
 
@@ -118,11 +338,19 @@ def main() -> int:
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    role_quotas = parse_role_quota(args.role_quota)
+    packets_to_consider = list(iter_packets(index, args.max_chars))
+    selected_packets, selection = select_packets(
+        packets_to_consider,
+        max(0, args.max_packets),
+        max(0, args.target_token_budget),
+        role_quotas,
+    )
     packet_count = 0
     provider_counts: dict[str, int] = {}
     source_type_counts: dict[str, int] = {}
     with out.open("w", encoding="utf-8") as handle:
-        for packet in iter_packets(index, args.max_chars):
+        for packet in selected_packets:
             packet_count += 1
             provider = str(packet.get("provider", "unknown"))
             source_type = str(packet.get("source_type", "unknown"))
@@ -138,6 +366,7 @@ def main() -> int:
         "packets": str(out),
         "packet_count": packet_count,
         "provider_counts": provider_counts,
+        "packet_selection": selection,
         "scope_policy": index.get("scope_policy", {}),
         "source": {
             "transcript_files": index.get("file_count", 0),

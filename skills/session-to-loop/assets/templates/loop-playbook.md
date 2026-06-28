@@ -14,7 +14,7 @@ Redaction: `{{redaction_status}}`
 
 {{loop_proposals}}
 
-## Decision Needed
+## Choose Next Action
 
 {{confirmation_prompt}}
 

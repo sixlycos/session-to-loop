@@ -40,6 +40,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--semantic-candidates", default=None, help="AI-generated semantic candidates JSON to guard and render.")
     parser.add_argument("--rule-fallback", action="store_true", help="Run deterministic keyword fallback for offline evals.")
     parser.add_argument("--max-packet-chars", type=int, default=1200, help="Maximum chars per analysis packet.")
+    parser.add_argument("--max-packets", type=int, default=0, help="Maximum analysis packets to keep after ranking. 0 keeps all.")
+    parser.add_argument(
+        "--target-token-budget",
+        type=int,
+        default=0,
+        help="Approximate token budget for selected analysis packets. 0 disables budget selection.",
+    )
+    parser.add_argument(
+        "--role-quota",
+        action="append",
+        default=[],
+        help="Minimum high-priority packets to reserve by role, e.g. --role-quota user=20 --role-quota tool=10.",
+    )
     return parser.parse_args()
 
 
@@ -102,6 +115,11 @@ def main() -> int:
             str(packet_index),
             "--max-chars",
             str(args.max_packet_chars),
+            "--max-packets",
+            str(args.max_packets),
+            "--target-token-budget",
+            str(args.target_token_budget),
+            *[item for quota in args.role_quota for item in ("--role-quota", quota)],
         ]
     )
 

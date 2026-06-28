@@ -1,10 +1,14 @@
 # SixLoops
 
+Stop reteaching your coding agent.
+
 Turn yesterday's AI coding friction into tomorrow's reusable agent loops.
 
 SixLoops is an open-source Agent Skill for mining local AI coding session logs and project evidence, then proposing the rules, skills, hooks, checklists, approval gates, or managed loops that would make the next agent run better.
 
 It is not a chat summarizer. It is a loop engineering assistant for software teams and solo developers who keep correcting the same AI behaviors.
+
+Think of session logs as friction telemetry: user corrections, tool failures, repeated verification habits, and risk boundaries that reveal which mechanism your repo is missing.
 
 The installed Codex skill is currently named `$session-to-loop` for compatibility. The product name is SixLoops.
 
@@ -38,14 +42,16 @@ The first screen is a small set of proposals, not an evidence dump.
 
 Each proposal is a Loop Card. It says:
 
+- Confirm this loop: exact reply strings such as `adopt ci-babysitter as goal-loop`, `shrink ci-babysitter to skill`, or `reject ci-babysitter`.
+- First run packet: the starter goal prompt, success criteria, state file, stop rule, and human gate.
 - Decision card: can use now, can confirm, can delegate, and next action.
 - Goal: what gets better.
-- Work shape: why this should be a loop instead of a script, skill, checklist, or gate.
+- Mechanism decision: why this should be a loop, why not a smaller mechanism, and why not scheduled automation yet.
 - Heartbeat: whether it should start as a session loop, goal loop, scheduled run, or event trigger.
 - Starting level: read-only report, goal loop, isolated draft, PR draft, or scheduled draft.
 - Trigger: when the loop starts.
 - Cycle: what the agent observes, does, and checks.
-- Verification: how success is known.
+- Verifier: primary check, checker role, PASS evidence, and status protocol.
 - Stop conditions: when the agent must stop.
 - Iteration cap: the maximum number of rounds before it reports a blocker.
 - Acceptance contract: success criteria, verifier, pass evidence, reject conditions, and no-progress policy.
@@ -57,7 +63,7 @@ Example:
 ```text
 Browser Audit Loop
 
-Decision card: can use now = limited, can confirm = yes, can delegate = yes.
+Confirm: `adopt browser-audit as goal-loop`
 Goal: Catch frontend route, copy, and i18n regressions before handoff.
 Trigger: After frontend, routing, copy, auth UI, or i18n changes.
 Cycle: identify changed routes, run checks, open the route in a browser,
@@ -68,6 +74,8 @@ Stop: auth/data blocks verification, visual direction needs approval, or routes 
 Iteration cap: 8 rounds.
 Approval boundary: product copy, visual direction, auth/data fixture changes.
 ```
+
+SixLoops should feel like a mechanism router, not a loop salesman. Weak, rare, unverifiable, or high-risk patterns should become a rule, skill, checklist, approval gate, or reject.
 
 ## When A Loop Is Worth It
 
@@ -158,6 +166,9 @@ python skills/session-to-loop/scripts/session_to_loop.py \
 ```
 
 Open `.session-to-loop/tmp/repeated-ci/public/loop-playbook.md` to see the generated Loop Card.
+The first useful actions should look like `adopt ci-babysitter as read-only`,
+`adopt ci-babysitter as goal-loop`, `shrink ci-babysitter to skill`, or
+`reject ci-babysitter`.
 
 For real local logs:
 
@@ -169,6 +180,18 @@ For real local logs, the pipeline stops after creating an analysis scope. Review
 
 ```bash
 python skills/session-to-loop/scripts/session_to_loop.py --input <session-log-file-or-dir> --approve
+```
+
+For large approved log sets, cap semantic review cost:
+
+```bash
+python skills/session-to-loop/scripts/session_to_loop.py \
+  --input <session-log-file-or-dir> \
+  --approve \
+  --max-packets 120 \
+  --target-token-budget 16000 \
+  --role-quota user=60 \
+  --role-quota tool=40
 ```
 
 The command creates compact packets and points the host AI to:
@@ -211,7 +234,7 @@ The skill should feel like this:
 3. Build compact, redacted analysis packets.
 4. Let the host AI infer repeated semantic patterns.
 5. Present 1-3 loop proposals first.
-6. Ask which proposal to adopt, shrink, or reject.
+6. Ask which proposal to adopt with a run level, shrink, or reject.
 7. Generate concrete loop cards, skills, hooks, checklists, or approval gates only after confirmation.
 
 It should not feel like this:
@@ -233,9 +256,9 @@ It should not feel like this:
 | High-risk human decision | Approval gate or checklist |
 | One-off event | Reject |
 
-## Privacy And Safety
+## Default Boundaries
 
-Local-first behavior is a guardrail, not the product pitch.
+Local-first behavior is a guardrail, not the product pitch. The product goal is better loop engineering; these defaults make the analysis safe to run on local project evidence.
 
 - No network access is needed by the pipeline.
 - No whole-disk or broad home-directory scan is performed by default.

@@ -34,7 +34,9 @@ State update format:
 
 ## Acceptance Contract
 
-Completion must resolve to one of: `DONE`, `CONTINUE`, `BLOCKED`, or `NEEDS_HUMAN`.
+Completion must resolve to one of: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
+
+Update the state file before reporting `DONE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
 
 Success criteria:
 

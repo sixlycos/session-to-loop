@@ -34,6 +34,36 @@ Prefer small packets containing:
 
 Use source pointers only when snippets are not approved.
 
+## Packet Selection
+
+For broad transcript sets, do not send every allowed packet to the host AI. Use the packet selector:
+
+- Prefer user correction, risk boundary, approval, and verification requests.
+- Keep tool failures, command status, browser screenshots, CI logs, and assertion summaries as supporting evidence.
+- Treat assistant packets as weak context unless explicitly scoped.
+- Record kept and dropped counts in `analysis-packets-index.json`.
+- Keep source pointers and `text_hash` so a narrow evidence window can be recovered later.
+
+Use `--max-packets`, `--target-token-budget`, and `--role-quota role=count` when the packet file would be too large for economical semantic review.
+
+Selection should be anchored on user semantics first. User messages reveal repeated corrections,
+approval boundaries, validation habits, and risk language. Tool packets should usually enter as
+small evidence windows around those anchors: first failure, final verifier, representative repeated
+command, browser/screenshot status, CI status, or assertion summary.
+
+For multilingual logs, preserve correction and risk language in the original user language. Important
+Chinese cues include `不要`, `别`, `确认`, `批准`, `上线`, `生产`, `迁移`, `删除`, `截图`, `浏览器`, `测试`,
+`报错`, `失败`, and `我来测`.
+
+Prefer a two-stage semantic review for large logs:
+
+1. Candidate pass: send compact user/tool packets and source pointers only.
+2. Narrow evidence pass: recover small windows only for the top candidates before final rendering.
+
+Do not let verbose CI logs, stack traces, browser snapshots, or soak-test output become primary
+evidence by volume. Compress tool evidence into command, tool name, status, error class, counts, and
+one exemplar whenever possible.
+
 ## Candidate Limits
 
 For user-facing output, keep:

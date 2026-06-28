@@ -4,6 +4,10 @@ Use this reference when a candidate loop touches frontend, backend, full-stack a
 
 Do not load every related skill. Pick the smallest relevant skill only after the loop candidate or task domain is clear.
 
+Do not render one generic development loop for every task. Classify the task surface first, then
+emit the smallest concrete artifact for that surface: frontend verification loop, backend contract
+triage loop, architecture task-split checklist, maker/checker review loop, or delivery readiness loop.
+
 ## Frontend Loops
 
 Typical triggers:
@@ -91,3 +95,10 @@ Delivery:
 
 - Produce summary, patch or PR draft, validation evidence, state file update, and next stop condition.
 
+Required output shape:
+
+- Frontend loop: changed routes/states, screenshot paths, console/network checks, i18n or browser verifier.
+- Backend loop: failure class, contract surface, focused verifier command, reversibility, migration or production gate.
+- Architecture loop: affected surfaces, interface contract, dependency order, verification per layer, human ambiguity gate.
+- Review loop: maker summary, checker findings with file/line or failure path, regression risk, focused verification.
+- Delivery loop: actual commands run, pass evidence, untested items, PR or handoff draft, merge/deploy approval gate.
