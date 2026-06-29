@@ -806,7 +806,6 @@ def render_loop_proposals(candidates: list[dict], language: str = "en") -> str:
     for index, candidate in enumerate(selected, start=1):
         managed_loop = candidate.get("managed_loop", {})
         contract = managed_loop.get("completion_contract", {})
-        exits = loop_exit_contract(candidate, managed_loop, contract)
         card = decision_card(candidate)
         options = card["confirmation_options"]
         first_run = first_run_defaults(candidate, managed_loop, contract, card, language)
@@ -814,13 +813,17 @@ def render_loop_proposals(candidates: list[dict], language: str = "en") -> str:
         mechanisms = ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")])
         work_shape = candidate.get("work_shape", "goal-driven" if "loop" in candidate.get("mechanisms", []) else "not recorded")
         loop_archetype = candidate.get("loop_archetype", "not recorded")
-        heartbeat = managed_loop.get("heartbeat", "goal")
-        maturity = managed_loop.get(
-            "recommended_maturity",
-            candidate.get("safety", {}).get("autonomy_level", "draft-only"),
-        )
-        mode = display_mode_for_candidate(candidate, card, managed_loop, language)
         state_file = managed_loop.get("state_file", f".sixloops/state/{candidate['id']}.json")
+        clarify_label = "Clarify"
+        act_label = "Act" if language == "en" else "Act"
+        verify_label = "Verify" if language == "en" else "Verify"
+        deliver_label = "Deliver / Stop" if language == "en" else "Deliver / Stop"
+        reply_label = "Reply with one line:" if language == "en" else "回复其中一行："
+        goal_label = "Goal" if language == "en" else "目标"
+        first_cycle_label = "First cycle" if language == "en" else "第一轮"
+        verify_stop_label = "Verify and stop" if language == "en" else "验证和停止"
+        details_label = "Details kept in the full card" if language == "en" else "完整细节保留在单独卡片"
+        review_label = "Review boundary" if language == "en" else "审查边界"
         blocks.append(
             "\n".join(
                 [
@@ -828,9 +831,24 @@ def render_loop_proposals(candidates: list[dict], language: str = "en") -> str:
                     "",
                     f"{ui(language, 'recommended_start')}: `{first_run['recommended_action']}`",
                     "",
-                    ui(language, "decision_line").format(
-                        decision=candidate["decision"], mechanisms=mechanisms, confidence=candidate["confidence"]
-                    ),
+                    f"{goal_label}: {candidate_objective(candidate, managed_loop, language)}",
+                    "",
+                    reply_label,
+                    "",
+                    "\n".join(f"- `{option}`" for option in options),
+                    "",
+                    f"{first_cycle_label}:",
+                    "",
+                    f"1. {clarify_label}: {first_run['first_run_observe']}; {first_run['first_run_decide']}.",
+                    f"2. {act_label}: {first_run['first_run_act']}.",
+                    f"3. {verify_label}: {first_run['first_run_verify']}",
+                    f"4. {deliver_label}: {ui(language, 'state')} `{state_file}`; {ui(language, 'stop_after')} {first_run['first_run_stop_after']}; {review_label}: {first_run['first_run_human_gate']}",
+                    "",
+                    f"{verify_stop_label}:",
+                    "",
+                    bullet_block(verification_items(candidate, contract, language), language),
+                    "",
+                    bullet_block(stop_items(candidate, contract, language), language),
                     "",
                     ui(language, "run_card_line").format(
                         can_use_now=display_flag(card["can_use_now"], language),
@@ -838,77 +856,15 @@ def render_loop_proposals(candidates: list[dict], language: str = "en") -> str:
                         can_delegate=display_flag(card["can_delegate"], language),
                     ),
                     "",
-                    f"{ui(language, 'next_action')}: `{card['next_action']}`",
-                    "",
-                    ui(language, "start_with_one"),
-                    "",
-                    "\n".join(f"- `{option}`" for option in options),
-                    "",
-                    f"{ui(language, 'what_it_does')}: {candidate_objective(candidate, managed_loop, language)}",
+                    ui(language, "decision_line").format(
+                        decision=candidate["decision"], mechanisms=mechanisms, confidence=candidate["confidence"]
+                    ),
                     "",
                     ui(language, "work_shape_line").format(work_shape=work_shape, loop_archetype=loop_archetype),
                     "",
-                    ui(language, "heartbeat_line").format(heartbeat=heartbeat, mode=mode, maturity=maturity),
+                    f"{details_label}: `cards/{candidate['id']}.md`",
                     "",
-                    ui(language, "first_cycle"),
-                    "",
-                    f"- {ui(language, 'observe')}: {first_run['first_run_observe']}",
-                    f"- {ui(language, 'decide')}: {first_run['first_run_decide']}",
-                    f"- {ui(language, 'act')}: {first_run['first_run_act']}",
-                    f"- {ui(language, 'verify')}: {first_run['first_run_verify']}",
-                    f"- {ui(language, 'state')}: {state_file}",
-                    f"- {ui(language, 'stop_after')}: {first_run['first_run_stop_after']}",
-                    "",
-                    ui(language, "trigger"),
-                    "",
-                    bullet_block(trigger_items(candidate, managed_loop, language), language),
-                    "",
-                    ui(language, "loop_cycle"),
-                    "",
-                    bullet_block(cycle_steps(candidate, managed_loop, language), language),
-                    "",
-                    ui(language, "verification"),
-                    "",
-                    bullet_block(verification_items(candidate, contract, language), language),
-                    "",
-                    ui(language, "stop_conditions"),
-                    "",
-                    bullet_block(stop_items(candidate, contract, language), language),
-                    "",
-                    ui(language, "iteration_cap").format(count=managed_loop.get("max_iterations_per_run", 8)),
-                    "",
-                    ui(language, "review_boundary").format(boundary=approval_boundary(candidate, language)),
-                    "",
-                    ui(language, "acceptance_checks"),
-                    "",
-                    bullet_block(
-                        localized_items(contract.get("success_criteria", []), language, ["聚焦验证通过，或明确记录阻塞原因。"]),
-                        language,
-                    ),
-                    "",
-                    ui(language, "loop_exits"),
-                    "",
-                    ui(language, "continue_only_if"),
-                    "",
-                    bullet_block(localized_items(exits.get("continue_only_if", []), language, ["目标未变，下一步仍在已批准范围内，且验证器能拒绝错误输出。"]), language),
-                    "",
-                    ui(language, "done_when"),
-                    "",
-                    bullet_block(localized_items(exits.get("done_when", []), language, ["验收标准通过，并保留必要证据。"]), language),
-                    "",
-                    ui(language, "review_when"),
-                    "",
-                    bullet_block(localized_items(exits.get("needs_human_when", []), language, ["需要人工判断、显式批准或更强执行模式。"]), language),
-                    "",
-                    ui(language, "blocked_when"),
-                    "",
-                    bullet_block(localized_items(exits.get("blocked_when", []), language, ["当前证据或验证器不足以继续可靠推进。"]), language),
-                    "",
-                    ui(language, "budget_when"),
-                    "",
-                    bullet_block(localized_items(exits.get("budget_stopped_when", []), language, ["达到事项数、迭代数、时间、token 或成本上限。"]), language),
-                    "",
-                    f"{ui(language, 'why_mechanism')}: {mechanism['why_this_mechanism']} {why_this_loop(candidate, language)}",
+                    f"{ui(language, 'why_mechanism')}: {mechanism['why_this_mechanism']}",
                 ]
             )
         )

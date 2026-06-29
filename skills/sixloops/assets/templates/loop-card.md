@@ -1,22 +1,27 @@
 # {{name}}
 
-## Start Plan
+## Start Here
 
-Recommended start: `{{recommended_action}}`
+Recommended reply: `{{recommended_action}}`
 
 Mode: `{{mode_display}}`
 
-This loop will do:
+Goal:
 
-{{control_will_do}}
+{{first_run_goal}}
 
-This loop will not do in the current mode:
+Reply in this chat with one line:
 
-{{control_will_not}}
+{{start_options}}
 
-It returns to you before:
+## First Cycle
 
-{{control_must_ask}}
+1. Clarify: {{first_run_observe}}; {{first_run_decide}}.
+2. Act: {{first_run_act}}.
+3. Verify: {{first_run_verify}}
+4. Deliver / Stop: update `{{managed_state_file}}`; stop after {{first_run_stop_after}}; review boundary: {{first_run_human_gate}}
+
+## Verify And Stop
 
 It verifies with:
 
@@ -26,17 +31,21 @@ It stops when:
 
 {{control_stop}}
 
-Why this loop should exist:
+It returns to you before:
+
+{{control_must_ask}}
+
+This loop will not do in this mode:
+
+{{control_will_not}}
+
+## Why This Loop
 
 {{control_why}}
 
 Where this may be wrong:
 
 {{where_this_may_be_wrong}}
-
-Reply in this chat with one of these lines. Do not run it in a terminal or copy the whole card unless you are handing it to another agent:
-
-{{start_options}}
 
 ```yaml
 id: "{{id}}"
@@ -47,38 +56,7 @@ work_shape: "{{work_shape}}"
 loop_archetype: "{{loop_archetype}}"
 ```
 
-## How To Start
-
-Start from the weakest useful mode. Move up only when the verifier and review results justify it.
-
-Reply in this chat with one:
-
-{{start_options}}
-
-First cycle packet:
-
-```text
-Objective:
-{{first_run_goal}}
-
-Acceptance checks:
-{{first_run_success_criteria}}
-
-First cycle:
-1. Observe: {{first_run_observe}}
-2. Decide: {{first_run_decide}}
-3. Act: {{first_run_act}}
-4. Verify: {{first_run_verify}}
-5. Update state: {{managed_state_file}}
-
-Stop after:
-{{first_run_stop_after}}
-
-Return for review:
-{{first_run_human_gate}}
-```
-
-## Run Card
+## Details
 
 Can start now: `{{can_use_now}}`
 

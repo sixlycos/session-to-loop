@@ -2,19 +2,19 @@
 
 {{summary}}
 
-## Action Overview
+## Start Here
 
 {{proposal_overview}}
 
-## How To Start
+## Reply With One Line
 
 {{confirmation_prompt}}
 
-## Recommended Start Plans
+## First Run Cards
 
 {{loop_proposals}}
 
-## Smaller Mechanisms
+## Details And Smaller Options
 
 These are useful only if you reject or downgrade the loop proposals.
 

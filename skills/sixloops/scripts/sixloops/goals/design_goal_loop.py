@@ -146,6 +146,10 @@ def strings(value: object) -> list[str]:
     return [text] if text else []
 
 
+def first(items: list[str], default: str) -> str:
+    return items[0] if items else default
+
+
 def bullet(items: list[str]) -> str:
     if not items:
         return "- None."
@@ -156,6 +160,70 @@ def numbered(items: list[str]) -> str:
     if not items:
         return "1. No repeatable steps recorded."
     return "\n".join(f"{index}. {item}" for index, item in enumerate(items, start=1))
+
+
+def contains_cjk_text(value: str) -> bool:
+    return bool(re.search(r"[\u3400-\u9fff]", value))
+
+
+def design_language(design: dict) -> str:
+    return "zh" if contains_cjk_text(str(design.get("goal", ""))) else "en"
+
+
+ZH_START_CARD_TEXT = {
+    "Run the focused project verifier identified during the Decide step.": "运行 Decide 阶段确定的聚焦项目验证。",
+    "Same visible failure repeats twice.": "同一可见问题重复出现两次。",
+    "No new screenshot, console, network, or i18n evidence appears across two iterations.": "连续两轮没有新的截图、控制台、网络或 i18n 证据。",
+    "The browser verifier or dev server is unavailable.": "浏览器验证器或开发服务器不可用。",
+    "A product copy, translation tone, visual direction, route behavior, or scope-expansion decision is required.": "需要产品文案、翻译语气、视觉方向、路由行为或范围扩张判断。",
+    "visual direction changes": "视觉方向变更",
+    "product copy decisions": "产品文案决策",
+    "translation tone or terminology decisions": "翻译语气或术语决策",
+    "route behavior changes": "路由行为变更",
+    "auth or data fixture changes": "认证或数据夹具变更",
+    "scope expansion": "范围扩张",
+    "irreversible changes": "不可逆变更",
+}
+
+
+def start_card_text(value: str, language: str) -> str:
+    if language != "zh":
+        return value
+    return ZH_START_CARD_TEXT.get(value, value)
+
+
+def start_card_items(items: list[str], language: str) -> list[str]:
+    return [start_card_text(item, language) for item in items]
+
+
+def first_cycle_card(design: dict) -> str:
+    language = design_language(design)
+    managed_loop = design["managed_loop"]
+    contract = managed_loop["completion_contract"]
+    max_items = managed_loop["max_items_per_cycle"]
+    max_iterations = managed_loop["max_iterations_per_run"]
+    verifier = start_card_text(first(contract["verifier_commands"], "Run the focused verifier."), language)
+    approval_separator = "、" if language == "zh" else ", "
+    approvals = approval_separator.join(start_card_items(design["safety"]["requires_approval_for"], language))
+
+    if language == "zh":
+        return "\n".join(
+            [
+                f"1. Clarify：读取 `STATE.json`、当前目标、项目规则和输入；本轮最多选择 {max_items} 个事项。",
+                f"2. Act：只在 `{level_to_mode(design['adoption_level'])}` 边界内处理有直接证据支撑的事项。",
+                f"3. Verify：{verifier}",
+                f"4. Deliver / Stop：更新 `STATE.json`；达到 {max_iterations} 轮、重复无进展、触达审查边界，或需要 {approvals} 时返回。",
+            ]
+        )
+
+    return "\n".join(
+        [
+            f"1. Clarify: read `STATE.json`, the current goal, project rules, and inputs; choose at most {max_items} item(s).",
+            f"2. Act: work only inside `{level_to_mode(design['adoption_level'])}` with directly evidenced items.",
+            f"3. Verify: {verifier}",
+            f"4. Deliver / Stop: update `STATE.json`; return after {max_iterations} iterations, repeated no-progress, a review boundary, or approval needs: {approvals}.",
+        ]
+    )
 
 
 def read_goal(args: argparse.Namespace) -> str:
@@ -631,9 +699,46 @@ def render_goal(design: dict) -> str:
     contract = managed_loop["completion_contract"]
     exit_contract = managed_loop["loop_exit_contract"]
     mode = level_to_mode(design["adoption_level"])
+    language = design_language(design)
+    intro = (
+        "这是一份 SixLoops 运行包。先按 Start Card 跑第一轮，细节和退出协议保留在后面。"
+        if language == "zh"
+        else "Use this as a SixLoops run packet. Start with the card below; keep the full protocol for details."
+    )
+    goal_label = "目标" if language == "zh" else "Goal"
+    first_cycle_label = "第一轮" if language == "zh" else "First cycle"
+    verify_label = "验证方式" if language == "zh" else "Verifier"
+    stop_label = "停止/返回审查" if language == "zh" else "Stop / return for review"
+    ask_label = "返回审查前需要批准" if language == "zh" else "Ask before"
     return f"""# {design["name"]}
 
-Use this as a SixLoops run packet.
+{intro}
+
+## Start Card
+
+- Mode: `{mode}`
+- Internal level: `{design["adoption_level"]}`
+- Team mode: `{design["team_mode"]}`
+
+{goal_label}:
+
+{design["goal"]}
+
+{first_cycle_label}:
+
+{first_cycle_card(design)}
+
+{verify_label}:
+
+{bullet(start_card_items(contract["verifier_commands"], language))}
+
+{stop_label}:
+
+{bullet(start_card_items(contract["reject_conditions"], language))}
+
+{ask_label}:
+
+{bullet(start_card_items(design["safety"]["requires_approval_for"], language))}
 
 ## Objective
 
@@ -766,9 +871,49 @@ def render_team(design: dict) -> str:
 
 def render_handoff(design: dict, artifact_dir: Path) -> str:
     exits = design["managed_loop"]["loop_exit_contract"]
+    managed_loop = design["managed_loop"]
+    contract = managed_loop["completion_contract"]
+    mode = level_to_mode(design["adoption_level"])
+    language = design_language(design)
+    intro = (
+        "这个目录是一份 goal-ready SixLoops 设计。先看 Start Card，再按 `GOAL.md` 的完整协议执行。"
+        if language == "zh"
+        else "This folder contains a goal-ready SixLoops design. Start with the card below, then use `GOAL.md` for the full protocol."
+    )
+    goal_label = "目标" if language == "zh" else "Goal"
+    first_cycle_label = "第一轮" if language == "zh" else "First cycle"
+    verify_label = "验证方式" if language == "zh" else "Verifier"
+    stop_label = "停止/返回审查" if language == "zh" else "Stop / return for review"
+    ask_label = "返回审查前需要批准" if language == "zh" else "Ask before"
     return f"""# {design["name"]} Handoff
 
-This folder contains a goal-ready SixLoops design generated from a user objective.
+{intro}
+
+## Start Card
+
+- Mode: `{mode}`
+- Internal level: `{design["adoption_level"]}`
+- Team mode: `{design["team_mode"]}`
+
+{goal_label}:
+
+{design["goal"]}
+
+{first_cycle_label}:
+
+{first_cycle_card(design)}
+
+{verify_label}:
+
+{bullet(start_card_items(contract["verifier_commands"], language))}
+
+{stop_label}:
+
+{bullet(start_card_items(contract["reject_conditions"], language))}
+
+{ask_label}:
+
+{bullet(start_card_items(design["safety"]["requires_approval_for"], language))}
 
 ## Why This Loop
 

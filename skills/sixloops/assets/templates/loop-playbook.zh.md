@@ -2,19 +2,19 @@
 
 {{summary}}
 
-## 建议行动总览
+## 先看这里
 
 {{proposal_overview}}
 
-## 如何选择下一步
+## 回复其中一行
 
 {{confirmation_prompt}}
 
-## Loop 卡片
+## 第一轮运行卡
 
 {{loop_proposals}}
 
-## 较小机制
+## 详情和较小机制
 
 如果你拒绝或降级上面的 Loop 方案，这些机制才是更合适的选择。
 

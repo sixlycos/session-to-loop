@@ -1,22 +1,27 @@
 # {{name}}
 
-## 启动计划
+## 先看这里
 
-推荐启动方式：`{{recommended_action}}`
+推荐回复：`{{recommended_action}}`
 
 模式：`{{mode_display}}`
 
-这个 Loop 会做：
+目标：
 
-{{control_will_do}}
+{{first_run_goal}}
 
-当前模式下不会做：
+在当前对话回复其中一行：
 
-{{control_will_not}}
+{{start_options}}
 
-它会在这些情况前返回给你：
+## 第一轮
 
-{{control_must_ask}}
+1. Clarify：{{first_run_observe}}；{{first_run_decide}}。
+2. Act：{{first_run_act}}。
+3. Verify：{{first_run_verify}}
+4. Deliver / Stop：更新 `{{managed_state_file}}`；停止于 {{first_run_stop_after}}；审查边界：{{first_run_human_gate}}
+
+## 验证和停止
 
 验证方式：
 
@@ -26,17 +31,21 @@
 
 {{control_stop}}
 
-为什么值得做成 Loop：
+它会在这些情况前返回给你：
+
+{{control_must_ask}}
+
+当前模式下不会做：
+
+{{control_will_not}}
+
+## 为什么值得做
 
 {{control_why}}
 
 这个判断可能错在哪里：
 
 {{where_this_may_be_wrong}}
-
-只需要在当前对话回复下面某一行。不要在终端执行，也不用复制整张卡片；只有要转交给另一个 agent 时才复制卡片：
-
-{{start_options}}
 
 ```yaml
 id: "{{id}}"
@@ -47,38 +56,7 @@ work_shape: "{{work_shape}}"
 loop_archetype: "{{loop_archetype}}"
 ```
 
-## 如何启动
-
-从最弱但有用的模式开始。只有验证结果和人工审查证明值得升级时，再提高模式。
-
-在当前对话回复其中一行：
-
-{{start_options}}
-
-第一轮运行包：
-
-```text
-目标：
-{{first_run_goal}}
-
-验收标准：
-{{first_run_success_criteria}}
-
-第一轮：
-1. 观察：{{first_run_observe}}
-2. 决策：{{first_run_decide}}
-3. 执行：{{first_run_act}}
-4. 验证：{{first_run_verify}}
-5. 更新状态：{{managed_state_file}}
-
-停止于：
-{{first_run_stop_after}}
-
-返回审查：
-{{first_run_human_gate}}
-```
-
-## 运行卡片
+## 详情
 
 现在可启动：`{{can_use_now}}`
 
