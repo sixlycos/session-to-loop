@@ -7,6 +7,7 @@
       "team_mode": "subagent-team",
       "roles": ["planner", "frontend-maker", "browser-verifier", "reviewer", "integrator"],
       "approval_for": ["visual direction changes", "product copy decisions"],
+      "require_exit_contract": true,
       "must_include": ["GOAL.md", "TEAM.md", "STATE.json"]
     }
   },
@@ -18,6 +19,7 @@
       "team_mode": "subagent-team",
       "roles": ["triage-planner", "issue-investigator", "fixer", "verifier", "integrator"],
       "approval_for": ["broad scan", "production action"],
+      "require_exit_contract": true,
       "must_include": ["GOAL.md", "TEAM.md", "STATE.json"]
     }
   }

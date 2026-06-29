@@ -98,6 +98,16 @@ A loop is not just a prompt that repeats. A useful loop needs four things:
 
 If those are missing, SixLoops should recommend a prompt, rule, skill, checklist, approval gate, or reject instead.
 
+The most important part is the exit contract. A loop is not a long prompt; it is a controlled state machine. Every cycle must end with exactly one status:
+
+- `CONTINUE`: another cycle can increase verified certainty.
+- `DONE`: success criteria passed; return to the human for acceptance.
+- `NEEDS_HUMAN`: product, design, release, data, security, cost, architecture, or approval judgment is required.
+- `BLOCKED`: the same failure repeated, evidence stopped changing, or the verifier is unavailable or ambiguous.
+- `BUDGET_STOPPED`: the iteration, item, time, token, or cost cap was reached.
+
+Continue only when the next round can add verifiable information. Stop when it would only add effort.
+
 A real loop also needs five moves: discovery, handoff, verification, persistence, and scheduling. If one is missing, the loop usually becomes one of five failures: blind, tangled, nodding, amnesiac, or manual.
 
 The safest build order is:

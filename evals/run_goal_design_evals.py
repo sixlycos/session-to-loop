@@ -77,6 +77,28 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
         if approval not in approvals:
             failures.append(f"expected approval boundary {approval!r}, got {sorted(approvals)}")
 
+    if expected.get("require_exit_contract"):
+        exit_contract = design.get("managed_loop", {}).get("loop_exit_contract", {})
+        required_keys = {
+            "continue_only_if",
+            "done_when",
+            "needs_human_when",
+            "blocked_when",
+            "budget_stopped_when",
+            "status_protocol",
+        }
+        missing = sorted(required_keys - set(exit_contract))
+        if missing:
+            failures.append(f"missing loop_exit_contract keys: {missing}")
+        statuses = set(exit_contract.get("status_protocol", {}))
+        required_statuses = {"CONTINUE", "DONE", "NEEDS_HUMAN", "BLOCKED", "BUDGET_STOPPED"}
+        missing_statuses = sorted(required_statuses - statuses)
+        if missing_statuses:
+            failures.append(f"missing exit statuses: {missing_statuses}")
+        for list_key in required_keys - {"status_protocol"}:
+            if not exit_contract.get(list_key):
+                failures.append(f"empty exit contract list: {list_key}")
+
     for filename in expected.get("must_include", []):
         if not (design_dir / filename).exists():
             failures.append(f"missing artifact {filename}")
@@ -86,6 +108,9 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
         failures.append("unrendered template placeholder found in goal-design artifacts")
     if "subagent" not in rendered.lower() and expected.get("team_mode") == "subagent-team":
         failures.append("expected subagent-team artifacts to mention subagent behavior")
+    for status in ("CONTINUE", "DONE", "NEEDS_HUMAN", "BLOCKED", "BUDGET_STOPPED"):
+        if status not in rendered:
+            failures.append(f"expected rendered artifacts to include status {status}")
 
     return failures
 

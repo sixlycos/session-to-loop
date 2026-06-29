@@ -11,6 +11,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from loop_contract import normalize_exit_contract
+
 
 DEFAULT_CANDIDATES = Path(".session-to-loop/private/candidates.json")
 DEFAULT_OUT_DIR = Path(".session-to-loop/adopted")
@@ -32,7 +34,6 @@ LEVEL_POLICIES = {
     "scheduled-readonly": "Use only as a scheduled read-only report until separate automation setup is approved.",
     "scheduled-draft": "Use only after separate scheduling, isolation, notification, and rollback boundaries are approved.",
 }
-
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -102,6 +103,19 @@ def candidate_contract(candidate: dict) -> tuple[dict, dict]:
     return managed_loop, contract
 
 
+def exit_contract(candidate: dict) -> dict:
+    managed_loop, contract = candidate_contract(candidate)
+    safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
+    return normalize_exit_contract(
+        managed_loop.get("loop_exit_contract"),
+        success_criteria=strings(contract.get("success_criteria") or candidate.get("verification")),
+        reject_conditions=strings(contract.get("reject_conditions") or candidate.get("stop_conditions")),
+        approval_boundary=strings(safety.get("requires_approval_for")),
+        max_items=managed_loop.get("max_items_per_cycle", 3),
+        max_iterations=managed_loop.get("max_iterations_per_run", 8),
+    )
+
+
 def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
     managed_loop, contract = candidate_contract(candidate)
     safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
@@ -118,6 +132,7 @@ def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
         "state_schema": managed_loop.get("state_schema", {}),
         "success_criteria": strings(contract.get("success_criteria") or candidate.get("verification")),
         "reject_conditions": strings(contract.get("reject_conditions") or candidate.get("stop_conditions")),
+        "loop_exit_contract": exit_contract(candidate),
         "approval_boundary": strings(safety.get("requires_approval_for")),
         "budget_caps": strings(safety.get("budget_caps")),
         "items": [],
@@ -127,12 +142,15 @@ def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
         "human_queue": [],
         "next_cursor": None,
         "last_status": None,
+        "last_exit_status": None,
+        "status_history": [],
         "artifact_dir": str(artifact_dir),
     }
 
 
 def render_goal(candidate: dict, level: str) -> str:
     managed_loop, contract = candidate_contract(candidate)
+    exits = exit_contract(candidate)
     candidate_id = str(candidate.get("id"))
     state_file = "STATE.json"
     suggested_state = managed_loop.get("state_file", f".session-to-loop/state/{candidate_id}.json")
@@ -185,6 +203,28 @@ Use this as a delegated goal after the user confirms `{candidate_id}` at `{level
 
 Also stop after `{max_iterations}` iteration(s), no progress across two iterations, or any human gate.
 
+## Exit Contract
+
+Continue only if:
+
+{bullet(exits["continue_only_if"])}
+
+Return `DONE` when:
+
+{bullet(exits["done_when"])}
+
+Return `NEEDS_HUMAN` when:
+
+{bullet(exits["needs_human_when"])}
+
+Return `BLOCKED` when:
+
+{bullet(exits["blocked_when"])}
+
+Return `BUDGET_STOPPED` when:
+
+{bullet(exits["budget_stopped_when"])}
+
 ## Human Gate
 
 {bullet(approval_boundary or ["Ask before expanding scope, making irreversible changes, or changing product/release/data boundaries."])}
@@ -207,6 +247,7 @@ Return one status at the end:
 
 def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
     managed_loop, _ = candidate_contract(candidate)
+    exits = exit_contract(candidate)
     candidate_id = str(candidate.get("id"))
     return f"""# {candidate.get("name", candidate_id)} Adoption Handoff
 
@@ -223,6 +264,28 @@ Paste or attach `GOAL.md` as the delegated goal. Keep `STATE.json` beside it and
 ## Trigger
 
 {bullet(strings(managed_loop.get("cadence_or_trigger") or candidate.get("trigger")))}
+
+## Exit Contract
+
+Continue only if:
+
+{bullet(exits["continue_only_if"])}
+
+Return `DONE` when:
+
+{bullet(exits["done_when"])}
+
+Return `NEEDS_HUMAN` when:
+
+{bullet(exits["needs_human_when"])}
+
+Return `BLOCKED` when:
+
+{bullet(exits["blocked_when"])}
+
+Return `BUDGET_STOPPED` when:
+
+{bullet(exits["budget_stopped_when"])}
 
 ## Files
 

@@ -27,6 +27,7 @@ Every goal loop must include:
 - Verifier commands or checks.
 - Success criteria and pass evidence.
 - Stop conditions and no-progress policy.
+- Loop exit contract with `CONTINUE`, `DONE`, `NEEDS_HUMAN`, `BLOCKED`, and `BUDGET_STOPPED` boundaries.
 - State file and resume policy.
 - Approval boundary.
 - Optional subagent team roles.
@@ -87,6 +88,8 @@ The script writes:
 Use `--domain frontend|backend|fullstack|architecture|review|delivery|maintenance|general` when the domain is obvious.
 
 Use `--team-mode subagent-team` only when team decomposition is useful. Use `--team-mode phased` when the same agent should run the roles sequentially.
+
+Before presenting the result, check `loop-exit-contract.md`. The generated loop must explain when another cycle will add verified certainty and when it must return to the human.
 
 ## Output First
 

@@ -60,6 +60,7 @@ The user-facing product is a small set of project-specific loop proposals that t
 4. Apply deterministic hard gates.
    - Read `references/signal-taxonomy.md` when categorizing repeated prompts, failures, verifications, context repairs, polling loops, risk gates, and one-off events.
    - Read `references/loop-foundations.md` before recommending `loop` or scheduled automation.
+   - Read `references/loop-exit-contract.md` before rendering any goal-ready loop, team loop, or adoption packet.
    - Count recurrence across sessions, not only repeated lines inside one session.
    - Read `references/scoring-rubric.md` before assigning confidence or recommending automation.
    - Apply hard downgrades for one-off patterns, unverifiable loops, irreversible actions, or secret-heavy evidence.
@@ -137,5 +138,6 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 - Put evidence strength and source limitations after the proposals unless the source quality blocks recommendation.
 - Include trigger conditions, stop conditions, safety gates, verification signals, state persistence, resume behavior, and rejection reasons.
 - For every `loop` candidate, include a goal-ready `managed_loop` spec that a future agent could run without repeated user prompting after initial approval.
+- For every goal-ready loop, include a `loop_exit_contract` that defines `CONTINUE`, `DONE`, `NEEDS_HUMAN`, `BLOCKED`, and `BUDGET_STOPPED` boundaries.
 - For every team loop, include a `TEAM.md`-style plan with role prompts, modification boundaries, required outputs, and integrator status protocol.
 - Mark every candidate as `commit`, `draft`, `checklist-only`, `rule-only`, `needs-human`, or `reject`.

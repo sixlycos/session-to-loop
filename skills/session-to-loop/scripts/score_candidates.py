@@ -9,6 +9,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from loop_contract import build_exit_contract, validate_exit_contract
+
 
 DEFAULT_SIGNALS = Path(".session-to-loop/private/signals.json")
 DEFAULT_OUT = Path(".session-to-loop/private/candidates.json")
@@ -340,7 +342,17 @@ def enrich_profile(candidate_id: str, base_profile: dict) -> dict:
     managed_loop = dict(base_profile["managed_loop"])
     managed_loop.setdefault("discovery_sources", profile.get("inputs", []) or profile.get("trigger", []))
     managed_loop.setdefault("state_schema", default_state_schema())
-    managed_loop.setdefault("completion_contract", default_completion_contract(profile))
+    completion_contract = managed_loop.setdefault("completion_contract", default_completion_contract(profile))
+    managed_loop.setdefault(
+        "loop_exit_contract",
+        build_exit_contract(
+            success_criteria=completion_contract.get("success_criteria"),
+            reject_conditions=completion_contract.get("reject_conditions") or profile.get("stop_conditions"),
+            approval_boundary=profile.get("requires_approval_for"),
+            max_items=managed_loop.get("max_items_per_cycle", 3),
+            max_iterations=managed_loop.get("max_iterations_per_run", 8),
+        ),
+    )
     managed_loop.setdefault(
         "promotion_criteria",
         ["Promote only after repeated runs pass verification and human review accepts the output."],
@@ -361,6 +373,8 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
     candidate_id = signal["id"]
     managed_loop = profile.get("managed_loop", {})
     completion_contract = managed_loop.get("completion_contract", {})
+    exit_contract = managed_loop.get("loop_exit_contract", {})
+    exit_validation = validate_exit_contract(exit_contract)
     has_project_context_evidence = provider_counts.get("auxiliary", 0) > 0
     criteria = {
         "requested_loop_mechanism": "loop" in mechanisms,
@@ -394,6 +408,16 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_failure_policy": bool(managed_loop.get("failure_policy")),
         "has_human_checkpoint": bool(profile.get("requires_approval_for")),
         "has_budget_cap": bool(managed_loop.get("max_iterations_per_run")),
+        "has_loop_exit_contract": exit_validation["valid"],
+        "has_all_exit_statuses": not exit_validation["missing_statuses"],
+        "has_continue_gate": bool(exit_contract.get("continue_only_if")),
+        "has_budget_stop": bool(exit_contract.get("budget_stopped_when")),
+        "exit_contract_bound_to_verifier": bool(
+            completion_contract.get("success_criteria") and exit_contract.get("done_when")
+        ),
+        "exit_contract_bound_to_human_gate": bool(
+            profile.get("requires_approval_for") and exit_contract.get("needs_human_when")
+        ),
     }
     required_keys = [
         "requested_loop_mechanism",
@@ -416,6 +440,12 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_failure_policy",
         "has_human_checkpoint",
         "has_budget_cap",
+        "has_loop_exit_contract",
+        "has_all_exit_statuses",
+        "has_continue_gate",
+        "has_budget_stop",
+        "exit_contract_bound_to_verifier",
+        "exit_contract_bound_to_human_gate",
     ]
     missing = [key for key in required_keys if not criteria[key]]
     return {

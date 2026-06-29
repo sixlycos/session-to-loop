@@ -15,6 +15,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_EVALS = REPO_ROOT / "evals" / "evals.json"
 DEFAULT_OUT_ROOT = REPO_ROOT / ".session-to-loop" / "tmp" / "evals"
 PIPELINE = REPO_ROOT / "skills" / "session-to-loop" / "scripts" / "session_to_loop.py"
+EXIT_STATUSES = ["CONTINUE", "DONE", "NEEDS_HUMAN", "BLOCKED", "BUDGET_STOPPED"]
+EXIT_CONTRACT_KEYS = [
+    "continue_only_if",
+    "done_when",
+    "needs_human_when",
+    "blocked_when",
+    "budget_stopped_when",
+    "status_protocol",
+]
 
 
 def load_json(path: Path) -> object:
@@ -75,6 +84,45 @@ def candidate_approvals(candidates: list[dict]) -> set[str]:
     return approvals
 
 
+def loop_candidates(candidates: list[dict]) -> list[dict]:
+    return [candidate for candidate in candidates if "loop" in candidate.get("mechanisms", [])]
+
+
+def validate_loop_exit_contract(candidate: dict, expected_statuses: list[str]) -> list[str]:
+    failures: list[str] = []
+    managed_loop = candidate.get("managed_loop") if isinstance(candidate.get("managed_loop"), dict) else {}
+    contract = managed_loop.get("loop_exit_contract") if isinstance(managed_loop.get("loop_exit_contract"), dict) else {}
+    candidate_id = str(candidate.get("id", "unknown"))
+    if not contract:
+        return [f"{candidate_id}: missing managed_loop.loop_exit_contract"]
+
+    for key in EXIT_CONTRACT_KEYS:
+        value = contract.get(key)
+        if key == "status_protocol":
+            if not isinstance(value, dict):
+                failures.append(f"{candidate_id}: loop_exit_contract.status_protocol must be an object")
+        elif not value:
+            failures.append(f"{candidate_id}: loop_exit_contract.{key} is empty")
+
+    protocol = contract.get("status_protocol", {}) if isinstance(contract.get("status_protocol"), dict) else {}
+    for status in expected_statuses:
+        if status not in protocol:
+            failures.append(f"{candidate_id}: missing exit status {status!r}")
+    return failures
+
+
+def has_budget_stop_number(candidate: dict) -> bool:
+    managed_loop = candidate.get("managed_loop") if isinstance(candidate.get("managed_loop"), dict) else {}
+    contract = managed_loop.get("loop_exit_contract") if isinstance(managed_loop.get("loop_exit_contract"), dict) else {}
+    budget_text = " ".join(str(item) for item in contract.get("budget_stopped_when", []))
+    caps = [
+        str(managed_loop.get("max_items_per_cycle", "")),
+        str(managed_loop.get("max_iterations_per_run", "")),
+        budget_text,
+    ]
+    return any(any(ch.isdigit() for ch in item) for item in caps)
+
+
 def assert_case(case: dict, case_dir: Path) -> list[str]:
     failures: list[str] = []
     expected = case.get("expected", {})
@@ -97,6 +145,7 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
     mechanisms = candidate_mechanisms(candidates)
     decisions = {str(item.get("decision")) for item in candidates}
     approvals = candidate_approvals(candidates)
+    loop_items = loop_candidates(candidates)
     roles = {str(packet.get("role")) for packet in packets}
     session_ids = {str(packet.get("session_id")) for packet in packets}
     provider_counts = packet_index.get("provider_counts", {}) or packet_index.get("source", {}).get("providers", {})
@@ -142,6 +191,18 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
         if approval not in approvals:
             failures.append(f"expected approval boundary {approval!r}, got {sorted(approvals)}")
 
+    if expected.get("require_loop_exit_contract"):
+        if not loop_items:
+            failures.append("expected at least one loop candidate with loop_exit_contract")
+        expected_statuses = expected.get("require_exit_statuses") or EXIT_STATUSES
+        for candidate in loop_items:
+            failures.extend(validate_loop_exit_contract(candidate, expected_statuses))
+
+    if expected.get("require_budget_stop_numbers"):
+        for candidate in loop_items:
+            if not has_budget_stop_number(candidate):
+                failures.append(f"{candidate.get('id')}: budget stop must include concrete numeric caps")
+
     if expected.get("redaction_required") and not packet_index.get("redaction", {}).get("enabled"):
         failures.append("expected redaction to be enabled")
 
@@ -151,6 +212,12 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
             failures.append(f"forbidden text leaked into public artifacts: {forbidden!r}")
     if "{{" in public_text or "}}" in public_text:
         failures.append("unrendered template placeholder found in public artifacts")
+    if expected.get("require_rendered_exit_contract"):
+        if "## Exit Contract" not in public_text:
+            failures.append("expected rendered artifacts to include ## Exit Contract")
+        for status in expected.get("require_exit_statuses") or EXIT_STATUSES:
+            if status not in public_text:
+                failures.append(f"expected rendered artifacts to include exit status {status!r}")
 
     return failures
 

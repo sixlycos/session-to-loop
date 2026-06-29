@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from loop_contract import normalize_exit_contract, validate_exit_contract
+
 
 DEFAULT_SEMANTIC = Path(".session-to-loop/private/semantic-candidates.json")
 DEFAULT_PACKET_INDEX = Path(".session-to-loop/private/analysis-packets-index.json")
@@ -116,6 +118,11 @@ def normalize_managed_loop(
     ]
     objective = str(source.get("objective") or summary)
     state_file = str(source.get("state_file") or f".session-to-loop/state/{candidate_id}.json")
+    completion_contract = normalize_completion_contract(source, verification, stop_conditions)
+    max_items = positive_int(source.get("max_items_per_cycle"), 3)
+    max_iterations = positive_int(source.get("max_iterations_per_run"), 8)
+    safety = raw.get("safety") if isinstance(raw.get("safety"), dict) else {}
+    approval_boundary = strings(safety.get("requires_approval_for")) or strings(safety.get("human_checkpoint"))
     return {
         "objective": objective,
         "heartbeat": str(source.get("heartbeat") or raw.get("heartbeat") or "goal"),
@@ -131,9 +138,17 @@ def normalize_managed_loop(
         "cycle_steps": strings(source.get("cycle_steps")) or default_cycle,
         "selection_policy": strings(source.get("selection_policy"))
         or ["Select at most 1-3 items that are high impact, evidenced, and reversible."],
-        "max_items_per_cycle": positive_int(source.get("max_items_per_cycle"), 3),
-        "max_iterations_per_run": positive_int(source.get("max_iterations_per_run"), 8),
-        "completion_contract": normalize_completion_contract(source, verification, stop_conditions),
+        "max_items_per_cycle": max_items,
+        "max_iterations_per_run": max_iterations,
+        "completion_contract": completion_contract,
+        "loop_exit_contract": normalize_exit_contract(
+            source.get("loop_exit_contract"),
+            success_criteria=completion_contract.get("success_criteria"),
+            reject_conditions=completion_contract.get("reject_conditions") or stop_conditions,
+            approval_boundary=approval_boundary,
+            max_items=max_items,
+            max_iterations=max_iterations,
+        ),
         "change_policy": str(
             source.get("change_policy")
             or "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files. Do not push, merge, deploy, or mutate production without approval."
@@ -273,6 +288,8 @@ def loop_eligibility(candidate: dict) -> dict:
     managed_loop = candidate.get("managed_loop", {})
     completion_contract = managed_loop.get("completion_contract", {})
     safety = candidate.get("safety", {})
+    exit_contract = managed_loop.get("loop_exit_contract", {})
+    exit_validation = validate_exit_contract(exit_contract)
     risky = any(
         word in " ".join(candidate.get("mechanisms", []) + candidate.get("trigger", []) + candidate.get("actions", [])).lower()
         for word in ("deploy", "production", "migration", "delete", "permission", "payment")
@@ -305,6 +322,17 @@ def loop_eligibility(candidate: dict) -> dict:
         "has_failure_policy": bool(managed_loop.get("failure_policy")),
         "has_human_checkpoint": bool(safety.get("human_checkpoint") or safety.get("requires_approval_for")),
         "has_budget_cap": bool(safety.get("budget_caps") or managed_loop.get("max_iterations_per_run")),
+        "has_loop_exit_contract": exit_validation["valid"],
+        "has_all_exit_statuses": not exit_validation["missing_statuses"],
+        "has_continue_gate": bool(exit_contract.get("continue_only_if")),
+        "has_budget_stop": bool(exit_contract.get("budget_stopped_when")),
+        "exit_contract_bound_to_verifier": bool(
+            completion_contract.get("success_criteria") and exit_contract.get("done_when")
+        ),
+        "exit_contract_bound_to_human_gate": bool(
+            (safety.get("human_checkpoint") or safety.get("requires_approval_for"))
+            and exit_contract.get("needs_human_when")
+        ),
     }
     missing = [
         key

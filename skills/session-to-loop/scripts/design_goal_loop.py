@@ -11,6 +11,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from loop_contract import build_exit_contract
+
 
 DEFAULT_OUT_DIR = Path(".session-to-loop/goal-design")
 DOMAINS = {
@@ -429,6 +431,13 @@ def build_design(args: argparse.Namespace) -> dict:
         "pass_evidence_required",
         ["Command output, screenshot, CI status, review finding resolution, or explicit verifier note."],
     )
+    loop_exit_contract = build_exit_contract(
+        success_criteria,
+        reject_conditions,
+        approval_boundary,
+        max_items,
+        max_iterations,
+    )
 
     managed_loop = {
         "objective": goal,
@@ -454,6 +463,7 @@ def build_design(args: argparse.Namespace) -> dict:
             "reject_conditions": reject_conditions,
             "no_progress_policy": "Stop when no evidence changes across two iterations, then record the blocker and next human decision.",
         },
+        "loop_exit_contract": loop_exit_contract,
         "change_policy": (
             "Read-only until edit scope is approved. For draft-producing levels, use a local reversible change set "
             "or isolated branch/worktree. Do not push, merge, deploy, migrate, delete data, or change credentials without approval."
@@ -524,6 +534,7 @@ def build_state(design: dict) -> dict:
         "state_schema": managed_loop["state_schema"],
         "success_criteria": contract["success_criteria"],
         "reject_conditions": contract["reject_conditions"],
+        "loop_exit_contract": managed_loop["loop_exit_contract"],
         "approval_boundary": design["safety"]["requires_approval_for"],
         "items": [],
         "attempts": [],
@@ -532,12 +543,15 @@ def build_state(design: dict) -> dict:
         "human_queue": [],
         "next_cursor": None,
         "last_status": None,
+        "last_exit_status": None,
+        "status_history": [],
     }
 
 
 def render_goal(design: dict) -> str:
     managed_loop = design["managed_loop"]
     contract = managed_loop["completion_contract"]
+    exit_contract = managed_loop["loop_exit_contract"]
     return f"""# {design["name"]}
 
 Use this as a delegated SixLoops goal loop.
@@ -578,6 +592,28 @@ Required pass evidence:
 {bullet(contract["reject_conditions"])}
 
 Also stop after `{managed_loop["max_iterations_per_run"]}` iteration(s), repeated no-progress, or a human gate.
+
+## Exit Contract
+
+Continue only if:
+
+{bullet(exit_contract["continue_only_if"])}
+
+Return `DONE` when:
+
+{bullet(exit_contract["done_when"])}
+
+Return `NEEDS_HUMAN` when:
+
+{bullet(exit_contract["needs_human_when"])}
+
+Return `BLOCKED` when:
+
+{bullet(exit_contract["blocked_when"])}
+
+Return `BUDGET_STOPPED` when:
+
+{bullet(exit_contract["budget_stopped_when"])}
 
 ## State
 

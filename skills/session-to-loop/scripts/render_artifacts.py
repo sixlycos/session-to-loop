@@ -9,6 +9,8 @@ import re
 import sys
 from pathlib import Path
 
+from loop_contract import normalize_exit_contract
+
 
 DEFAULT_CANDIDATES = Path(".session-to-loop/private/candidates.json")
 DEFAULT_OUT_DIR = Path(".session-to-loop/public")
@@ -58,6 +60,30 @@ def mapping_block(value: dict) -> str:
 
 def first(items: list[str], default: str = "None.") -> str:
     return items[0] if items else default
+
+
+def loop_exit_contract(candidate: dict, managed_loop: dict, contract: dict) -> dict:
+    safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
+    return normalize_exit_contract(
+        managed_loop.get("loop_exit_contract"),
+        success_criteria=contract.get("success_criteria") or candidate.get("verification"),
+        reject_conditions=contract.get("reject_conditions") or candidate.get("stop_conditions"),
+        approval_boundary=safety.get("requires_approval_for") or safety.get("human_checkpoint"),
+        max_items=managed_loop.get("max_items_per_cycle", 3),
+        max_iterations=managed_loop.get("max_iterations_per_run", 8),
+    )
+
+
+def exit_contract_values(exits: dict) -> dict[str, str]:
+    protocol = exits.get("status_protocol", {})
+    return {
+        "exit_continue_only_if": bullet_block(exits.get("continue_only_if", [])),
+        "exit_done_when": bullet_block(exits.get("done_when", [])),
+        "exit_needs_human_when": bullet_block(exits.get("needs_human_when", [])),
+        "exit_blocked_when": bullet_block(exits.get("blocked_when", [])),
+        "exit_budget_stopped_when": bullet_block(exits.get("budget_stopped_when", [])),
+        "exit_status_protocol": mapping_block(protocol if isinstance(protocol, dict) else {}),
+    }
 
 
 def bool_label(value: bool) -> str:
@@ -244,6 +270,7 @@ def render_loop_proposals(candidates: list[dict]) -> str:
     for index, candidate in enumerate(selected, start=1):
         managed_loop = candidate.get("managed_loop", {})
         contract = managed_loop.get("completion_contract", {})
+        exits = loop_exit_contract(candidate, managed_loop, contract)
         card = decision_card(candidate)
         options = card["confirmation_options"]
         first_run = first_run_defaults(candidate, managed_loop, contract)
@@ -311,6 +338,28 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     "",
                     bullet_block(contract.get("success_criteria", [])),
                     "",
+                    "Exit contract:",
+                    "",
+                    "Continue only if:",
+                    "",
+                    bullet_block(exits.get("continue_only_if", [])),
+                    "",
+                    "Return `DONE` when:",
+                    "",
+                    bullet_block(exits.get("done_when", [])),
+                    "",
+                    "Return `NEEDS_HUMAN` when:",
+                    "",
+                    bullet_block(exits.get("needs_human_when", [])),
+                    "",
+                    "Return `BLOCKED` when:",
+                    "",
+                    bullet_block(exits.get("blocked_when", [])),
+                    "",
+                    "Return `BUDGET_STOPPED` when:",
+                    "",
+                    bullet_block(exits.get("budget_stopped_when", [])),
+                    "",
                     f"Why this mechanism: {mechanism['why_this_mechanism']} {why_this_loop(candidate)}",
                 ]
             )
@@ -353,6 +402,7 @@ def candidate_card(candidate: dict) -> str:
     first_evidence = evidence[0] if evidence else {}
     managed_loop = candidate.get("managed_loop", {})
     contract = managed_loop.get("completion_contract", {})
+    exits = loop_exit_contract(candidate, managed_loop, contract)
     card = decision_card(candidate)
     options = card["confirmation_options"]
     first_run = first_run_defaults(candidate, managed_loop, contract)
@@ -438,6 +488,7 @@ def candidate_card(candidate: dict) -> str:
         "contract_pass_evidence_required": bullet_block(contract.get("pass_evidence_required", [])),
         "contract_reject_conditions": bullet_block(contract.get("reject_conditions", [])),
         "contract_no_progress_policy": contract.get("no_progress_policy", "Not recorded."),
+        **exit_contract_values(exits),
         "managed_change_policy": managed_loop.get("change_policy", "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files."),
         "managed_deliverables": bullet_block(managed_loop.get("deliverables", [])),
         "managed_resume_policy": managed_loop.get("resume_policy", "Read the state file first and continue unresolved items before starting new work."),
@@ -456,6 +507,7 @@ def candidate_card(candidate: dict) -> str:
 def claude_loop(candidate: dict) -> str:
     managed_loop = candidate.get("managed_loop", {})
     contract = managed_loop.get("completion_contract", {})
+    exits = loop_exit_contract(candidate, managed_loop, contract)
     values = {
         "loop_name": candidate["name"],
         "goal": managed_loop.get("objective", candidate["summary"]),
@@ -475,6 +527,7 @@ def claude_loop(candidate: dict) -> str:
         "contract_pass_evidence_required": bullet_block(contract.get("pass_evidence_required", [])),
         "contract_reject_conditions": bullet_block(contract.get("reject_conditions", [])),
         "contract_no_progress_policy": contract.get("no_progress_policy", "Not recorded."),
+        **exit_contract_values(exits),
         "cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
         "selection_policy": bullet_block(managed_loop.get("selection_policy", [])),
         "max_items_per_cycle": str(managed_loop.get("max_items_per_cycle", 3)),

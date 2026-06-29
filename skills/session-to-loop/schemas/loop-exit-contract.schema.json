@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sixloops.local/schemas/loop-exit-contract.schema.json",
+  "title": "SixLoops Loop Exit Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "continue_only_if",
+    "done_when",
+    "needs_human_when",
+    "blocked_when",
+    "budget_stopped_when",
+    "status_protocol"
+  ],
+  "properties": {
+    "continue_only_if": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "done_when": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "needs_human_when": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "blocked_when": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "budget_stopped_when": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "status_protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "CONTINUE",
+        "DONE",
+        "NEEDS_HUMAN",
+        "BLOCKED",
+        "BUDGET_STOPPED"
+      ],
+      "properties": {
+        "CONTINUE": { "type": "string", "minLength": 1 },
+        "DONE": { "type": "string", "minLength": 1 },
+        "NEEDS_HUMAN": { "type": "string", "minLength": 1 },
+        "BLOCKED": { "type": "string", "minLength": 1 },
+        "BUDGET_STOPPED": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

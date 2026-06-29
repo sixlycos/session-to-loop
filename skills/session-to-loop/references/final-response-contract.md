@@ -24,6 +24,7 @@ For each proposal, include:
 - Stop conditions: when the agent must stop.
 - Iteration cap: the maximum number of rounds before it reports a blocker.
 - Acceptance contract: success criteria, verifier, pass evidence, reject conditions, and no-progress policy.
+- Exit contract: when to return `CONTINUE`, `DONE`, `NEEDS_HUMAN`, `BLOCKED`, or `BUDGET_STOPPED`.
 - Approval boundary: what still needs human approval.
 - Why this loop: the product reason plus the evidence basis.
 

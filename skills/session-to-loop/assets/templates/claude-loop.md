@@ -62,6 +62,34 @@ No-progress policy:
 
 {{contract_no_progress_policy}}
 
+## Exit Contract
+
+Update the state file before returning any status.
+
+Continue only if:
+
+{{exit_continue_only_if}}
+
+Return `DONE` when:
+
+{{exit_done_when}}
+
+Return `NEEDS_HUMAN` when:
+
+{{exit_needs_human_when}}
+
+Return `BLOCKED` when:
+
+{{exit_blocked_when}}
+
+Return `BUDGET_STOPPED` when:
+
+{{exit_budget_stopped_when}}
+
+Status protocol:
+
+{{exit_status_protocol}}
+
 ## Inputs to Inspect Each Cycle
 
 {{context_source}}

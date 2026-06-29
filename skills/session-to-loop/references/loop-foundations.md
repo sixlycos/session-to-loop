@@ -121,6 +121,22 @@ A managed loop must compile these gates into an acceptance contract:
 Do not render a goal-ready loop artifact when the acceptance contract is missing. Render a rule,
 skill, checklist, approval gate, or rejection instead.
 
+## Loop Exit Contract
+
+Treat the exit contract as the center of the loop, not a footnote. A loop must decide whether the
+next cycle increases verified certainty or only adds more effort.
+
+Every cycle must end with exactly one status:
+
+- `CONTINUE`: continue only when new verifier evidence can be gained, risk stays within scope, and budget remains.
+- `DONE`: success criteria passed with pass evidence; return to the human for acceptance.
+- `NEEDS_HUMAN`: product, design, release, security, data, cost, architecture, or high-impact approval is required.
+- `BLOCKED`: the same failure repeated, evidence stopped changing, or the verifier is unavailable or ambiguous.
+- `BUDGET_STOPPED`: item, iteration, time, token, or cost cap is reached.
+
+Read `loop-exit-contract.md` when rendering goal-ready artifacts. If a proposal cannot say when to
+continue and when to return to the human, downgrade it to a skill, checklist, or prompt.
+
 ## Minimum Safety Checklist
 
 Before recommending unattended execution or draft-producing autonomy, require:

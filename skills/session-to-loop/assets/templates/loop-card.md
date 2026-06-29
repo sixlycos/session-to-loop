@@ -101,6 +101,32 @@ Status protocol:
 
 `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`
 
+## Exit Contract
+
+Continue only if:
+
+{{exit_continue_only_if}}
+
+Return `DONE` when:
+
+{{exit_done_when}}
+
+Return `NEEDS_HUMAN` when:
+
+{{exit_needs_human_when}}
+
+Return `BLOCKED` when:
+
+{{exit_blocked_when}}
+
+Return `BUDGET_STOPPED` when:
+
+{{exit_budget_stopped_when}}
+
+Status protocol:
+
+{{exit_status_protocol}}
+
 ## Adoption Path
 
 Current rung: `{{current_rung}}`

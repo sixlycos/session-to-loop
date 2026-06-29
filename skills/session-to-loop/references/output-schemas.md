@@ -12,6 +12,8 @@ Use these structures when producing machine-readable artifacts. Markdown reports
 - `decision_card`: user-facing readiness summary: `can_use_now`, `can_confirm`, `can_delegate`, `missing_before_delegate`, `next_action`, and `confirmation_options`.
 - `first_run_packet`: the confirmable starter contract: `recommended_action`, `reply_to_confirm`, `starter_goal_prompt`, `first_run_mode`, `state_file`, `observe`, `decide`, `act`, `verify`, `stop_after`, and `human_gate`.
 - `managed_loop.completion_contract`: mandatory for real loops; defines success criteria, verifier commands, evaluator, pass evidence, reject conditions, and no-progress policy.
+- `managed_loop.loop_exit_contract`: mandatory for goal-ready loops; defines when to continue, return done, ask a human, block, or stop by budget.
+- `schemas/loop-exit-contract.schema.json`: machine-readable shape for the mandatory exit contract.
 - `managed_loop.state_schema`: minimal durable state ledger the loop must update before stopping.
 - `managed_loop.status_protocol`: allowed statuses: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, and `BUDGET_STOPPED`.
 - `economics`: lightweight cost and acceptance estimate: trigger frequency, expected per-run cost, automatic rejection signals, human review load, demotion threshold, and budget caps.
@@ -119,6 +121,32 @@ managed_loop:
       - "Same failure repeats twice."
       - "Push or merge is required."
     no_progress_policy: "Stop when the same failure repeats twice or no evidence changes across two iterations."
+  loop_exit_contract:
+    continue_only_if:
+      - "Objective is unchanged."
+      - "Next action stays inside approved scope."
+      - "A verifier can reject bad output."
+      - "New evidence changed or is likely from the next verifier."
+      - "Risk stays below the approval boundary."
+      - "Iteration and item budgets remain."
+    done_when:
+      - "Relevant local test passes."
+      - "CI status becomes green or remaining failure is clearly blocked."
+    needs_human_when:
+      - "Push or merge is required."
+      - "Product, release, security, data, cost, or architecture judgment is required."
+    blocked_when:
+      - "Same failure repeats twice."
+      - "No evidence changes across two iterations."
+      - "Verifier is unavailable or ambiguous."
+    budget_stopped_when:
+      - "Iteration, item, time, token, or cost cap is reached."
+    status_protocol:
+      CONTINUE: "Only when another cycle can increase verified certainty."
+      DONE: "Success criteria passed with required pass evidence; return for acceptance."
+      NEEDS_HUMAN: "Human judgment or explicit approval is required."
+      BLOCKED: "Reliable progress is not possible with current evidence or verifier."
+      BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
   change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
   deliverables:
     - "Status summary"
@@ -460,6 +488,24 @@ success_criteria:
   - "Relevant local test passes."
 reject_conditions:
   - "Same failure repeats twice."
+loop_exit_contract:
+  continue_only_if:
+    - "Objective is unchanged."
+    - "A verifier can reject bad output."
+  done_when:
+    - "Relevant local test passes."
+  needs_human_when:
+    - "Push or merge is required."
+  blocked_when:
+    - "Same failure repeats twice."
+  budget_stopped_when:
+    - "Iteration, item, time, token, or cost cap is reached."
+  status_protocol:
+    CONTINUE: "Only when another cycle can increase verified certainty."
+    DONE: "Success criteria passed with required pass evidence; return for acceptance."
+    NEEDS_HUMAN: "Human judgment or explicit approval is required."
+    BLOCKED: "Reliable progress is not possible with current evidence or verifier."
+    BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
 approval_boundary:
   - "push"
   - "merge"
@@ -519,6 +565,31 @@ managed_loop:
       - "Same failure repeats twice."
       - "A human approval boundary is reached."
     no_progress_policy: "Stop when no evidence changes across two iterations."
+  loop_exit_contract:
+    continue_only_if:
+      - "Objective is unchanged."
+      - "Next action stays inside approved scope."
+      - "A verifier can reject bad output."
+      - "New evidence changed or is likely from the next verifier."
+      - "Risk stays below the approval boundary."
+      - "Iteration and item budgets remain."
+    done_when:
+      - "Target routes render without blocking errors."
+    needs_human_when:
+      - "Visual direction changes are required."
+      - "Product copy decisions are required."
+    blocked_when:
+      - "Same failure repeats twice."
+      - "No evidence changes across two iterations."
+      - "Verifier is unavailable or ambiguous."
+    budget_stopped_when:
+      - "Iteration, item, time, token, or cost cap is reached."
+    status_protocol:
+      CONTINUE: "Only when another cycle can increase verified certainty."
+      DONE: "Success criteria passed with required pass evidence; return for acceptance."
+      NEEDS_HUMAN: "Human judgment or explicit approval is required."
+      BLOCKED: "Reliable progress is not possible with current evidence or verifier."
+      BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
 subagent_team:
   mode: "subagent-team"
   activation_rule: "If subagent tools are available, use separate agents for planner/reviewer/verifier work; otherwise run roles sequentially."

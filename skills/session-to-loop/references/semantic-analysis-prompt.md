@@ -53,6 +53,7 @@ For each candidate, decide:
   `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
 - Whether the loop has an acceptance contract: success criteria, verifier commands or checks,
   evaluator, required pass evidence, reject conditions, no-progress policy, state schema, and human checkpoint.
+- Whether the loop has an exit contract: continue-only-if conditions, done conditions, needs-human boundaries, blocked conditions, and budget-stop conditions.
 
 ## Loop Standard
 
@@ -66,6 +67,8 @@ lowest adoption level that would be useful.
 If a candidate has repeated steps but no acceptance contract, state schema, resume policy,
 verification, stop condition, budget cap, or human checkpoint, recommend `skill` or `checklist`
 instead of `loop`.
+
+If a candidate cannot say when to continue and when to return to the human, recommend a smaller mechanism. A loop is a controlled state machine, not a long prompt.
 
 If the work is process-shaped and has no meaningful agent decision, recommend a script, hook, or
 traditional automation instead of a loop. If the work is tool-assisted but still needs frequent human

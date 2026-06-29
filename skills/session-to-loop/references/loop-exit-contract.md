@@ -1,0 +1,86 @@
+# Loop Exit Contract
+
+Use this reference before rendering any goal-ready loop, team loop, or adoption packet.
+
+## Core Definition
+
+A loop is not a long prompt. A loop is a controlled state machine with an explicit exit protocol.
+
+Every loop cycle must end with exactly one status:
+
+- `CONTINUE`: keep going because another cycle can increase verified certainty.
+- `DONE`: success criteria passed; return to the human for acceptance.
+- `NEEDS_HUMAN`: the next decision belongs to a human.
+- `BLOCKED`: the loop cannot make reliable progress.
+- `BUDGET_STOPPED`: the item, iteration, time, token, or cost cap was reached.
+
+## Continue Rule
+
+Continue only when all are true:
+
+- The objective is unchanged.
+- The next action stays inside approved scope.
+- New evidence is available or likely from the next verifier.
+- A verifier can reject bad output.
+- Risk remains below the approval boundary.
+- The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.
+- Iteration, item, time, token, and cost budgets remain.
+
+If the next round only adds effort without adding verifiable information, stop.
+
+## Return To Human
+
+Return to the human when:
+
+- Success criteria pass. Status: `DONE`.
+- Product, design, copy, translation, release, security, data, cost, or architecture judgment is needed. Status: `NEEDS_HUMAN`.
+- Push, merge, deploy, migration, deletion, credential change, permission change, production config, or billing-impacting action is needed. Status: `NEEDS_HUMAN`.
+- The verifier is missing, unavailable, flaky, ambiguous, or cannot explain the result. Status: `BLOCKED` or `NEEDS_HUMAN`.
+- The same failure repeats twice. Status: `BLOCKED`.
+- No evidence changes across two iterations. Status: `BLOCKED`.
+- The fix expands scope beyond the approved loop. Status: `NEEDS_HUMAN`.
+- The budget cap is reached. Status: `BUDGET_STOPPED`.
+
+## Required Schema
+
+Every goal-ready loop should include:
+
+```yaml
+loop_exit_contract:
+  continue_only_if:
+    - "Objective is unchanged."
+    - "Next action stays inside approved scope."
+    - "A verifier can reject bad output."
+    - "New evidence changed or is likely from the next verifier."
+    - "Risk stays below the approval boundary."
+    - "Iteration and item budgets remain."
+  done_when:
+    - "All success criteria pass with required pass evidence."
+  needs_human_when:
+    - "Product, design, copy, release, data, security, cost, or architecture judgment is required."
+    - "A high-impact action is required."
+  blocked_when:
+    - "Same failure repeats twice."
+    - "No evidence changes across two iterations."
+    - "Verifier is unavailable or ambiguous."
+  budget_stopped_when:
+    - "Iteration, item, time, token, or cost cap is reached."
+  status_protocol:
+    CONTINUE: "Only when another cycle can increase verified certainty."
+    DONE: "Success criteria passed; return for acceptance."
+    NEEDS_HUMAN: "Human judgment or approval is required."
+    BLOCKED: "Reliable progress is not possible."
+    BUDGET_STOPPED: "Budget cap reached."
+```
+
+## Rendering Rule
+
+Do not hide this contract under generic stop conditions. User-facing artifacts should show:
+
+- Continue only if.
+- Done when.
+- Needs human when.
+- Blocked when.
+- Budget stopped when.
+
+This boundary matters more than the tool list because it decides whether the next cycle reduces rework or creates more rework.
