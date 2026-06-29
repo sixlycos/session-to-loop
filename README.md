@@ -71,34 +71,36 @@ SixLoops can render:
 
 ```mermaid
 flowchart TD
-  A["Start with a goal, session logs, or project evidence"] --> B{"Input type"}
-  B -->|Direct goal| C["Design a goal loop<br/>design_goal_loop.py"]
-  B -->|Session logs| D["Confirm a narrow analysis scope"]
-  B -->|Project evidence| E["Package supporting evidence"]
+  A["Choose an entrypoint"] --> B{"Request type"}
 
-  D --> F["Redact, normalize, and build analysis packets"]
-  E --> G["Semantic analysis<br/>find loop candidates"]
-  F --> G
-  C --> H["Fast loop check<br/>cadence, verifier, reproducibility, cap, human gate"]
-  G --> H
+  B -->|Direct goal| C["Run design_goal_loop.py"]
+  C --> D["Read GOAL, STATE, HANDOFF, TEAM, and goal-loop-design"]
+  D --> L["Present Start Plan<br/>verifier, state, stop policy, review boundary"]
 
-  H --> I{"Smallest useful mechanism?"}
-  I -->|Rule, skill, checklist, gate, or eval| J["Render lightweight artifact"]
-  I -->|Managed loop| K["Render loop playbook<br/>state, verifier, stop policy, review boundary"]
-  I -->|Weak, rare, unsafe, or unverifiable| L["Reject or downgrade"]
+  B -->|Session logs or project evidence| E["Run sixloops.py --input"]
+  E --> F{"Scope approved?"}
+  F -->|No| G["Present inventory and ask for narrow scope"]
+  G --> E
+  F -->|Yes| H["Redact, normalize, and build analysis-packets.jsonl"]
+  H --> I["Host AI writes semantic-candidates.json"]
+  I --> J["Rerun sixloops.py with scope and semantic candidates"]
+  J --> K["Apply guardrails, score candidates, and render artifacts"]
+  K --> L
 
-  J --> M["User chooses start, shrink, or reject"]
-  K --> M
-  L --> M
+  B -->|Start or continue an existing loop| M["Read latest runbook or adoption packet"]
+  M --> N["Infer approved mode and current state"]
+  N --> R["Run one controlled cycle"]
 
-  M --> N{"Start mode approved?"}
-  N -->|No| O["Keep the artifact for manual use"]
-  N -->|Read-only, edit, draft, or PR| P["Run one controlled cycle"]
+  L --> O{"User decision"}
+  O -->|Start approved| P["Create adoption packet when stateful reuse is needed<br/>adopt_candidate.py"]
+  O -->|Shrink| Q["Keep as rule, skill, checklist, gate, or eval"]
+  O -->|Reject| Z["No automation"]
+  P --> R
 
-  P --> Q{"Exit contract"}
-  Q -->|DONE| R["Accepted result"]
-  Q -->|CONTINUE| P
-  Q -->|Review needed, blocked, or budget stopped| S["Return to human"]
+  R --> S{"Exit contract"}
+  S -->|DONE| T["Accepted result"]
+  S -->|CONTINUE| R
+  S -->|Review needed, BLOCKED, or BUDGET_STOPPED| U["Return to human"]
 ```
 
 ## Quick Start

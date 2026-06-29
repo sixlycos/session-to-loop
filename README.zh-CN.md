@@ -67,34 +67,36 @@ SixLoops 可以渲染：
 
 ```mermaid
 flowchart TD
-  A["从目标、会话日志或项目证据开始"] --> B{"输入类型"}
-  B -->|直接目标| C["设计 goal loop<br/>design_goal_loop.py"]
-  B -->|会话日志| D["确认狭窄分析范围"]
-  B -->|项目证据| E["打包支持性证据"]
+  A["选择入口"] --> B{"请求类型"}
 
-  D --> F["脱敏、标准化并构建分析 packets"]
-  E --> G["语义分析<br/>找到 loop candidates"]
-  F --> G
-  C --> H["快速 loop 检查<br/>频率、验证器、可复现性、上限、人类关卡"]
-  G --> H
+  B -->|直接目标| C["运行 design_goal_loop.py"]
+  C --> D["读取 GOAL、STATE、HANDOFF、TEAM 和 goal-loop-design"]
+  D --> L["展示 Start Plan<br/>验证器、状态、停止策略、review 边界"]
 
-  H --> I{"最小有用机制是什么？"}
-  I -->|规则、skill、清单、审批门或 eval| J["渲染轻量产物"]
-  I -->|托管 loop| K["渲染 loop playbook<br/>状态、验证器、停止策略、review 边界"]
-  I -->|弱、罕见、不安全或不可验证| L["拒绝或降级"]
+  B -->|会话日志或项目证据| E["运行 sixloops.py --input"]
+  E --> F{"scope 是否已批准？"}
+  F -->|否| G["展示 inventory，并要求确认狭窄 scope"]
+  G --> E
+  F -->|是| H["脱敏、标准化，并构建 analysis-packets.jsonl"]
+  H --> I["宿主 AI 写入 semantic-candidates.json"]
+  I --> J["带 scope 和 semantic candidates 重新运行 sixloops.py"]
+  J --> K["应用 guardrails、候选打分，并渲染产物"]
+  K --> L
 
-  J --> M["用户选择启动、缩小或拒绝"]
-  K --> M
-  L --> M
+  B -->|启动或继续已有 loop| M["读取最新 runbook 或 adoption packet"]
+  M --> N["推断已批准模式和当前状态"]
+  N --> R["运行一个受控 cycle"]
 
-  M --> N{"是否批准启动模式？"}
-  N -->|否| O["保留产物供手动使用"]
-  N -->|只读、编辑、draft 或 PR| P["运行一个受控 cycle"]
+  L --> O{"用户决策"}
+  O -->|批准启动| P["需要状态化复用时创建 adoption packet<br/>adopt_candidate.py"]
+  O -->|缩小| Q["保留为规则、skill、清单、审批门或 eval"]
+  O -->|拒绝| Z["不自动化"]
+  P --> R
 
-  P --> Q{"退出合同"}
-  Q -->|DONE| R["结果被接受"]
-  Q -->|CONTINUE| P
-  Q -->|需要 review、阻塞或预算停止| S["交还给人"]
+  R --> S{"退出合同"}
+  S -->|DONE| T["结果被接受"]
+  S -->|CONTINUE| R
+  S -->|需要 review、BLOCKED 或 BUDGET_STOPPED| U["交还给人"]
 ```
 
 ## 快速开始
