@@ -1,6 +1,6 @@
 ---
 name: session-to-loop
-description: SixLoops analyzes local AI coding session transcripts and project context to identify recurring human interventions, repeated failures, verification habits, risk boundaries, and automation candidates. Use when the user wants to mine past Codex, Claude Code, or coding-agent JSONL sessions, improve agent workflows, design project-specific loops, convert repeated manual prompting into reusable rules, skills, hooks, loop prompts, checklists, or eval cases, or decide whether a repeated pattern should not be automated.
+description: SixLoops analyzes local AI coding session transcripts, project context, or direct user goals to design project-specific loop engineering artifacts. Use when the user wants to mine past Codex, Claude Code, or coding-agent JSONL sessions, improve agent workflows, design goal-ready loops, create subagent/team loop plans, convert repeated manual prompting into reusable rules, skills, hooks, loop prompts, checklists, approval gates, eval cases, or decide whether a repeated pattern should not be automated.
 ---
 
 # SixLoops
@@ -15,8 +15,10 @@ The user-facing product is a small set of project-specific loop proposals that t
 
 - Prefer evidence-backed recommendations over generic workflow advice.
 - Let the host AI perform semantic grouping; use scripts for deterministic discovery, redaction, packet building, hard gates, and rendering.
+- When the user starts from a current goal instead of transcripts, design the goal loop directly; do not force transcript discovery.
 - Choose the smallest mechanism that would actually reduce repeated friction.
 - Reserve `loop` for managed goal loops that a user can delegate after one explicit approval.
+- Use subagent/team decomposition only when it improves planning, implementation, review, or verification; otherwise run the roles sequentially in the current agent.
 - Recommend no automation when a pattern is rare, unverifiable, unsafe, or mostly a human judgment call.
 - Ask once for analysis scope, then continue. Ask again only before expanding scope, exporting shareable snippets, or modifying project files.
 - Run locally and remain read-only unless the user explicitly asks to modify project files.
@@ -26,7 +28,13 @@ The user-facing product is a small set of project-specific loop proposals that t
 
 ## Workflow
 
-1. Scope the analysis.
+0. Choose the entrypoint.
+   - If the user gives a direct objective and asks for a loop, goal, team, or subagent workflow, read `references/goal-loop-designer.md` and run `scripts/design_goal_loop.py`.
+   - If the user asks to mine past sessions, analyze transcripts, or extract repeated patterns, use the transcript pipeline below.
+   - If both are available, design the loop from the goal first, then use transcript evidence to refine or downgrade it.
+   - If the user explicitly asks to start or delegate a generated team loop and subagent tools are available, use the generated `TEAM.md` role prompts to spawn only the needed roles for the current cycle.
+
+1. Scope transcript analysis.
    - Identify the project root, transcript source, time range, and output directory.
    - If transcript paths are ambiguous, list likely candidates and ask the user which to use.
    - Before reading transcript bodies, present the discovered inventory and ask one concise question confirming allowed files, roles, snippet policy, and output visibility.
@@ -58,6 +66,7 @@ The user-facing product is a small set of project-specific loop proposals that t
 
 5. Compile artifacts.
    - Read `references/final-response-contract.md` before presenting results to the user.
+   - Read `references/goal-loop-designer.md` when the output is a demand-driven goal loop or subagent/team loop plan.
    - Read `references/skill-routing-matrix.md` when candidates cover frontend, backend, full-stack architecture, review, verification, or delivery loops.
    - Use `assets/templates/loop-card.md` for each candidate.
    - Use `assets/templates/loop-playbook.md` for the overall report.
@@ -79,6 +88,7 @@ Recommended unified entry:
 
 Low-level deterministic scripts remain available:
 
+0. `scripts/design_goal_loop.py --goal "<user goal>" --domain auto --team-mode auto --level goal-loop --out-dir <artifact-dir>`
 1. `scripts/discover_claude_sessions.py --input <file-or-dir> --out <manifest.json>`
 2. `scripts/prepare_analysis_scope.py --manifest <manifest.json> --approve --roles user tool --out <scope.json>`
 3. `scripts/redact_transcripts.py --manifest <manifest.json> --scope <scope.json> --out-dir <redacted-dir> --index <redacted-index.json>`
@@ -106,6 +116,7 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 - Use a skill when the finding is an on-demand workflow with repeatable steps.
 - Use a hook when the finding must run deterministically at a lifecycle point.
 - Use a loop when the finding can become a managed goal loop: objective, trigger or cadence, input discovery, prioritization, bounded actions, verification, state file, resume policy, and stop conditions.
+- Use a team loop when the goal benefits from separate planner, maker, checker, verifier, and integrator roles. Prefer subagents for independent review/verification when the host runtime supports them; otherwise run the same roles sequentially.
 - Include a hard iteration cap for every loop. Without an iteration cap, recommend a skill or checklist instead.
 - Use a checklist when the finding is useful but not safe or deterministic enough to automate.
 - Use an approval gate when the finding involves deployment, deletion, schema migration, permissions, payments, or other high-impact actions.
@@ -126,4 +137,5 @@ Use `--rule-fallback` only for offline synthetic evals or when the host AI is un
 - Put evidence strength and source limitations after the proposals unless the source quality blocks recommendation.
 - Include trigger conditions, stop conditions, safety gates, verification signals, state persistence, resume behavior, and rejection reasons.
 - For every `loop` candidate, include a goal-ready `managed_loop` spec that a future agent could run without repeated user prompting after initial approval.
+- For every team loop, include a `TEAM.md`-style plan with role prompts, modification boundaries, required outputs, and integrator status protocol.
 - Mark every candidate as `commit`, `draft`, `checklist-only`, `rule-only`, `needs-human`, or `reject`.

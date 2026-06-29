@@ -1,0 +1,24 @@
+[
+  {
+    "id": "frontend-browser-team",
+    "goal": "After frontend route or i18n changes, verify browser screenshots and fix low-risk UI regressions.",
+    "expected": {
+      "domain": "frontend",
+      "team_mode": "subagent-team",
+      "roles": ["planner", "frontend-maker", "browser-verifier", "reviewer", "integrator"],
+      "approval_for": ["visual direction changes", "product copy decisions"],
+      "must_include": ["GOAL.md", "TEAM.md", "STATE.json"]
+    }
+  },
+  {
+    "id": "daily-maintenance-loop",
+    "goal": "每天早上检查我的项目，读取最近错误日志、CI失败、TODO和用户反馈，只挑1-3个高价值问题，能低风险修就尝试修复并验证。",
+    "expected": {
+      "domain": "maintenance",
+      "team_mode": "subagent-team",
+      "roles": ["triage-planner", "issue-investigator", "fixer", "verifier", "integrator"],
+      "approval_for": ["broad scan", "production action"],
+      "must_include": ["GOAL.md", "TEAM.md", "STATE.json"]
+    }
+  }
+]

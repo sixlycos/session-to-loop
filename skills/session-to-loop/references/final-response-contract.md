@@ -6,6 +6,8 @@ Use this contract when presenting SixLoops results to a user.
 
 Start with 1-3 concrete proposals the user can say yes or no to. Do not lead with transcript limitations, redaction notes, evidence tables, or file inventories unless the source quality blocks any recommendation.
 
+For demand-driven goal design, lead with the generated goal loop: goal, first cycle, team shape, verifier, stop condition, human gate, and artifact paths. Make clear that the source is the user's current objective rather than historical transcript evidence.
+
 For each proposal, include:
 
 - Confirm this loop: one recommended action and exact reply strings such as `adopt ci-babysitter as goal-loop`, `shrink ci-babysitter to skill`, or `reject ci-babysitter`.
@@ -41,6 +43,14 @@ After the user confirms `adopt <candidate-id> as <level>`, generate the adoption
 `scripts/adopt_candidate.py`. The user-facing next artifact should be concrete: `GOAL.md`,
 `STATE.json`, `HANDOFF.md`, and a draft `AGENTS-snippet.md`. Do not silently install the
 snippet into project instructions.
+
+When the user asks to design from a goal, generate the goal-design packet with
+`scripts/design_goal_loop.py`. The user-facing artifacts should be `GOAL.md`, `TEAM.md`,
+`STATE.json`, `HANDOFF.md`, and `goal-loop-design.json`.
+
+When the user explicitly asks to start a team loop and subagent tools are available, state which
+roles will run this cycle, then use `TEAM.md` prompts for the needed subagents. Do not spawn maker
+roles unless edit scope is explicit.
 
 ## Language
 

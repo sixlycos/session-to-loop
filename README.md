@@ -10,6 +10,8 @@ It is not a chat summarizer. It is a loop engineering assistant for software tea
 
 Think of session logs as friction telemetry: user corrections, tool failures, repeated verification habits, and risk boundaries that reveal which mechanism your repo is missing.
 
+SixLoops also has a goal-first mode: give it a current objective and it can design a goal-ready loop, including state, verifier, stop conditions, human gates, and an optional subagent/team plan.
+
 The installed Codex skill is currently named `$session-to-loop` for compatibility. The product name is SixLoops.
 
 ## Why The Name
@@ -77,6 +79,14 @@ Approval boundary: product copy, visual direction, auth/data fixture changes.
 
 SixLoops should feel like a mechanism router, not a loop salesman. Weak, rare, unverifiable, or high-risk patterns should become a rule, skill, checklist, approval gate, or reject.
 
+For goal-first loop design, you get a ready-to-run folder:
+
+- `GOAL.md`: the delegated goal loop.
+- `TEAM.md`: planner, maker, checker, verifier, and integrator roles when a team helps.
+- `STATE.json`: the resume ledger.
+- `HANDOFF.md`: how to run or resume.
+- `AGENTS-snippet.md`: draft project instruction, not auto-installed.
+
 ## When A Loop Is Worth It
 
 A loop is not just a prompt that repeats. A useful loop needs four things:
@@ -143,6 +153,7 @@ It does not try to replace planning, review, frontend QA, CI triage, or deployme
 
 Supported now:
 
+- Direct user goals for goal-ready loop design.
 - Codex JSONL session logs.
 - Claude Code JSONL session logs.
 - Generic JSONL logs with `user`, `assistant`, or `tool` records.
@@ -158,12 +169,27 @@ Planned or partial:
 - Loop Engineering Playbook.
 - Loop Cards.
 - Draft managed loop prompts that can be delegated like a goal after approval.
+- Goal-first loop designs with `GOAL.md`, `TEAM.md`, `STATE.json`, and `HANDOFF.md`.
 - Draft Agent Skills.
 - Draft `AGENTS.md` or `CLAUDE.md` rules.
 - Approval gate and checklist drafts.
 - Eval cases for checking whether the generated workflow improves future sessions.
 
 ## Quick Start
+
+Design from a goal, without session logs:
+
+```bash
+python skills/session-to-loop/scripts/design_goal_loop.py \
+  --goal "After frontend changes, verify changed routes with browser screenshots, fix low-risk regressions, and stop when review or product judgment is needed." \
+  --domain frontend \
+  --team-mode auto \
+  --level goal-loop \
+  --out-dir .session-to-loop/tmp/frontend-goal \
+  --overwrite
+```
+
+Open the generated `GOAL.md` and `TEAM.md` under `.session-to-loop/tmp/frontend-goal/`.
 
 Try SixLoops without private logs first:
 
@@ -260,6 +286,13 @@ The skill should feel like this:
 6. Ask which proposal to adopt with a run level, shrink, or reject.
 7. Generate concrete loop cards, skills, hooks, checklists, approval gates, or adoption packets only after confirmation.
 
+For goal-first mode, it should feel like this:
+
+1. Classify the goal surface: frontend, backend, full-stack, architecture, review, delivery, maintenance, or general.
+2. Produce a goal loop with verifier, state, stop condition, and human gate.
+3. Add a subagent/team plan only when it improves planning, review, or verification.
+4. Generate the artifacts locally without modifying the target project.
+
 It should not feel like this:
 
 - "I found some files. Please approve every internal step."
@@ -323,6 +356,12 @@ Run all synthetic evals:
 
 ```bash
 python evals/run_evals.py --keep-going
+```
+
+Run goal-design evals:
+
+```bash
+python evals/run_goal_design_evals.py --keep-going
 ```
 
 Run a representative fixture:

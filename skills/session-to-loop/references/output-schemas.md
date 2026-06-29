@@ -6,6 +6,7 @@ Use these structures when producing machine-readable artifacts. Markdown reports
 
 - `work_shape`: `process-shaped`, `tool-assisted`, or `goal-driven`.
 - `loop_archetype`: short label such as `engineering-maintenance`, `frontend-verification`, `monitoring-research`, `document-batch`, or `delivery-governance`.
+- `team_mode`: `none`, `phased`, or `subagent-team`.
 - `managed_loop.heartbeat`: `session`, `goal`, `scheduled`, or `event`.
 - `managed_loop.recommended_maturity`: `read-only-report`, `goal-loop`, `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
 - `decision_card`: user-facing readiness summary: `can_use_now`, `can_confirm`, `can_delegate`, `missing_before_delegate`, `next_action`, and `confirmation_options`.
@@ -469,6 +470,79 @@ progress_metrics: []
 human_queue: []
 next_cursor: null
 last_status: null
+```
+
+## Goal Loop Design
+
+Generated when the user starts from a current objective instead of historical transcripts.
+
+```yaml
+version: 1
+design_model: "goal-to-loop-v1"
+loop_id: "frontend-after-route-changes-a1b2c3d4e5"
+name: "Frontend Verification Loop"
+goal: "After frontend changes, verify changed routes with browser screenshots."
+domain: "frontend"
+work_shape: "goal-driven"
+loop_archetype: "frontend-verification"
+adoption_level: "goal-loop"
+team_mode: "subagent-team"
+managed_loop:
+  objective: "After frontend changes, verify changed routes with browser screenshots."
+  heartbeat: "goal"
+  recommended_maturity: "goal-loop"
+  cadence_or_trigger:
+    - "After route, layout, component, auth UI, i18n, or copy changes."
+  discovery_sources:
+    - "changed frontend files"
+    - "route list"
+    - "browser console"
+    - "screenshots"
+  state_file: "STATE.json"
+  cycle_steps:
+    - "Read prior state, current goal, changed UI files, and project instructions."
+    - "Identify the smallest route/state set that proves the change."
+    - "Choose at most 1-3 visible or user-path regressions."
+    - "Apply only reversible UI fixes inside the approved scope."
+    - "Run focused static checks and browser verification."
+  max_items_per_cycle: 3
+  max_iterations_per_run: 8
+  completion_contract:
+    success_criteria:
+      - "Target routes render without blocking errors."
+    verifier_commands:
+      - "Run the focused project verifier identified during the Decide step."
+    evaluator_agent: "Use deterministic checks first; use a reviewer or verifier role when commands cannot decide."
+    pass_evidence_required:
+      - "Command output, screenshot, CI status, review finding resolution, or explicit verifier note."
+    reject_conditions:
+      - "Same failure repeats twice."
+      - "A human approval boundary is reached."
+    no_progress_policy: "Stop when no evidence changes across two iterations."
+subagent_team:
+  mode: "subagent-team"
+  activation_rule: "If subagent tools are available, use separate agents for planner/reviewer/verifier work; otherwise run roles sequentially."
+  roles:
+    - id: "planner"
+      title: "Planner"
+      may_modify_files: false
+      outputs:
+        - "finding summary"
+        - "recommended next action"
+    - id: "browser-verifier"
+      title: "Browser Verifier"
+      may_modify_files: false
+      outputs:
+        - "route list"
+        - "screenshot or snapshot evidence"
+safety:
+  autonomy_level: "goal-loop"
+  requires_approval_for:
+    - "visual direction changes"
+    - "product copy decisions"
+  budget_caps:
+    - "Handle at most 3 item(s) per cycle."
+    - "Stop after 8 iteration(s) per run."
 ```
 
 ## Eval Case

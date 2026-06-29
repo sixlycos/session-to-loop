@@ -8,6 +8,11 @@ Do not render one generic development loop for every task. Classify the task sur
 emit the smallest concrete artifact for that surface: frontend verification loop, backend contract
 triage loop, architecture task-split checklist, maker/checker review loop, or delivery readiness loop.
 
+For goal-first designs, use `scripts/design_goal_loop.py` to generate `TEAM.md`. If the host runtime
+has subagent tools, planner/checker/verifier roles may run as separate agents. Maker roles may only
+modify files after the user grants edit scope. If subagents are unavailable, execute the roles
+sequentially in the current agent.
+
 ## Frontend Loops
 
 Typical triggers:
@@ -28,6 +33,7 @@ Possible skill routing:
 - Browser verification: `playwright` or browser-control skills.
 - UI quality review: `frontend-review`, `frontend-design`, or project-specific frontend skills.
 - Framework-specific implementation: `nextjs`, `shadcn-ui`, or similar only when the repo uses them.
+- Team roles: planner, frontend-maker, browser-verifier, reviewer, integrator.
 
 ## Backend Loops
 
@@ -48,6 +54,7 @@ Possible skill routing:
 - CI failures: `gh-fix-ci` when GitHub checks are available.
 - Code review: `review` or project-specific review skills.
 - Provider acceptance: generated project skill or checklist before turning into hooks.
+- Team roles: planner, backend-maker, contract-verifier, reviewer, integrator.
 
 ## Full-Stack Architecture Loops
 
@@ -68,6 +75,7 @@ Possible skill routing:
 - Architecture review: project-specific generated skill or `review`.
 - Browser verification: `playwright`.
 - CI/release: `gh-fix-ci` or release-oriented skills when explicitly needed.
+- Team roles: architect, frontend-maker, backend-maker, integration-verifier, integrator.
 
 ## Development Lifecycle Loops
 
