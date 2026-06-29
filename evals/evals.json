@@ -28,7 +28,13 @@
       "exclude_mechanisms": ["loop"],
       "require_analysis_run": true,
       "require_can_delegate": {"weak-loop": "no"},
-      "require_public_safe_summary": true
+      "require_public_safe_summary": true,
+      "must_not_include": ["Mode: `worktree draft`"],
+      "forbidden_confirmation_options": [
+        "start weak-loop as low-risk edit",
+        "start weak-loop as worktree draft",
+        "start weak-loop as PR draft"
+      ]
     }
   },
   {
@@ -42,7 +48,12 @@
       "exclude_mechanisms": ["loop"],
       "require_analysis_run": true,
       "require_can_delegate": {"deploy-autopilot": "no"},
-      "require_public_safe_summary": true
+      "require_public_safe_summary": true,
+      "forbidden_confirmation_options": [
+        "start deploy-autopilot as low-risk edit",
+        "start deploy-autopilot as worktree draft",
+        "start deploy-autopilot as PR draft"
+      ]
     }
   },
   {

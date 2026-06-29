@@ -16,7 +16,7 @@ The repository is named `sixloops`. The installed skill folder remains `session-
 
 | Before | After |
 | --- | --- |
-| "CI is red again. Read the logs before guessing." | **CI Babysitter Loop** with state, verifier, iteration cap, and push/merge human gate. |
+| "CI is red again. Read the logs before guessing." | **CI Babysitter Loop** with state, verifier, iteration cap, and push/merge review boundary. |
 | "Don't use npm in this repo." | **Package-manager rule** or checklist, not a full loop. |
 | "After UI changes, open the route and screenshot it." | **Browser Audit Loop** with route discovery, screenshot evidence, and visual/product stop gates. |
 | "Deploy only after I approve." | **Approval gate**, not autonomous deployment. |
@@ -42,7 +42,7 @@ It can turn repeated patterns like these:
 
 Into concrete artifacts:
 
-- **Loop Cards**: 1-3 confirmable proposals, not an evidence dump.
+- **Start Plans**: 1-3 confirmable loop proposals, not an evidence dump.
 - **Goal loops**: `GOAL.md`, `STATE.json`, `HANDOFF.md`, and optional `TEAM.md`.
 - **Rules / skills / hooks / checklists**: smaller mechanisms when a full loop is too much.
 - **Approval gates**: hard boundaries for deploys, migrations, credentials, schema changes, and other high-impact work.
@@ -56,7 +56,7 @@ SixLoops makes the job smaller:
 
 1. **Local scripts** discover, normalize, redact, select compact packets, and apply deterministic guardrails.
 2. **The host AI** reads the compact packets and performs semantic judgment.
-3. **The renderer** returns user-confirmable Loop Cards with stop conditions, verifier, state, and human gates.
+3. **The renderer** returns startable loop plans with stop conditions, verifier, state, and review boundaries.
 
 ![SixLoops semantic analysis turns noisy packets into loop cards](assets/readme/semantic-kitchen.png)
 
@@ -66,7 +66,7 @@ This is more useful than a long prompt because SixLoops:
 - Avoids loading whole session logs into context.
 - Separates semantic judgment from deterministic safety checks.
 - Rejects one-off noise instead of creating fake rules.
-- Produces a mechanism you can actually adopt, shrink, or reject.
+- Produces a mechanism you can actually start, shrink, or reject.
 
 ## Quick Start
 
@@ -90,7 +90,7 @@ Then start a new Codex thread and ask:
 
 ```text
 Use $session-to-loop to find the first loop in this repo worth trying.
-Return 1-3 Loop Cards with verifier, state, stop condition, and human gate.
+Return 1-3 Start Plans with verifier, state, stop condition, and review boundary.
 Reject weak patterns.
 ```
 
@@ -156,8 +156,10 @@ Open:
 
 You should see actions like:
 
-- `adopt ci-babysitter as read-only`
-- `adopt ci-babysitter as goal-loop`
+- `start ci-babysitter as read-only`
+- `start ci-babysitter as low-risk edit`
+- `start ci-babysitter as worktree draft`
+- `start ci-babysitter as PR draft`
 - `shrink ci-babysitter to skill`
 - `reject ci-babysitter`
 
@@ -268,31 +270,31 @@ Unzip it into one of these directories:
 
 ## What The User Sees
 
-The first useful screen should be **1-3 Loop Cards**.
+The first useful screen should be **1-3 Start Plans**.
 
 Each card says:
 
 - **What this loop will do**
 - **What it will not do**
-- **When it must ask you**
+- **When it returns to you**
 - **How it verifies**
 - **When it stops**
 - **Why it is worth existing**
-- **How to confirm, shrink, or reject it**
+- **How to start, shrink, or reject it**
 
 Example:
 
 ```text
 Browser Audit Loop
 
-Confirm: adopt browser-audit as goal-loop
-Goal: Catch frontend route, copy, and i18n regressions before handoff.
+Start: start browser-audit as low-risk edit
+Objective: Catch frontend route, copy, and i18n regressions before handoff.
 Trigger: After frontend, routing, copy, auth UI, or i18n changes.
 Cycle: identify changed routes, run checks, open the route in a browser,
 capture screenshots, fix at most 1-3 confirmed regressions, record state.
 Verifier: target routes render, screenshots confirm the main path, i18n passes.
 Stop: auth/data blocks verification, visual direction needs approval, or routes pass.
-Approval boundary: product copy, visual direction, auth/data fixture changes.
+Review boundary: product copy, visual direction, auth/data fixture changes.
 ```
 
 ## When A Loop Is Worth It
@@ -305,7 +307,7 @@ Use a loop only when the work passes the fast loop check:
 - **Has an objective gate**: tests, type checks, builds, lint, screenshots, logs, assertions, or a tight rubric can reject bad output.
 - **Can be reproduced by the agent**: the agent can run the code, inspect the failure, and see whether it improved.
 - **Has a hard stop**: iteration, time, token, item, or cost cap.
-- **Keeps a human gate**: merge, deploy, dependency, credential, schema, data, payment, and production-impacting actions return to a person.
+- **Keeps a review boundary**: merge, deploy, dependency, credential, schema, data, payment, and production-impacting actions require the matching user-approved mode or review.
 
 Good first loops are small, recurring, and machine-checkable:
 
@@ -328,7 +330,7 @@ The minimum viable loop is deliberately boring:
 
 1. Make one manual run reliable.
 2. Save the repeatable knowledge as a skill or checklist.
-3. Add one state file, one verifier, one hard cap, and one human gate.
+3. Add one state file, one verifier, one hard cap, and one review boundary.
 4. Only then add a schedule or event trigger.
 
 The most important part is the exit contract:
@@ -337,7 +339,7 @@ The most important part is the exit contract:
 
 - `CONTINUE`: another cycle can increase verified certainty.
 - `DONE`: success criteria passed; return to the human for acceptance.
-- `NEEDS_HUMAN`: product, design, release, data, security, cost, architecture, or approval judgment is required.
+- Review needed: product, design, release, data, security, cost, architecture, or approval judgment is required.
 - `BLOCKED`: the same failure repeated, evidence stopped changing, or the verifier is unavailable or ambiguous.
 - `BUDGET_STOPPED`: the iteration, item, time, token, or cost cap was reached.
 
@@ -365,7 +367,7 @@ SixLoops should explicitly guard against common money pits:
 ## Outputs
 
 - `loop-playbook.md`
-- Loop Cards
+- Start Plans
 - Draft managed loop prompts
 - Goal-first loop designs with `GOAL.md`, `TEAM.md`, `STATE.json`, and `HANDOFF.md`
 - Draft Agent Skills
@@ -418,7 +420,7 @@ explicit input path
   -> build compact analysis packets
   -> host AI semantic analysis
   -> deterministic guardrails
-  -> Loop Cards / playbook / adoption packet
+  -> Start Plans / playbook / adoption packet
 ```
 
 The host AI decides:

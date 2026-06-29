@@ -62,7 +62,7 @@ Before proposing a `loop`, verify the candidate passes all five checks:
 - Objective rejection: tests, type checks, builds, lint, screenshots, logs, assertions, or a tight rubric can reject bad output.
 - Reproduction environment: the agent can run the changed code, inspect failures, and get fresh evidence.
 - Hard stop: iteration, time, token, item, or cost cap is explicit.
-- Human review gate: merge, deploy, dependency, credential, schema, data, payment, and production-impacting actions return to a person.
+- Review gate: merge, deploy, dependency, credential, schema, data, payment, and production-impacting actions require the matching user-approved mode or human review.
 
 If one check fails, keep the recommendation as a prompt, rule, skill, hook, checklist, or approval gate.
 
@@ -112,18 +112,19 @@ Order matters:
 
 Use accepted change rate as the product metric. If fewer than half of outputs survive review, shrink the scope, improve the gate, or demote the loop.
 
-## Adoption Ladder
+## Start Mode Ladder
 
-Recommend the lowest adoption level that would be useful:
+Recommend the weakest useful mode:
 
-- `read-only`: inspect and summarize only.
-- `goal-loop`: run in the current session until the success criteria pass or the cap is hit.
-- `isolated-draft`: use an isolated branch or worktree for low-risk fixes, then stop for review.
-- `verified-pr-draft`: verify, prepare a PR draft, and leave merge to the human.
-- `scheduled-readonly`: run unattended but only report and update state.
-- `scheduled-draft`: run unattended, draft low-risk changes, notify the human, and never merge without approval.
+- `read-only`: inspect, rank, and report only.
+- `low-risk edit`: make bounded local edits with direct evidence and focused verification.
+- `worktree draft`: use an isolated branch or worktree for reversible exploratory changes.
+- `PR draft`: verify and prepare reviewable output; leave push, merge, deploy, and release actions to the user-approved path.
+- `scheduled read-only`: run unattended but only report and update state.
+- `scheduled draft`: run unattended, draft changes inside agreed isolation, notify the human, and leave landing to review.
+- `human-approved action`: perform a high-impact action only when the user explicitly grants that action and scope.
 
-Do not jump directly to scheduled or autonomous action. A loop should earn trust one rung at a time.
+Do not frame high-impact work as impossible. Frame it as requiring a stronger mode, explicit approval, or review. A loop should still earn trust one rung at a time.
 
 ## Practical Archetypes
 
@@ -157,13 +158,13 @@ If any gate is missing, prefer a prompt, rule, skill, checklist, or approval gat
 
 A managed loop must compile these gates into an acceptance contract:
 
-- Success criteria: observable conditions that can say DONE.
+- Acceptance checks: observable conditions that can say DONE.
 - Verifier: deterministic commands first, read-only checker when commands cannot decide.
 - Pass evidence: command output, status, screenshot, schema result, or explicit verifier note.
 - Reject conditions: what makes the loop stop, downgrade, or ask for a human.
 - State schema: what the loop writes before stopping so the next run can resume.
 - No-progress policy: how repeated failures or unchanged evidence stop the run.
-- Human checkpoint: actions that always remain outside autonomous execution.
+- Human checkpoint: actions that require a stronger mode, explicit approval, or review before they are finalized.
 
 Do not render a goal-ready loop artifact when the acceptance contract is missing. Render a rule,
 skill, checklist, approval gate, or rejection instead.
@@ -177,7 +178,7 @@ Every cycle must end with exactly one status:
 
 - `CONTINUE`: continue only when new verifier evidence can be gained, risk stays within scope, and budget remains.
 - `DONE`: success criteria passed with pass evidence; return to the human for acceptance.
-- `NEEDS_HUMAN`: product, design, release, security, data, cost, architecture, or high-impact approval is required.
+- review-needed: product, design, release, security, data, cost, architecture, or high-impact approval is required. Internal JSON may call this `NEEDS_HUMAN`.
 - `BLOCKED`: the same failure repeated, evidence stopped changing, or the verifier is unavailable or ambiguous.
 - `BUDGET_STOPPED`: item, iteration, time, token, or cost cap is reached.
 
@@ -193,10 +194,10 @@ Before recommending unattended execution or draft-producing autonomy, require:
 - Isolated branch, checkout, or worktree for edits.
 - Read-only checker, deterministic verifier, or both.
 - State file that is read first and updated before stopping.
-- Human gate for risky, irreversible, product, release, security, data, or cost decisions.
+- Review gate for risky, irreversible, product, release, security, data, or cost decisions.
 - Logs or notifications so failures, blockers, and created artifacts are visible.
 
-If any item is missing, start lower on the adoption ladder.
+If any item is missing, start lower on the mode ladder.
 
 ## Common Loop Failures
 
@@ -207,7 +208,7 @@ If any item is missing, start lower on the adoption ladder.
 - Blind loop: discovery is skipped and the human still chooses every task.
 - Tangled loop: handoff or isolation is skipped and parallel agents collide.
 - Drift loop: long runs lose standing constraints unless they reread the goal, state, and project rules.
-- Permission-creep loop: a read-only loop gains write or production permissions without a new approval gate.
+- Permission-creep loop: a read-only loop gains write or production permissions without a stronger mode and explicit review boundary.
 
 Use these names when rejecting or downgrading a candidate. They are clearer than vague warnings like "needs more safety."
 
@@ -249,15 +250,15 @@ Do not let the maker be the only judge of success for nontrivial loops.
 When the task is not ready for automation, propose a lightweight loop prompt:
 
 ```text
-Goal:
+Objective:
 [objective]
 
-Success criteria:
+Acceptance checks:
 - [objective criterion 1]
 - [objective criterion 2]
 - [objective criterion 3]
 
-Each round:
+Each cycle:
 1. PLAN: state the next smallest action.
 2. DO: produce or improve the result.
 3. VERIFY: score against every criterion and list weak points.

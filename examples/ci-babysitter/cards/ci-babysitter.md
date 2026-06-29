@@ -1,8 +1,12 @@
 # CI Babysitter Loop
 
-## Control Card
+## Start Plan
 
-This loop will:
+Recommended start: `start ci-babysitter as low-risk edit`
+
+Mode: `low-risk edit`
+
+This loop will do:
 
 - Read the previous state file if it exists.
 - Inspect CI status, failed logs, and current git diff.
@@ -10,12 +14,12 @@ This loop will:
 - Attempt only low-risk local fixes with direct evidence.
 - Run focused verification and record the result.
 
-This loop will not:
+This loop will not do in the current mode:
 
-- Perform approval-boundary actions without asking first: push, merge.
+- Land or finalize review-boundary actions without the matching mode: push, merge.
 - If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval.
 
-It must ask you before:
+It returns to you before:
 
 - push
 - merge
@@ -39,8 +43,10 @@ Where this may be wrong:
 
 Reply with one:
 
-- `adopt ci-babysitter as read-only`
-- `adopt ci-babysitter as goal-loop`
+- `start ci-babysitter as read-only`
+- `start ci-babysitter as low-risk edit`
+- `start ci-babysitter as worktree draft`
+- `start ci-babysitter as PR draft`
 - `shrink ci-babysitter to skill`
 - `reject ci-babysitter`
 
@@ -53,44 +59,46 @@ work_shape: "goal-driven"
 loop_archetype: "engineering-maintenance"
 ```
 
-## Confirm This Loop
+## Start Options
 
-Recommended action: `adopt as goal-loop`
+Start from the weakest useful mode. Move up only when the verifier and review results justify it.
 
 Reply with one:
 
-- `adopt ci-babysitter as read-only`
-- `adopt ci-babysitter as goal-loop`
+- `start ci-babysitter as read-only`
+- `start ci-babysitter as low-risk edit`
+- `start ci-babysitter as worktree draft`
+- `start ci-babysitter as PR draft`
 - `shrink ci-babysitter to skill`
 - `reject ci-babysitter`
 
-First run prompt:
+First cycle packet:
 
 ```text
-Goal:
+Objective:
 Keep CI failures moving toward a verified fix without guessing.
 
-Success criteria:
+Acceptance checks:
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
 
-Each round:
+First cycle:
 1. Observe: read the state file, current inputs, and latest verifier evidence
-2. Decide: choose at most 3 item(s), the next action, and any human gate
+2. Decide: choose at most 3 item(s), the next action, and any review boundary
 3. Act: pick at most 3 directly evidenced item(s)
 4. Verify: Run the focused project checks listed in verification.
 5. Update state: .session-to-loop/state/ci-babysitter.json
 
 Stop after:
-8 iterations, repeated failure, no progress across two iterations, or a human gate
+8 iterations, repeated failure, no progress across two iterations, or a review boundary
 
-Human gate:
+Return for review:
 Ask before push, merge.
 ```
 
-## Decision Card
+## Run Card
 
-Can use now: `limited`
+Can start now: `limited`
 
 Can confirm: `yes`
 
@@ -100,7 +108,7 @@ Missing before delegate:
 
 - None.
 
-Next action: `adopt`
+Next action: `start`
 
 ## Summary
 
@@ -143,7 +151,7 @@ PASS evidence:
 
 - Command output, CI status, or explicit verifier note.
 
-Status protocol:
+Internal status protocol:
 
 `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`
 
@@ -163,7 +171,7 @@ Return `DONE` when:
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 - push is required.
 - merge is required.
@@ -181,16 +189,16 @@ Return `BUDGET_STOPPED` when:
 Status protocol:
 
 - CONTINUE: Only when another cycle can increase verified certainty.
-- DONE: Success criteria passed with required pass evidence; return for acceptance.
-- NEEDS_HUMAN: Human judgment or explicit approval is required.
+- DONE: Acceptance checks passed with required evidence; return for acceptance.
+- NEEDS_HUMAN: Return for review because human judgment or explicit approval is required.
 - BLOCKED: Reliable progress is not possible with current evidence or verifier.
 - BUDGET_STOPPED: Item, iteration, time, token, or cost cap was reached.
 
-## Adoption Path
+## Mode Ladder
 
-Current rung: `goal-loop`
+Current mode: `low-risk edit`
 
-Next rung: `isolated-draft`
+Next mode: `worktree draft`
 
 Promotion criteria:
 
@@ -217,9 +225,9 @@ Demote if:
 
 Demote when fewer than half of reviewed outputs are accepted, verifier evidence stays weak, or human judgment dominates the loop.
 
-## Managed Goal Loop Spec
+## Loop Runbook
 
-Goal:
+Objective:
 
 Keep CI failures moving toward a verified fix without guessing.
 
@@ -237,9 +245,13 @@ Heartbeat:
 
 `goal`
 
-Recommended starting level:
+Internal maturity:
 
 `goal-loop`
+
+User-facing mode:
+
+`low-risk edit`
 
 State file:
 
@@ -282,7 +294,7 @@ Max iterations per run:
 
 ## Acceptance Contract
 
-Success criteria:
+Acceptance checks:
 
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.

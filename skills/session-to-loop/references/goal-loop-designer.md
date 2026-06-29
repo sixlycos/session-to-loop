@@ -27,12 +27,12 @@ Every goal loop must include:
 - Verifier commands or checks.
 - Success criteria and pass evidence.
 - Stop conditions and no-progress policy.
-- Loop exit contract with `CONTINUE`, `DONE`, `NEEDS_HUMAN`, `BLOCKED`, and `BUDGET_STOPPED` boundaries.
+- Loop exit contract with `CONTINUE`, `DONE`, review-needed, `BLOCKED`, and `BUDGET_STOPPED` boundaries. Internal JSON may still use `NEEDS_HUMAN`.
 - State file and resume policy.
-- Approval boundary.
+- Review boundary and the mode required for higher-impact actions.
 - Optional subagent team roles.
 
-If the goal is vague, design a read-only or planning loop first. Do not invent edit authority.
+If the goal is vague, design a read-only or planning loop first. If the user grants edit, worktree, or PR-draft authority, make the first cycle runnable in that mode.
 
 Before designing a managed loop, run the same fit test used for transcript-derived candidates:
 
@@ -40,7 +40,7 @@ Before designing a managed loop, run the same fit test used for transcript-deriv
 - Objective checks can reject bad output.
 - The agent can inspect or run the changed system.
 - The loop has explicit item, iteration, time, token, or cost caps.
-- High-impact actions return to the human before merge, deploy, dependency, credential, schema, data, payment, or production changes.
+- High-impact actions require the matching user-approved mode or review before merge, deploy, dependency, credential, schema, data, payment, or production changes.
 
 If the fit test fails, return a read-only loop, skill, checklist, approval gate, or rejection instead of a delegated loop.
 
@@ -62,11 +62,11 @@ When the user explicitly asks to start, run, delegate, or use a subagent team:
 - Spawn maker roles only when edit scope is explicit and bounded.
 - Give each subagent one role prompt, the goal, allowed scope, expected output, and a reminder not to expand scope.
 - While subagents run, continue non-overlapping work in the main thread.
-- Integrate role outputs into `STATE.json` and return one status: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
+- Integrate role outputs into `STATE.json` and return one status: `DONE`, `CONTINUE`, `BLOCKED`, review-needed, or `BUDGET_STOPPED`.
 
 Default team roles:
 
-- Planner: clarify objective, affected surfaces, 1-3 items, verifier path, and approval gates.
+- Planner: clarify objective, affected surfaces, 1-3 items, verifier path, and review boundaries.
 - Maker: implement only approved, reversible changes.
 - Checker or reviewer: inspect diff, likely regressions, missing tests, and risky assumptions.
 - Verifier: run or specify the smallest check that can reject bad output.
@@ -103,14 +103,14 @@ Before presenting the result, check `loop-exit-contract.md`. The generated loop 
 
 ## Output First
 
-Lead with what the loop will do:
+Lead with the Start Plan:
 
-1. Goal.
+1. Objective.
 2. First cycle.
 3. Team shape if any.
 4. Verifier.
 5. Stop condition.
-6. Human gate.
+6. Review boundary and selected mode.
 7. Generated artifact paths.
 
 Put evidence limitations after the loop design. In demand-driven mode, the source is the user's current goal, not historical transcript evidence.

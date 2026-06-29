@@ -4,7 +4,7 @@
   "name": "CI Babysitter Loop",
   "status": "pending",
   "adoption_level": "goal-loop",
-  "created_at": "2026-06-29T02:42:10.665897+00:00",
+  "created_at": "2026-06-29T06:34:25.171695+00:00",
   "objective_hash": "aa0ed75a9bfeb253",
   "objective": "Keep CI failures moving toward a verified fix without guessing.",
   "heartbeat": "goal",
@@ -50,8 +50,8 @@
     ],
     "status_protocol": {
       "CONTINUE": "Only when another cycle can increase verified certainty.",
-      "DONE": "Success criteria passed with required pass evidence; return for acceptance.",
-      "NEEDS_HUMAN": "Human judgment or explicit approval is required.",
+      "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
+      "NEEDS_HUMAN": "Return for review because human judgment or explicit approval is required.",
       "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
       "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
     }
@@ -77,5 +77,5 @@
   "human_acceptance": null,
   "next_adjustment": null,
   "demotion_recommendation": null,
-  "artifact_dir": ".session-to-loop\\tmp\\examples\\ci-babysitter\\adopted\\ci-babysitter"
+  "artifact_dir": "examples/ci-babysitter/adoption"
 }

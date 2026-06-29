@@ -9,8 +9,8 @@ ALLOWED_EXIT_STATUSES = ["CONTINUE", "DONE", "NEEDS_HUMAN", "BLOCKED", "BUDGET_S
 
 STATUS_PROTOCOL = {
     "CONTINUE": "Only when another cycle can increase verified certainty.",
-    "DONE": "Success criteria passed with required pass evidence; return for acceptance.",
-    "NEEDS_HUMAN": "Human judgment or explicit approval is required.",
+    "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
+    "NEEDS_HUMAN": "Return for review because human judgment or explicit approval is required.",
     "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
     "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached.",
 }
@@ -52,14 +52,14 @@ def build_exit_contract(
     max_items: int = 3,
     max_iterations: int = 8,
 ) -> dict:
-    success = strings(success_criteria) or ["Success criteria pass with required evidence."]
+    success = strings(success_criteria) or ["Acceptance checks pass with required evidence."]
     blocked = strings(reject_conditions) or [
         "Same failure repeats twice.",
         "No evidence changes across two iterations.",
         "Verifier is unavailable or ambiguous.",
     ]
     approvals = strings(approval_boundary)
-    human = [f"{item} is required." for item in approvals] or ["Human judgment or approval is required."]
+    human = [f"Review required for {item}." for item in approvals] or ["Review required for human judgment or approval."]
     max_items = positive_int(max_items, 3)
     max_iterations = positive_int(max_iterations, 8)
     return {
@@ -68,7 +68,7 @@ def build_exit_contract(
             "Next action stays inside approved scope.",
             "A verifier can reject bad output.",
             "New evidence changed or is likely from the next verifier.",
-            "Risk stays below the approval boundary.",
+            "Risk stays below the approved mode and review boundary.",
             "The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.",
             f"Fewer than {max_items} item(s) are active in this cycle.",
             f"Fewer than {max_iterations} iteration(s) have run.",

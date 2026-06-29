@@ -1,14 +1,14 @@
-# CI Babysitter Loop Goal Loop
+# CI Babysitter Loop Run Packet
 
-Use this as a delegated goal after the user confirms `ci-babysitter` at `goal-loop`.
+Use this after the user starts `ci-babysitter` as `low-risk edit`.
 
-## Goal
+## Objective
 
 Keep CI failures moving toward a verified fix without guessing.
 
-## Adoption Level
+## Start Mode
 
-`goal-loop`: Run as a delegated goal loop. Ask before edits unless the user explicitly grants edit scope.
+`low-risk edit` (`goal-loop` internally): Run as a delegated goal loop. Ask before edits unless the user explicitly grants edit scope.
 
 ## State
 
@@ -16,7 +16,7 @@ Keep CI failures moving toward a verified fix without guessing.
 - Suggested project state path: `.session-to-loop/state/ci-babysitter.json`
 - Read state before every cycle and update it before stopping.
 
-## Success Criteria
+## Acceptance Checks
 
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
@@ -43,7 +43,7 @@ Keep CI failures moving toward a verified fix without guessing.
 - Same failure repeats twice.
 - Push or merge required.
 
-Also stop after `8` iteration(s), no progress across two iterations, or any human gate.
+Also stop after `8` iteration(s), no progress across two iterations, or any review boundary.
 
 ## Exit Contract
 
@@ -61,7 +61,7 @@ Return `DONE` when:
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 - push is required.
 - merge is required.
@@ -94,7 +94,7 @@ Return one status at the end:
 - `DONE`: all success criteria passed with verifier evidence.
 - `CONTINUE`: progress changed and budget remains.
 - `BLOCKED`: repeated failure, no progress, missing input, or uncertain verifier.
-- `NEEDS_HUMAN`: approval or human judgment is required.
+- `NEEDS_HUMAN`: return for review because approval or human judgment is required.
 - `BUDGET_STOPPED`: item, iteration, time, or token cap was reached.
 
 ## First Run Retro

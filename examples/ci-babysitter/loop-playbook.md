@@ -1,46 +1,42 @@
-# Loop Engineering Playbook
+# SixLoops Start Plans
 
-Project: `session-to-loop`
+Recommended 1 startable loop plan(s). Choose a mode, shrink the idea, reject it, or rerun with narrower evidence.
 
-Analysis window: `explicit local inputs`
-
-Input sources: `1 file(s), 5 record(s)`
-
-Redaction: `enabled`
-
-## Loop Proposals
-
-Prepared 1 user-confirmable loop engineering proposal(s) from local evidence.
+## Recommended Start Plans
 
 ### 1. CI Babysitter Loop
 
+Recommended start: `start ci-babysitter as low-risk edit`
+
 Decision: `draft` | Mechanism: `loop, skill` | Confidence: `high`
 
-Can use now: `limited` | Can confirm: `yes` | Can delegate: `yes`
+Can start now: `limited` | Can confirm: `yes` | Can delegate: `yes`
 
-Next action: `adopt`
+Next action: `start`
 
-Confirm with one:
+Start with one:
 
-- `adopt ci-babysitter as read-only`
-- `adopt ci-babysitter as goal-loop`
+- `start ci-babysitter as read-only`
+- `start ci-babysitter as low-risk edit`
+- `start ci-babysitter as worktree draft`
+- `start ci-babysitter as PR draft`
 - `shrink ci-babysitter to skill`
 - `reject ci-babysitter`
 
-Goal: Keep CI failures moving toward a verified fix without guessing.
+What it does: Keep CI failures moving toward a verified fix without guessing.
 
 Work shape: `goal-driven` | Archetype: `engineering-maintenance`
 
-Heartbeat: `goal` | Recommended starting level: `goal-loop`
+Heartbeat: `goal` | Mode: `low-risk edit` | Internal maturity: `goal-loop`
 
-First run:
+First cycle:
 
 - Observe: read the state file, current inputs, and latest verifier evidence
-- Decide: choose at most 3 item(s), the next action, and any human gate
+- Decide: choose at most 3 item(s), the next action, and any review boundary
 - Act: pick at most 3 directly evidenced item(s)
 - Verify: Run the focused project checks listed in verification.
 - State: .session-to-loop/state/ci-babysitter.json
-- Stop after: 8 iterations, repeated failure, no progress across two iterations, or a human gate
+- Stop after: 8 iterations, repeated failure, no progress across two iterations, or a review boundary
 
 Trigger:
 
@@ -67,14 +63,14 @@ Stop conditions:
 
 Iteration cap: 8 run iteration(s)
 
-Approval boundary: push; merge
+Review boundary: push; merge
 
-Acceptance contract:
+Acceptance checks:
 
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
 
-Exit contract:
+Loop exits:
 
 Continue only if:
 
@@ -90,7 +86,7 @@ Return `DONE` when:
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 - push is required.
 - merge is required.
@@ -107,59 +103,75 @@ Return `BUDGET_STOPPED` when:
 
 Why this mechanism: This needs repeated observe-decide-act-verify behavior with state, verification, stop conditions, and resume behavior. Repeated user requests to inspect CI logs before patching and to avoid pushing before verification. Basis: repeated user-language evidence.
 
-## Choose Next Action
+## Start, Shrink, Or Reject
 
-Confirm which proposal(s) to adopt from `CI Babysitter Loop`. After confirmation, generate the concrete loop card, draft skill or hook/checklist, and the state-file convention for the selected loop.
+Choose which proposal to start, shrink, or reject from `CI Babysitter Loop`. If the chosen mode allows edits, run the first controlled cycle in that mode; otherwise generate the run packet and state convention.
 
-- `adopt ci-babysitter as read-only`
-- `adopt ci-babysitter as goal-loop`
+- `start ci-babysitter as read-only`
+- `start ci-babysitter as low-risk edit`
+- `start ci-babysitter as worktree draft`
+- `start ci-babysitter as PR draft`
 - `shrink ci-babysitter to skill`
 - `reject ci-babysitter`
 
-## Recommended Artifacts
+## Smaller Mechanisms
+
+These are useful only if you reject or downgrade the loop proposals.
+
+### Rules and Memory Candidates
+
+None.
+
+### Skill Candidates
+
+- `ci-babysitter`: Repeated user requests to inspect CI logs before patching and to avoid pushing before verification.
+
+### Hook Candidates
+
+None.
+
+### Checklist or Approval Gates
+
+None.
+
+### Rejected Candidates
+
+None.
+
+## Decision Index
 
 | Candidate | Mechanism | Decision | Confidence |
 | --- | --- | --- | --- |
 | CI Babysitter Loop | loop, skill | draft | high |
 
-## Rules and Memory Candidates
-
-None.
-
-## Skill Candidates
+Loop candidates:
 
 - `ci-babysitter`: Repeated user requests to inspect CI logs before patching and to avoid pushing before verification.
 
-## Hook Candidates
+## Run Notes
 
-None.
+Project: `session-to-loop`
 
-## Loop Candidates
+Analysis window: `explicit local inputs`
 
-- `ci-babysitter`: Repeated user requests to inspect CI logs before patching and to avoid pushing before verification.
+Input sources: `1 file(s), 5 record(s)`
 
-## Checklist or Approval Gates
+Redaction: `enabled`
 
-None.
-
-## Rejected Candidates
-
-None.
-
-## Source Notes
+Source limitations:
 
 Files: 1; records: 5; providers: generic=4; source types: generic-jsonl=4
 
-## Private Data
+## Private Outputs
 
-Private candidates and evidence packets are omitted from this public example.
+- .session-to-loop/private/candidates.json
 
 ## Shareable Outputs
 
-- cards/ci-babysitter.md
-- ci-babysitter-loop.md
-- ci-babysitter-skill.md
-- summary.json
+- examples/ci-babysitter/cards/ci-babysitter.md
+- examples/ci-babysitter/ci-babysitter-loop.md
+- examples/ci-babysitter/ci-babysitter-skill.md
+- examples/ci-babysitter/summary.json
 
 
 ## Analysis Scope

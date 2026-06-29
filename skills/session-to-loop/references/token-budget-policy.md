@@ -83,5 +83,5 @@ For implementation, generate concrete artifacts only for user-confirmed candidat
 Load a related skill only when:
 
 - the candidate domain is clear,
-- the user confirmed adoption or asked for implementation, or
+- the user asked to start, continue, or implement the loop, or
 - the current task requires that skill to verify a recommendation.

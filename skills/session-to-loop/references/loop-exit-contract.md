@@ -10,7 +10,7 @@ Every loop cycle must end with exactly one status:
 
 - `CONTINUE`: keep going because another cycle can increase verified certainty.
 - `DONE`: success criteria passed; return to the human for acceptance.
-- `NEEDS_HUMAN`: the next decision belongs to a human.
+- `NEEDS_HUMAN`: the next decision belongs to a human. In user-facing copy, call this review-needed or return-for-review.
 - `BLOCKED`: the loop cannot make reliable progress.
 - `BUDGET_STOPPED`: the item, iteration, time, token, or cost cap was reached.
 
@@ -22,7 +22,7 @@ Continue only when all are true:
 - The next action stays inside approved scope.
 - New evidence is available or likely from the next verifier.
 - A verifier can reject bad output.
-- Risk remains below the approval boundary.
+- Risk remains below the approved mode and review boundary.
 - The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.
 - Iteration, item, time, token, and cost budgets remain.
 
@@ -34,7 +34,7 @@ Return to the human when:
 
 - Success criteria pass. Status: `DONE`.
 - Product, design, copy, translation, release, security, data, cost, or architecture judgment is needed. Status: `NEEDS_HUMAN`.
-- Push, merge, deploy, migration, deletion, credential change, permission change, production config, or billing-impacting action is needed. Status: `NEEDS_HUMAN`.
+- Push, merge, deploy, migration, deletion, credential change, permission change, production config, or billing-impacting action needs a stronger user-approved mode or review. Status: `NEEDS_HUMAN`.
 - The verifier is missing, unavailable, flaky, ambiguous, or cannot explain the result. Status: `BLOCKED` or `NEEDS_HUMAN`.
 - The same failure repeats twice. Status: `BLOCKED`.
 - No evidence changes across two iterations. Status: `BLOCKED`.
@@ -52,7 +52,7 @@ loop_exit_contract:
     - "Next action stays inside approved scope."
     - "A verifier can reject bad output."
     - "New evidence changed or is likely from the next verifier."
-    - "Risk stays below the approval boundary."
+    - "Risk stays below the approved mode and review boundary."
     - "Iteration and item budgets remain."
   done_when:
     - "All success criteria pass with required pass evidence."
@@ -68,7 +68,7 @@ loop_exit_contract:
   status_protocol:
     CONTINUE: "Only when another cycle can increase verified certainty."
     DONE: "Success criteria passed; return for acceptance."
-    NEEDS_HUMAN: "Human judgment or approval is required."
+    NEEDS_HUMAN: "Return for review because human judgment or approval is required."
     BLOCKED: "Reliable progress is not possible."
     BUDGET_STOPPED: "Budget cap reached."
 ```

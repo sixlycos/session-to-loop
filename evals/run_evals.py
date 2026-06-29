@@ -279,9 +279,20 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
             leaked_keys = sorted(forbidden_keys & summary_keys)
             if leaked_keys:
                 failures.append(f"public summary leaked private keys: {leaked_keys}")
-            for candidate in summary.get("candidates", []) if isinstance(summary, dict) else []:
+            summary_candidates = summary.get("candidates", []) if isinstance(summary, dict) else []
+            for candidate in summary_candidates:
                 if "source_limitations" not in candidate:
                     failures.append("public summary candidate missing source_limitations")
+            forbidden_options = set(expected.get("forbidden_confirmation_options", []))
+            if forbidden_options:
+                rendered_options = {
+                    str(option)
+                    for candidate in summary_candidates
+                    for option in candidate.get("confirmation_options", [])
+                }
+                leaked_options = sorted(forbidden_options & rendered_options)
+                if leaked_options:
+                    failures.append(f"public summary exposed forbidden confirmation options: {leaked_options}")
 
     return failures
 

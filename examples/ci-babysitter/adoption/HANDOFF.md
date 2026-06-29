@@ -1,6 +1,6 @@
-# CI Babysitter Loop Adoption Handoff
+# CI Babysitter Loop Run Handoff
 
-This packet was generated after confirming `ci-babysitter` as `goal-loop`.
+This packet was generated after starting `ci-babysitter` as `low-risk edit`.
 
 ## What To Run
 
@@ -30,7 +30,7 @@ Return `DONE` when:
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 - push is required.
 - merge is required.
@@ -52,7 +52,7 @@ and any demotion recommendation in `STATE.json`.
 
 ## Files
 
-- `GOAL.md`
-- `STATE.json`
-- `AGENTS-snippet.md`
-- `manifest.json`
+- `examples/ci-babysitter/adoption/GOAL.md`
+- `examples/ci-babysitter/adoption/STATE.json`
+- `examples/ci-babysitter/adoption/AGENTS-snippet.md`
+- `examples/ci-babysitter/adoption/manifest.json`

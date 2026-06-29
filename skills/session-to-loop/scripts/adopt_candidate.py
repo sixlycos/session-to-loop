@@ -12,18 +12,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from loop_contract import normalize_exit_contract
+from mode_policy import INTERNAL_TO_MODE, level_to_mode, mode_to_level
 
 
 DEFAULT_CANDIDATES = Path(".session-to-loop/private/candidates.json")
 DEFAULT_OUT_DIR = Path(".session-to-loop/adopted")
-ALLOWED_LEVELS = {
-    "read-only",
-    "goal-loop",
-    "isolated-draft",
-    "verified-pr-draft",
-    "scheduled-readonly",
-    "scheduled-draft",
-}
+ALLOWED_LEVELS = set(INTERNAL_TO_MODE)
 
 
 LEVEL_POLICIES = {
@@ -34,6 +28,7 @@ LEVEL_POLICIES = {
     "scheduled-readonly": "Use only as a scheduled read-only report until separate automation setup is approved.",
     "scheduled-draft": "Use only after separate scheduling, isolation, notification, and rollback boundaries are approved.",
 }
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -170,17 +165,18 @@ def render_goal(candidate: dict, level: str) -> str:
     deliverables = strings(managed_loop.get("deliverables"))
     max_items = managed_loop.get("max_items_per_cycle", 3)
     max_iterations = managed_loop.get("max_iterations_per_run", 8)
-    return f"""# {candidate.get("name", candidate_id)} Goal Loop
+    mode = level_to_mode(level)
+    return f"""# {candidate.get("name", candidate_id)} Run Packet
 
-Use this as a delegated goal after the user confirms `{candidate_id}` at `{level}`.
+Use this after the user starts `{candidate_id}` as `{mode}`.
 
-## Goal
+## Objective
 
 {managed_loop.get("objective") or candidate.get("summary", "Run the loop.")}
 
-## Adoption Level
+## Start Mode
 
-`{level}`: {LEVEL_POLICIES[level]}
+`{mode}` (`{level}` internally): {LEVEL_POLICIES[level]}
 
 ## State
 
@@ -188,7 +184,7 @@ Use this as a delegated goal after the user confirms `{candidate_id}` at `{level
 - Suggested project state path: `{suggested_state}`
 - Read state before every cycle and update it before stopping.
 
-## Success Criteria
+## Acceptance Checks
 
 {bullet(success)}
 
@@ -208,7 +204,7 @@ Use this as a delegated goal after the user confirms `{candidate_id}` at `{level
 
 {bullet(reject_conditions)}
 
-Also stop after `{max_iterations}` iteration(s), no progress across two iterations, or any human gate.
+Also stop after `{max_iterations}` iteration(s), no progress across two iterations, or any review boundary.
 
 ## Exit Contract
 
@@ -220,7 +216,7 @@ Return `DONE` when:
 
 {bullet(exits["done_when"])}
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 {bullet(exits["needs_human_when"])}
 
@@ -247,7 +243,7 @@ Return one status at the end:
 - `DONE`: all success criteria passed with verifier evidence.
 - `CONTINUE`: progress changed and budget remains.
 - `BLOCKED`: repeated failure, no progress, missing input, or uncertain verifier.
-- `NEEDS_HUMAN`: approval or human judgment is required.
+- `NEEDS_HUMAN`: return for review because approval or human judgment is required.
 - `BUDGET_STOPPED`: item, iteration, time, or token cap was reached.
 
 ## First Run Retro
@@ -262,9 +258,10 @@ def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
     managed_loop, _ = candidate_contract(candidate)
     exits = exit_contract(candidate)
     candidate_id = str(candidate.get("id"))
-    return f"""# {candidate.get("name", candidate_id)} Adoption Handoff
+    mode = level_to_mode(level)
+    return f"""# {candidate.get("name", candidate_id)} Run Handoff
 
-This packet was generated after confirming `{candidate_id}` as `{level}`.
+This packet was generated after starting `{candidate_id}` as `{mode}`.
 
 ## What To Run
 
@@ -288,7 +285,7 @@ Return `DONE` when:
 
 {bullet(exits["done_when"])}
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 {bullet(exits["needs_human_when"])}
 
@@ -319,17 +316,18 @@ def render_agents_snippet(candidate: dict, level: str) -> str:
     safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
     candidate_id = str(candidate.get("id"))
     verifier = strings(contract.get("verifier_commands") or candidate.get("verification"))
+    mode = level_to_mode(level)
     return f"""# Draft AGENTS.md Snippet: {candidate.get("name", candidate_id)}
 
 This is a draft rule. Do not install it automatically; review it before copying into project instructions.
 
 When `{candidate_id}` is triggered:
 
-- Run level: `{level}`.
-- Goal: {managed_loop.get("objective") or candidate.get("summary", "No objective recorded.")}
+- Run mode: `{mode}` (`{level}` internally).
+- Objective: {managed_loop.get("objective") or candidate.get("summary", "No objective recorded.")}
 - Read and update the loop state before stopping.
 - Handle at most {managed_loop.get("max_items_per_cycle", 3)} item(s) per cycle.
-- Stop after {managed_loop.get("max_iterations_per_run", 8)} iteration(s), repeated failure, no progress, or a human gate.
+- Stop after {managed_loop.get("max_iterations_per_run", 8)} iteration(s), repeated failure, no progress, or a review boundary.
 - Verify with: {", ".join(verifier) if verifier else "the focused project verifier"}.
 - Ask before: {", ".join(strings(safety.get("requires_approval_for"))) or "irreversible, release, data, or product-boundary changes"}.
 """
@@ -351,7 +349,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create goal-ready adoption artifacts for one confirmed candidate.")
     parser.add_argument("--candidates", default=str(DEFAULT_CANDIDATES), help=f"Candidates JSON. Default: {DEFAULT_CANDIDATES}")
     parser.add_argument("--candidate-id", required=True, help="Candidate id to adopt.")
-    parser.add_argument("--level", required=True, choices=sorted(ALLOWED_LEVELS), help="Adoption level confirmed by the user.")
+    parser.add_argument("--level", help="Internal level or user-facing start mode confirmed by the user.")
+    parser.add_argument("--mode", help="User-facing start mode. Overrides --level.")
     parser.add_argument("--out-dir", default=str(DEFAULT_OUT_DIR), help=f"Adoption output directory. Default: {DEFAULT_OUT_DIR}")
     parser.add_argument("--overwrite", action="store_true", help="Replace an existing adoption packet for the same candidate.")
     return parser.parse_args()
@@ -359,6 +358,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    raw_mode = args.mode or args.level
+    if not raw_mode:
+        raise ValueError("Pass --mode <start-mode> or --level <internal-level>.")
+    level = mode_to_level(raw_mode)
     data, candidates = load_candidates(Path(args.candidates))
     candidate = find_candidate(candidates, args.candidate_id)
     if candidate.get("decision") == "reject":
@@ -374,7 +377,7 @@ def main() -> int:
     snippet_path = artifact_dir / "AGENTS-snippet.md"
     manifest_path = artifact_dir / "manifest.json"
 
-    state = build_state(candidate, args.level, artifact_dir)
+    state = build_state(candidate, level, artifact_dir)
     manifest = {
         "version": 1,
         "created_at": now_iso(),
@@ -382,7 +385,7 @@ def main() -> int:
         "candidate_name": candidate.get("name", args.candidate_id),
         "decision": candidate.get("decision"),
         "mechanisms": candidate.get("mechanisms", []),
-        "adoption_level": args.level,
+        "adoption_level": level,
         "source_candidates": str(Path(args.candidates)),
         "source_analysis_model": data.get("analysis_model"),
         "files": {
@@ -394,9 +397,9 @@ def main() -> int:
     }
 
     write_json(state_path, state, args.overwrite)
-    write_text(goal_path, render_goal(candidate, args.level), args.overwrite)
-    write_text(handoff_path, render_handoff(candidate, args.level, artifact_dir), args.overwrite)
-    write_text(snippet_path, render_agents_snippet(candidate, args.level), args.overwrite)
+    write_text(goal_path, render_goal(candidate, level), args.overwrite)
+    write_text(handoff_path, render_handoff(candidate, level, artifact_dir), args.overwrite)
+    write_text(snippet_path, render_agents_snippet(candidate, level), args.overwrite)
     write_json(manifest_path, manifest, args.overwrite)
 
     print(f"Created adoption packet: {artifact_dir}")

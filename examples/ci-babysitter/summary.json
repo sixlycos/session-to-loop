@@ -39,8 +39,10 @@
       "confidence": "high",
       "can_delegate": "yes",
       "confirmation_options": [
-        "adopt ci-babysitter as read-only",
-        "adopt ci-babysitter as goal-loop",
+        "start ci-babysitter as read-only",
+        "start ci-babysitter as low-risk edit",
+        "start ci-babysitter as worktree draft",
+        "start ci-babysitter as PR draft",
         "shrink ci-babysitter to skill",
         "reject ci-babysitter"
       ],

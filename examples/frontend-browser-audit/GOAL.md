@@ -1,8 +1,8 @@
 # Frontend Verification Loop
 
-Use this as a delegated SixLoops goal loop.
+Use this as a SixLoops run packet.
 
-## Goal
+## Objective
 
 After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed.
 
@@ -10,10 +10,11 @@ After frontend route or i18n changes, verify browser screenshots, fix low-risk U
 
 - Domain: `frontend`
 - Archetype: `frontend-verification`
-- Adoption level: `isolated-draft`
+- Start mode: `worktree draft`
+- Internal level: `isolated-draft`
 - Team mode: `phased`
 
-## Success Criteria
+## Acceptance Checks
 
 - Target routes render without blocking errors.
 - Desktop/mobile screenshots or snapshots confirm the main path.
@@ -53,7 +54,7 @@ Required pass evidence:
 - The browser verifier or dev server is unavailable.
 - A product copy, translation tone, visual direction, route behavior, or scope-expansion decision is required.
 
-Also stop after `8` iteration(s), repeated no-progress, or a human gate.
+Also stop after `8` iteration(s), repeated no-progress, or a review boundary.
 
 ## Exit Contract
 
@@ -63,7 +64,7 @@ Continue only if:
 - Next action stays inside approved scope.
 - A verifier can reject bad output.
 - New evidence changed or is likely from the next verifier.
-- Risk stays below the approval boundary.
+- Risk stays below the approved mode and review boundary.
 - The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.
 - Fewer than 3 item(s) are active in this cycle.
 - Fewer than 8 iteration(s) have run.
@@ -75,15 +76,15 @@ Return `DONE` when:
 - Console and network checks show no blocking errors.
 - i18n/copy output shows no missing key, raw key, or unintended fallback locale.
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
-- visual direction changes is required.
-- product copy decisions is required.
-- translation tone or terminology decisions is required.
-- route behavior changes is required.
-- auth or data fixture changes is required.
-- scope expansion is required.
-- irreversible changes is required.
+- Review required for visual direction changes.
+- Review required for product copy decisions.
+- Review required for translation tone or terminology decisions.
+- Review required for route behavior changes.
+- Review required for auth or data fixture changes.
+- Review required for scope expansion.
+- Review required for irreversible changes.
 
 Return `BLOCKED` when:
 
@@ -116,7 +117,8 @@ Return `BUDGET_STOPPED` when:
 
 ## Final Status
 
-Return exactly one: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
+Return exactly one internal status: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
+In user-facing copy, treat `NEEDS_HUMAN` as return-for-review.
 
 ## First Run Retro
 

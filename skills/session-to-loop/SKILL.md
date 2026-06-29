@@ -9,7 +9,7 @@ description: SixLoops analyzes local AI coding session transcripts, project cont
 
 Compile past AI coding sessions into evidence-backed loop engineering artifacts. Optimize first for useful mechanism recommendations that improve future agent performance. Treat local execution, redaction, and approval scope as guardrails around the analysis, not as the main value.
 
-The user-facing product is a small set of project-specific loop proposals that the user can confirm, delegate, or reject. Evidence explains why the proposals are credible; it is not the lead story.
+The user-facing product is a small set of project-specific loop plans that the user can start, shrink, or reject. If the user grants an edit/worktree/PR mode, the next step is the first controlled cycle, not another explanatory report. Evidence explains why the proposals are credible; it is not the lead story.
 
 ## Operating Principles
 
@@ -18,6 +18,7 @@ The user-facing product is a small set of project-specific loop proposals that t
 - When the user starts from a current goal instead of transcripts, design the goal loop directly; do not force transcript discovery.
 - Choose the smallest mechanism that would actually reduce repeated friction.
 - Reserve `loop` for managed goal loops that a user can delegate after one explicit approval.
+- Treat actions as mode-gated, not absolutely forbidden. Read-only mode reports; low-risk edit mode may patch bounded local issues; worktree draft mode may explore larger reversible changes; PR draft mode may prepare reviewable output; landing, merge, deploy, migration, credential, schema, data, payment, and production changes need the matching user-approved mode or review.
 - Before recommending `loop`, run the fast loop check: repeated cadence, objective rejection gate, reproducible environment, hard stop, and human gate for high-impact actions.
 - Use subagent/team decomposition only when it improves planning, implementation, review, or verification; otherwise run the roles sequentially in the current agent.
 - Recommend no automation when a pattern is rare, unverifiable, unsafe, or mostly a human judgment call.
@@ -32,6 +33,7 @@ The user-facing product is a small set of project-specific loop proposals that t
 0. Choose the entrypoint.
    - If the user gives a direct objective and asks for a loop, goal, team, or subagent workflow, read `references/goal-loop-designer.md`, semantically assess risk/verifiability/autonomy, then run `scripts/design_goal_loop.py`.
    - If the user asks to mine past sessions, analyze transcripts, or extract repeated patterns, use the transcript pipeline below.
+   - If the user asks to start, run, continue, or execute a loop, read the latest Loop Runbook or adoption packet, infer the granted mode, and run the first controlled cycle inside that mode.
    - If both are available, design the loop from the goal first, then use transcript evidence to refine or downgrade it.
    - If the user explicitly asks to start or delegate a generated team loop and subagent tools are available, use the generated `TEAM.md` role prompts to spawn only the needed roles for the current cycle.
 
@@ -66,7 +68,7 @@ The user-facing product is a small set of project-specific loop proposals that t
    - Read `references/scoring-rubric.md` before assigning confidence or recommending automation.
    - Apply hard downgrades for one-off patterns, unverifiable loops, irreversible actions, or secret-heavy evidence.
 
-5. Compile artifacts.
+5. Compile artifacts and, when authorized, start the first cycle.
    - Read `references/final-response-contract.md` before presenting results to the user.
    - Read `references/goal-loop-designer.md` when the output is a demand-driven goal loop or subagent/team loop plan.
    - Read `references/skill-routing-matrix.md` when candidates cover frontend, backend, full-stack architecture, review, verification, or delivery loops.
@@ -75,6 +77,8 @@ The user-facing product is a small set of project-specific loop proposals that t
    - Use `assets/templates/claude-loop.md` only for candidates that can be handed to an agent as a managed goal loop.
    - Use `assets/templates/generated-skill.md` only for on-demand workflows with reusable steps.
    - Read `references/output-schemas.md` when producing machine-readable JSON or YAML summaries.
+   - Present `start <candidate-id> as read-only`, `start <candidate-id> as low-risk edit`, `start <candidate-id> as worktree draft`, `start <candidate-id> as PR draft`, `shrink <candidate-id> to skill`, and `reject <candidate-id>` style actions.
+   - When the user has already granted a start mode, execute the first cycle in that mode and end with `DONE`, `CONTINUE`, review-needed, `BLOCKED`, or `BUDGET_STOPPED`.
 
 ## Bundled Scripts
 
@@ -86,7 +90,7 @@ Recommended unified entry:
 4. Read `analysis-run.json`, `references/semantic-analysis-prompt.md`, `schemas/semantic-candidates.schema.json`, and the selected packets.
 5. Use host AI semantic judgment to write `semantic-candidates.json`; do not use regex matching as the primary product path.
 6. Continue with the `analysis-run.json` `continue_command`, or rerun `scripts/session_to_loop.py --input <file-or-dir> --scope <approved-scope.json> --semantic-candidates <semantic-candidates.json>`.
-7. Present 1-3 Loop Cards from rendered artifacts. After the user confirms a proposal, run `scripts/adopt_candidate.py --candidates <candidates.json> --candidate-id <id> --level <level> --out-dir <adoption-dir>` to create the goal, state, handoff, and project-rule snippet.
+7. Present 1-3 Start Plans from rendered artifacts. If the user chooses a start mode, either run the first controlled cycle directly or run `scripts/adopt_candidate.py --candidates <candidates.json> --candidate-id <id> --mode "<start-mode>" --out-dir <adoption-dir>` to create the stateful run packet before execution. The script also accepts internal `--level <level>` for automation.
 
 Low-level deterministic scripts remain available:
 
@@ -97,7 +101,7 @@ Low-level deterministic scripts remain available:
 4. `scripts/build_analysis_packets.py --redacted-index <redacted-index.json> --out <packets.jsonl>`
 5. `scripts/apply_guardrails.py --semantic-candidates <semantic-candidates.json> --packet-index <packet-index.json> --out <candidates.json>`
 6. `scripts/render_artifacts.py --candidates <candidates.json> --out-dir <artifact-dir>`
-7. `scripts/adopt_candidate.py --candidates <candidates.json> --candidate-id <id> --level goal-loop --out-dir <adoption-dir>`
+7. `scripts/adopt_candidate.py --candidates <candidates.json> --candidate-id <id> --mode "low-risk edit" --out-dir <adoption-dir>`
 
 Only pass explicit transcript files or narrow directories. Keep raw and intermediate outputs under
 `.session-to-loop/private/` or `.session-to-loop/tmp/` unless the user asks for shareable artifacts.
@@ -125,22 +129,38 @@ Use `--rule-fallback` only for offline synthetic evals, fixture development, or 
 - Use an approval gate when the finding involves deployment, deletion, schema migration, permissions, payments, or other high-impact actions.
 - Use no automation when evidence is weak or the cost of automation exceeds the repeated friction.
 
+## Start Modes
+
+- `read-only`: inspect, rank, and report only.
+- `low-risk edit`: make bounded local changes with direct evidence and focused verification.
+- `worktree draft`: use an isolated branch or worktree for reversible exploratory changes.
+- `PR draft`: prepare verified, reviewable output; leave push, merge, deploy, and release actions to the user-approved path.
+- `scheduled read-only`: scheduled reporting only, after separate automation setup is approved.
+- `scheduled draft`: scheduled draft-producing loop only after isolation, notifications, and rollback boundaries are approved.
+- `human-approved action`: perform a high-impact action only when the user explicitly grants that action and scope.
+
+Prefer the weakest useful mode. Do not frame high-impact work as impossible; frame it as requiring a stronger mode, explicit approval, or review.
+Only show edit, PR, or scheduled start options when the rendered candidate can actually support that mode. If `can_delegate=no`, keep the start choice at `read-only`, shrink it, or reject it.
+
 ## Output Requirements
 
-- Lead with 1-3 concrete Loop Cards, not with evidence inventory.
-- For each proposal, show confirm-this-loop options, first-run packet, decision card, mechanism decision, goal, heartbeat, recommended starting level, trigger, cycle, verifier box, stop conditions, approval boundary, and why this loop should exist.
-- Use exact confirmation strings: `adopt <candidate-id> as read-only`, `adopt <candidate-id> as goal-loop`, `shrink <candidate-id> to skill`, or `reject <candidate-id>`.
+- Default close is a Start Plan, not an execution diary. Lead with what the user should start, shrink, reject, or run next.
+- Lead with 1-3 concrete Start Plans, not with evidence inventory.
+- Do not open with pipeline steps, record counts, redaction counts, file inventories, or "I processed..." unless source quality blocks any recommendation.
+- For each proposal, show start options, first-cycle packet, run card, mechanism decision, objective, heartbeat, recommended mode, trigger, cycle, verifier box, stop conditions, review boundary, and why this loop should exist.
+- Use exact confirmation strings from the rendered Start Plan, such as `start <candidate-id> as read-only`, `start <candidate-id> as low-risk edit`, `start <candidate-id> as worktree draft`, `start <candidate-id> as PR draft`, `start <candidate-id> as scheduled read-only`, `start <candidate-id> as scheduled draft`, `shrink <candidate-id> to skill`, or `reject <candidate-id>`. Do not invent stronger options that are absent from the card.
 - Only render goal-ready loop artifacts when the candidate has an acceptance contract: success criteria, verifier, state schema, resume policy, stop policy, budget cap, and human checkpoint.
 - For unattended or draft-producing loops, include the minimum safety checklist: success criteria, hard caps, isolation, read-only checker or deterministic verifier, state file, human gate, and visible logs or notifications.
-- Ask the user to confirm which proposal(s) to adopt, convert to a smaller mechanism, or reject.
-- After confirmation, generate an adoption packet with `GOAL.md`, `STATE.json`, `HANDOFF.md`, and a draft `AGENTS-snippet.md`; do not silently install it into the target project.
+- Ask the user to choose which proposal to start, convert to a smaller mechanism, or reject.
+- After start confirmation, generate an adoption packet with `GOAL.md`, `STATE.json`, `HANDOFF.md`, and a draft `AGENTS-snippet.md` when stateful reuse is needed; do not silently install it into the target project.
 - Match the user's language in the final response. Keep internal schemas and deterministic script fields in English.
 - Separate private raw evidence from shareable summaries.
 - Quote only short redacted snippets when necessary.
 - Put evidence strength and source limitations after the proposals unless the source quality blocks recommendation.
+- Put artifact paths and run notes at the end. Keep them short: paths, source limitation, and any blocker.
 - Include trigger conditions, stop conditions, safety gates, verification signals, state persistence, resume behavior, and rejection reasons.
 - For every `loop` candidate, include a goal-ready `managed_loop` spec that a future agent could run without repeated user prompting after initial approval.
-- For every goal-ready loop, include a `loop_exit_contract` that defines `CONTINUE`, `DONE`, `NEEDS_HUMAN`, `BLOCKED`, and `BUDGET_STOPPED` boundaries.
+- For every goal-ready loop, include a `loop_exit_contract` that defines `CONTINUE`, `DONE`, review-needed, `BLOCKED`, and `BUDGET_STOPPED` boundaries. Internal JSON may still use `NEEDS_HUMAN`; user-facing copy should say review-needed or return for review.
 - For every team loop, include a `TEAM.md`-style plan with role prompts, modification boundaries, required outputs, and integrator status protocol.
 - For every loop or team loop, include how success will be judged after adoption: accepted output rate, false positives, saved human corrections, and demotion trigger when review acceptance stays low.
 - Mark every candidate as `commit`, `draft`, `checklist-only`, `rule-only`, `needs-human`, or `reject`.

@@ -535,7 +535,7 @@ def apply_gates(candidate: dict) -> dict:
             if fallback not in mechanisms:
                 mechanisms.append(fallback)
         candidate["decision"] = "needs-human"
-        downgrades.append("Changed to needs-human because high-impact actions require an explicit approval boundary.")
+        downgrades.append("Changed to needs-human because high-impact actions require an explicit review boundary.")
 
     if delegate_gate.get("stale_or_conflicting_evidence"):
         if candidate.get("decision") == "commit":

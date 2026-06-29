@@ -2,7 +2,7 @@
 
 Use this as a managed agent goal after the user approves the loop.
 
-## Goal
+## Objective
 
 Keep CI failures moving toward a verified fix without guessing.
 
@@ -44,7 +44,7 @@ Completion must resolve to one of: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`,
 
 Update the state file before reporting `DONE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
 
-Success criteria:
+Acceptance checks:
 
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
@@ -88,7 +88,7 @@ Return `DONE` when:
 - Relevant local test passes.
 - CI becomes green or is clearly blocked.
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 - push is required.
 - merge is required.
@@ -106,8 +106,8 @@ Return `BUDGET_STOPPED` when:
 Status protocol:
 
 - CONTINUE: Only when another cycle can increase verified certainty.
-- DONE: Success criteria passed with required pass evidence; return for acceptance.
-- NEEDS_HUMAN: Human judgment or explicit approval is required.
+- DONE: Acceptance checks passed with required evidence; return for acceptance.
+- NEEDS_HUMAN: Return for review because human judgment or explicit approval is required.
 - BLOCKED: Reliable progress is not possible with current evidence or verifier.
 - BUDGET_STOPPED: Item, iteration, time, token, or cost cap was reached.
 

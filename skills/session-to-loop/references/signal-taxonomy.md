@@ -50,7 +50,7 @@ Signals:
 
 - Browser audits, screenshots, snapshots, i18n checks, soak tests, eval outputs, CI logs, or result files show repeated observe-decide-act-verify work.
 - The evidence is project-specific but not a complete Codex or Claude transcript.
-- The loop shape is concrete enough to define trigger, inputs, cycle steps, verification, stop conditions, and approval boundary.
+- The loop shape is concrete enough to define trigger, inputs, cycle steps, verification, stop conditions, start mode, and review boundary.
 
 Likely mechanism:
 

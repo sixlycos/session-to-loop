@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from loop_contract import build_exit_contract
+from mode_policy import level_to_mode
 
 
 DEFAULT_OUT_DIR = Path(".session-to-loop/goal-design")
@@ -312,7 +313,7 @@ def base_profile(domain: str) -> dict:
                 "Map affected modules, contracts, risks, and dependency order.",
                 "Choose at most 1-3 design decisions or implementation slices with verifiers.",
                 "Draft the smallest reversible plan or local proof before broad refactors.",
-                "Review the plan against risks and update state with next action or human gate.",
+                "Review the plan against risks and update state with next action or review boundary.",
             ],
             "verification": ["Design has a bounded implementation path.", "Each slice has a verifier.", "Ambiguities and human decisions are explicit."],
             "approval": ["large refactor", "schema migration", "public API change", "product tradeoff"],
@@ -435,7 +436,7 @@ def role_prompt(role_id: str, goal: str, domain: str) -> dict:
         "outputs": outputs,
         "prompt": (
             f"You are the {labels.get(role_id, role_id)} for a SixLoops {domain} goal. "
-            f"Goal: {goal} Return only your role output, evidence, blockers, and next action. "
+            f"Objective: {goal} Return only your role output, evidence, blockers, and next action. "
             "Do not expand scope. Do not perform high-impact actions without explicit approval."
         ),
     }
@@ -461,7 +462,7 @@ def build_design(args: argparse.Namespace) -> dict:
         [
             "Same failure repeats twice.",
             "No evidence changes across two iterations.",
-            "A human approval boundary is reached.",
+            "A review boundary is reached.",
             "The verifier is unavailable or ambiguous.",
         ],
     )
@@ -597,11 +598,12 @@ def render_goal(design: dict) -> str:
     managed_loop = design["managed_loop"]
     contract = managed_loop["completion_contract"]
     exit_contract = managed_loop["loop_exit_contract"]
+    mode = level_to_mode(design["adoption_level"])
     return f"""# {design["name"]}
 
-Use this as a delegated SixLoops goal loop.
+Use this as a SixLoops run packet.
 
-## Goal
+## Objective
 
 {design["goal"]}
 
@@ -609,10 +611,11 @@ Use this as a delegated SixLoops goal loop.
 
 - Domain: `{design["domain"]}`
 - Archetype: `{design["loop_archetype"]}`
-- Adoption level: `{design["adoption_level"]}`
+- Start mode: `{mode}`
+- Internal level: `{design["adoption_level"]}`
 - Team mode: `{design["team_mode"]}`
 
-## Success Criteria
+## Acceptance Checks
 
 {bullet(contract["success_criteria"])}
 
@@ -636,7 +639,7 @@ Required pass evidence:
 
 {bullet(contract["reject_conditions"])}
 
-Also stop after `{managed_loop["max_iterations_per_run"]}` iteration(s), repeated no-progress, or a human gate.
+Also stop after `{managed_loop["max_iterations_per_run"]}` iteration(s), repeated no-progress, or a review boundary.
 
 ## Exit Contract
 
@@ -648,7 +651,7 @@ Return `DONE` when:
 
 {bullet(exit_contract["done_when"])}
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 {bullet(exit_contract["needs_human_when"])}
 
@@ -672,7 +675,8 @@ Return `BUDGET_STOPPED` when:
 
 ## Final Status
 
-Return exactly one: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
+Return exactly one internal status: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
+In user-facing copy, treat `NEEDS_HUMAN` as return-for-review.
 
 ## First Run Retro
 
@@ -743,7 +747,7 @@ Return `DONE` when:
 
 {bullet(exits["done_when"])}
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 {bullet(exits["needs_human_when"])}
 
@@ -772,16 +776,17 @@ human acceptance, next adjustment, and demotion recommendation in `STATE.json`.
 
 def render_agents_snippet(design: dict) -> str:
     managed_loop = design["managed_loop"]
+    mode = level_to_mode(design["adoption_level"])
     return f"""# Draft AGENTS.md Snippet: {design["name"]}
 
 This is a draft loop instruction. Review before copying into project instructions.
 
 When the goal matches `{design["loop_id"]}`:
 
-- Run as `{design["adoption_level"]}` with `{design["team_mode"]}` team mode.
+- Run as `{mode}` (`{design["adoption_level"]}` internally) with `{design["team_mode"]}` team mode.
 - Objective: {design["goal"]}
 - Select at most {managed_loop["max_items_per_cycle"]} item(s) per cycle.
-- Stop after {managed_loop["max_iterations_per_run"]} iteration(s), repeated no-progress, or a human gate.
+- Stop after {managed_loop["max_iterations_per_run"]} iteration(s), repeated no-progress, or a review boundary.
 - Read and update `STATE.json` before returning.
 - Ask before: {", ".join(design["safety"]["requires_approval_for"])}.
 """

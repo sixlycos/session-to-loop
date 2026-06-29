@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from loop_contract import normalize_exit_contract
+from mode_policy import RUN_MODES, SCHEDULED_MODES, level_to_mode
 
 
 DEFAULT_CANDIDATES = Path(".session-to-loop/private/candidates.json")
@@ -118,22 +119,82 @@ def next_rung(current: str) -> str:
     return ladder[min(index + 1, len(ladder) - 1)]
 
 
+def smaller_mechanism(candidate: dict) -> str:
+    mechanisms = candidate.get("mechanisms", [])
+    return "skill" if "skill" in mechanisms else "checklist"
+
+
+def candidate_maturity(candidate: dict, managed_loop: dict | None = None) -> str:
+    managed_loop = managed_loop if isinstance(managed_loop, dict) else candidate.get("managed_loop", {})
+    if not isinstance(managed_loop, dict):
+        managed_loop = {}
+    return managed_loop.get("recommended_maturity", candidate.get("safety", {}).get("autonomy_level", "draft-only"))
+
+
+def unique(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        result.append(item)
+    return result
+
+
+def start_modes_for_candidate(candidate: dict, card: dict | None = None, managed_loop: dict | None = None) -> list[str]:
+    if candidate.get("decision") == "reject":
+        return []
+
+    modes = ["read-only"]
+    mechanisms = set(candidate.get("mechanisms", []))
+    decision = str(candidate.get("decision", ""))
+    card = card or {}
+    can_delegate = str(card.get("can_delegate", "yes" if "loop" in mechanisms else "no")).lower() == "yes"
+    if decision in {"needs-human", "rule-only", "checklist-only"} or "loop" not in mechanisms or not can_delegate:
+        return modes
+
+    maturity = candidate_maturity(candidate, managed_loop)
+    if maturity == "read-only":
+        return modes
+    if maturity == "scheduled-readonly":
+        return unique([*modes, SCHEDULED_MODES[0]])
+    if maturity == "scheduled-draft":
+        return unique([*modes, *SCHEDULED_MODES])
+    return unique([*modes, *RUN_MODES[1:]])
+
+
+def start_options(candidate: dict, card: dict | None = None, managed_loop: dict | None = None) -> list[str]:
+    candidate_id = candidate["id"]
+    options = [f"start {candidate_id} as {mode}" for mode in start_modes_for_candidate(candidate, card, managed_loop)]
+    if candidate.get("decision") != "reject":
+        options.append(f"shrink {candidate_id} to {smaller_mechanism(candidate)}")
+    options.append(f"reject {candidate_id}")
+    return options
+
+
+def display_mode_for_candidate(candidate: dict, card: dict | None = None, managed_loop: dict | None = None) -> str:
+    if candidate.get("decision") == "reject":
+        return "not startable"
+    modes = start_modes_for_candidate(candidate, card, managed_loop)
+    maturity_mode = level_to_mode(candidate_maturity(candidate, managed_loop))
+    return maturity_mode if maturity_mode in modes else first(modes, "read-only")
+
+
+def next_mode_for_candidate(candidate: dict, card: dict, maturity: str) -> str:
+    if candidate.get("decision") == "reject":
+        return "not startable"
+    if str(card.get("can_delegate", "no")).lower() != "yes":
+        return "not available until delegation gaps are fixed"
+    return level_to_mode(next_rung(maturity))
+
+
 def confirmation_options(candidate: dict) -> list[str]:
     card = candidate.get("decision_card") or {}
-    options = card.get("confirmation_options")
-    if isinstance(options, list) and options:
-        return [str(item) for item in options[:4]]
-    candidate_id = candidate["id"]
-    smaller = "skill" if "skill" in candidate.get("mechanisms", []) else "checklist"
-    return [
-        f"adopt {candidate_id} as read-only",
-        f"adopt {candidate_id} as goal-loop",
-        f"shrink {candidate_id} to {smaller}",
-        f"reject {candidate_id}",
-    ]
+    return start_options(candidate, card)
 
 
-def first_run_defaults(candidate: dict, managed_loop: dict, contract: dict) -> dict[str, str]:
+def first_run_defaults(candidate: dict, managed_loop: dict, contract: dict, card: dict | None = None) -> dict[str, str]:
     packet = candidate.get("first_run_packet") or {}
     max_iterations = managed_loop.get("max_iterations_per_run", 8)
     verifier = first(contract.get("verifier_commands", []), first(candidate.get("verification", []), "Run the focused verifier."))
@@ -150,12 +211,16 @@ def first_run_defaults(candidate: dict, managed_loop: dict, contract: dict) -> d
     else:
         success_text = bullet_block(contract.get("success_criteria", candidate.get("verification", [])))
     maturity = managed_loop.get("recommended_maturity", "goal-loop")
-    default_action = "adopt as read-only" if maturity == "read-only" else "adopt as goal-loop"
+    options = start_options(candidate, card, managed_loop)
+    start_choices = [option for option in options if option.startswith("start ")]
+    default_action = f"start {candidate['id']} as {level_to_mode(maturity)}"
+    if default_action not in start_choices:
+        default_action = first(start_choices, f"reject {candidate['id']}" if candidate.get("decision") == "reject" else f"shrink {candidate['id']} to {smaller_mechanism(candidate)}")
+    recommended_action = str(packet.get("recommended_action", default_action))
+    if recommended_action not in options:
+        recommended_action = default_action
     return {
-        "recommended_action": str(packet.get(
-            "recommended_action",
-            default_action,
-        )),
+        "recommended_action": recommended_action,
         "first_run_goal": str(packet.get("goal", managed_loop.get("objective", candidate.get("summary", "Run the loop.")))),
         "first_run_success_criteria": success_text,
         "first_run_observe": str(packet.get(
@@ -164,7 +229,7 @@ def first_run_defaults(candidate: dict, managed_loop: dict, contract: dict) -> d
         )),
         "first_run_decide": str(packet.get(
             "decide",
-            f"choose at most {managed_loop.get('max_items_per_cycle', 3)} item(s), the next action, and any human gate",
+            f"choose at most {managed_loop.get('max_items_per_cycle', 3)} item(s), the next action, and any review boundary",
         )),
         "first_run_act": str(packet.get(
             "act",
@@ -173,7 +238,7 @@ def first_run_defaults(candidate: dict, managed_loop: dict, contract: dict) -> d
         "first_run_verify": str(packet.get("verify", verifier)),
         "first_run_stop_after": str(packet.get(
             "stop_after",
-            f"{max_iterations} iterations, repeated failure, no progress across two iterations, or a human gate",
+            f"{max_iterations} iterations, repeated failure, no progress across two iterations, or a review boundary",
         )),
         "first_run_human_gate": str(human_gate),
     }
@@ -238,18 +303,18 @@ def approval_boundary(candidate: dict) -> str:
     approvals = candidate.get("safety", {}).get("requires_approval_for", [])
     if approvals:
         return "; ".join(approvals)
-    return "No extra approval boundary recorded beyond normal repo review."
+    return "No extra review boundary recorded beyond normal repo review."
 
 
 def control_will_not(candidate: dict, managed_loop: dict) -> list[str]:
     items = []
     approvals = candidate.get("safety", {}).get("requires_approval_for", [])
     if approvals:
-        items.append(f"Perform approval-boundary actions without asking first: {', '.join(str(item) for item in approvals)}.")
+        items.append(f"Land or finalize review-boundary actions without the matching mode: {', '.join(str(item) for item in approvals)}.")
     change_policy = managed_loop.get("change_policy")
     if change_policy:
         items.append(str(change_policy))
-    return items or ["Expand scope, take irreversible action, or act without verifier evidence."]
+    return items or ["Expand scope, finalize irreversible changes, or act without verifier evidence."]
 
 
 def where_wrong(candidate: dict) -> list[str]:
@@ -266,14 +331,18 @@ def where_wrong(candidate: dict) -> list[str]:
 
 def decision_card(candidate: dict) -> dict:
     card = candidate.get("decision_card") or {}
-    return {
+    next_action = card.get("next_action", "start" if candidate.get("decision") != "reject" else "reject")
+    if next_action == "adopt":
+        next_action = "start"
+    resolved = {
         "can_use_now": card.get("can_use_now", "limited" if candidate.get("decision") != "reject" else "no"),
         "can_confirm": card.get("can_confirm", "yes" if candidate.get("verification") else "no"),
         "can_delegate": card.get("can_delegate", "yes" if "loop" in candidate.get("mechanisms", []) else "no"),
         "missing_before_delegate": card.get("missing_before_delegate", []),
-        "next_action": card.get("next_action", "adopt" if candidate.get("decision") != "reject" else "reject"),
-        "confirmation_options": confirmation_options(candidate),
+        "next_action": next_action,
     }
+    resolved["confirmation_options"] = start_options(candidate, resolved)
+    return resolved
 
 
 def proposal_candidates(candidates: list[dict]) -> list[dict]:
@@ -310,7 +379,7 @@ def render_loop_proposals(candidates: list[dict]) -> str:
         exits = loop_exit_contract(candidate, managed_loop, contract)
         card = decision_card(candidate)
         options = card["confirmation_options"]
-        first_run = first_run_defaults(candidate, managed_loop, contract)
+        first_run = first_run_defaults(candidate, managed_loop, contract, card)
         mechanism = mechanism_decision(candidate, managed_loop)
         mechanisms = ", ".join(candidate.get("mechanisms") or [candidate.get("mechanism", "none")])
         work_shape = candidate.get("work_shape", "goal-driven" if "loop" in candidate.get("mechanisms", []) else "not recorded")
@@ -320,29 +389,32 @@ def render_loop_proposals(candidates: list[dict]) -> str:
             "recommended_maturity",
             candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         )
+        mode = display_mode_for_candidate(candidate, card, managed_loop)
         state_file = managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json")
         blocks.append(
             "\n".join(
                 [
                     f"### {index}. {candidate['name']}",
                     "",
+                    f"Recommended start: `{first_run['recommended_action']}`",
+                    "",
                     f"Decision: `{candidate['decision']}` | Mechanism: `{mechanisms}` | Confidence: `{candidate['confidence']}`",
                     "",
-                    f"Can use now: `{card['can_use_now']}` | Can confirm: `{card['can_confirm']}` | Can delegate: `{card['can_delegate']}`",
+                    f"Can start now: `{card['can_use_now']}` | Can confirm: `{card['can_confirm']}` | Can delegate: `{card['can_delegate']}`",
                     "",
                     f"Next action: `{card['next_action']}`",
                     "",
-                    "Confirm with one:",
+                    "Start with one:",
                     "",
                     "\n".join(f"- `{option}`" for option in options),
                     "",
-                    f"Goal: {managed_loop.get('objective', candidate.get('summary', 'No objective recorded.'))}",
+                    f"What it does: {managed_loop.get('objective', candidate.get('summary', 'No objective recorded.'))}",
                     "",
                     f"Work shape: `{work_shape}` | Archetype: `{loop_archetype}`",
                     "",
-                    f"Heartbeat: `{heartbeat}` | Recommended starting level: `{maturity}`",
+                    f"Heartbeat: `{heartbeat}` | Mode: `{mode}` | Internal maturity: `{maturity}`",
                     "",
-                    "First run:",
+                    "First cycle:",
                     "",
                     f"- Observe: {first_run['first_run_observe']}",
                     f"- Decide: {first_run['first_run_decide']}",
@@ -369,13 +441,13 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     "",
                     f"Iteration cap: {managed_loop.get('max_iterations_per_run', 8)} run iteration(s)",
                     "",
-                    f"Approval boundary: {approval_boundary(candidate)}",
+                    f"Review boundary: {approval_boundary(candidate)}",
                     "",
-                    "Acceptance contract:",
+                    "Acceptance checks:",
                     "",
                     bullet_block(contract.get("success_criteria", [])),
                     "",
-                    "Exit contract:",
+                    "Loop exits:",
                     "",
                     "Continue only if:",
                     "",
@@ -385,7 +457,7 @@ def render_loop_proposals(candidates: list[dict]) -> str:
                     "",
                     bullet_block(exits.get("done_when", [])),
                     "",
-                    "Return `NEEDS_HUMAN` when:",
+                    "Return for review when:",
                     "",
                     bullet_block(exits.get("needs_human_when", [])),
                     "",
@@ -409,10 +481,10 @@ def confirmation_prompt(candidates: list[dict]) -> str:
     if not selected:
         return "Recommended next step: run a narrower transcript analysis or keep these as rejected context."
     names = ", ".join(f"`{item['name']}`" for item in selected)
-    options = "\n".join(f"- `{option}`" for item in selected for option in confirmation_options(item))
+    options = "\n".join(f"- `{option}`" for item in selected for option in decision_card(item)["confirmation_options"])
     return (
-        f"Confirm which proposal(s) to adopt from {names}. After confirmation, generate the concrete loop card, "
-        "draft skill or hook/checklist, and the state-file convention for the selected loop.\n\n"
+        f"Choose which proposal to start, shrink, or reject from {names}. "
+        "If the chosen mode allows edits, run the first controlled cycle in that mode; otherwise generate the run packet and state convention.\n\n"
         f"{options}"
     )
 
@@ -553,7 +625,7 @@ def safe_candidate_summary(candidate: dict) -> dict:
         "mechanisms": candidate.get("mechanisms", []),
         "confidence": candidate.get("confidence"),
         "can_delegate": card.get("can_delegate"),
-        "confirmation_options": confirmation_options(candidate),
+        "confirmation_options": card.get("confirmation_options", []),
         "control": {
             "will_do": as_list(managed_loop.get("cycle_steps", candidate.get("actions", [])))[:5],
             "must_ask_before": candidate.get("safety", {}).get("requires_approval_for", []),
@@ -590,14 +662,16 @@ def candidate_card(candidate: dict, scope: dict | None = None) -> str:
     contract = managed_loop.get("completion_contract", {})
     exits = loop_exit_contract(candidate, managed_loop, contract)
     card = decision_card(candidate)
-    options = card["confirmation_options"]
-    first_run = first_run_defaults(candidate, managed_loop, contract)
+    first_run = first_run_defaults(candidate, managed_loop, contract, card)
     mechanism = mechanism_decision(candidate, managed_loop)
     economics = candidate.get("economics") or {}
     maturity = managed_loop.get(
         "recommended_maturity",
         candidate.get("safety", {}).get("autonomy_level", "draft-only"),
     )
+    mode = display_mode_for_candidate(candidate, card, managed_loop)
+    generated_options = card["confirmation_options"]
+    start_options_text = "\n".join(f"- `{option}`" for option in generated_options) or f"- `reject {candidate['id']}`"
     values = {
         "name": candidate["name"],
         "id": candidate["id"],
@@ -612,10 +686,8 @@ def candidate_card(candidate: dict, scope: dict | None = None) -> str:
         "missing_before_delegate": bullet(card.get("missing_before_delegate", [])),
         "next_action": card["next_action"],
         "recommended_action": first_run["recommended_action"],
-        "confirm_as_read_only": options[0] if len(options) > 0 else f"adopt {candidate['id']} as read-only",
-        "confirm_as_goal_loop": options[1] if len(options) > 1 else f"adopt {candidate['id']} as goal-loop",
-        "shrink_to_smaller_mechanism": options[2] if len(options) > 2 else f"shrink {candidate['id']} to skill",
-        "reject_candidate": options[3] if len(options) > 3 else f"reject {candidate['id']}",
+        "mode_display": mode,
+        "start_options": start_options_text,
         "first_run_goal": first_run["first_run_goal"],
         "first_run_success_criteria": first_run["first_run_success_criteria"],
         "first_run_observe": first_run["first_run_observe"],
@@ -630,8 +702,8 @@ def candidate_card(candidate: dict, scope: dict | None = None) -> str:
         "primary_verifier": bullet_block(contract.get("verifier_commands", candidate.get("verification", []))),
         "checker": contract.get("evaluator_agent", "Use deterministic checks first; use a read-only checker when commands cannot decide."),
         "pass_evidence_required": bullet_block(contract.get("pass_evidence_required", [])),
-        "current_rung": maturity,
-        "next_rung": next_rung(maturity),
+        "current_rung": mode,
+        "next_rung": next_mode_for_candidate(candidate, card, maturity),
         "expected_trigger_frequency": str(economics.get("expected_trigger_frequency", "unknown")),
         "expected_per_run_cost": str(economics.get("expected_per_run_cost", "unknown")),
         "automatic_rejection_signals": bullet_block(
@@ -677,6 +749,7 @@ def candidate_card(candidate: dict, scope: dict | None = None) -> str:
         "managed_discovery_sources": bullet_block(managed_loop.get("discovery_sources", candidate.get("inputs", []))),
         "managed_heartbeat": managed_loop.get("heartbeat", "goal"),
         "managed_recommended_maturity": maturity,
+        "managed_display_mode": mode,
         "managed_state_file": managed_loop.get("state_file", f".session-to-loop/state/{candidate['id']}.json"),
         "managed_state_schema": mapping_block(managed_loop.get("state_schema", {})),
         "managed_cycle_steps": bullet_block(managed_loop.get("cycle_steps", candidate.get("actions", []))),
@@ -774,7 +847,7 @@ def playbook(data: dict, out_dir: Path, rendered_paths: list[str]) -> str:
     candidates = data.get("candidates", [])
     selected = proposal_candidates(candidates)
     selected_count = len(selected)
-    summary = f"Prepared {selected_count} user-confirmable loop engineering proposal(s) from local evidence."
+    summary = f"Recommended {selected_count} startable loop plan(s). Choose a mode, shrink the idea, reject it, or rerun with narrower evidence."
     table_rows = "\n".join(
         f"| {item['name']} | {', '.join(item.get('mechanisms') or [item.get('mechanism', 'none')])} | "
         f"{item['decision']} | {item['confidence']} |"

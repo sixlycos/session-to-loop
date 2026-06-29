@@ -1,4 +1,50 @@
-# Loop Engineering Playbook
+# SixLoops Start Plans
+
+{{summary}}
+
+## Recommended Start Plans
+
+{{loop_proposals}}
+
+## Start, Shrink, Or Reject
+
+{{confirmation_prompt}}
+
+## Smaller Mechanisms
+
+These are useful only if you reject or downgrade the loop proposals.
+
+### Rules and Memory Candidates
+
+{{rules_and_memory}}
+
+### Skill Candidates
+
+{{skill_candidates}}
+
+### Hook Candidates
+
+{{hook_candidates}}
+
+### Checklist or Approval Gates
+
+{{approval_gates}}
+
+### Rejected Candidates
+
+{{rejected_candidates}}
+
+## Decision Index
+
+| Candidate | Mechanism | Decision | Confidence |
+| --- | --- | --- | --- |
+| {{candidate}} | {{mechanism}} | {{decision}} | {{confidence}} |
+
+Loop candidates:
+
+{{loop_candidates}}
+
+## Run Notes
 
 Project: `{{project}}`
 
@@ -8,47 +54,7 @@ Input sources: `{{transcript_source_summary}}`
 
 Redaction: `{{redaction_status}}`
 
-## Loop Proposals
-
-{{summary}}
-
-{{loop_proposals}}
-
-## Choose Next Action
-
-{{confirmation_prompt}}
-
-## Recommended Artifacts
-
-| Candidate | Mechanism | Decision | Confidence |
-| --- | --- | --- | --- |
-| {{candidate}} | {{mechanism}} | {{decision}} | {{confidence}} |
-
-## Rules and Memory Candidates
-
-{{rules_and_memory}}
-
-## Skill Candidates
-
-{{skill_candidates}}
-
-## Hook Candidates
-
-{{hook_candidates}}
-
-## Loop Candidates
-
-{{loop_candidates}}
-
-## Checklist or Approval Gates
-
-{{approval_gates}}
-
-## Rejected Candidates
-
-{{rejected_candidates}}
-
-## Source Notes
+Source limitations:
 
 {{source_limitations}}
 

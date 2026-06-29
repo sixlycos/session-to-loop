@@ -10,6 +10,7 @@ Use these structures when producing machine-readable artifacts. Markdown reports
 - `managed_loop.heartbeat`: `session`, `goal`, `scheduled`, or `event`.
 - `managed_loop.recommended_maturity`: `read-only`, `goal-loop`, `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
 - `decision_card`: user-facing readiness summary: `can_use_now`, `can_confirm`, `can_delegate`, `missing_before_delegate`, `next_action`, and `confirmation_options`.
+- User-facing mode names map onto internal maturity values through `scripts/mode_policy.py`: `read-only` -> `read-only`, `low-risk edit` -> `goal-loop`, `worktree draft` -> `isolated-draft`, `PR draft` -> `verified-pr-draft`, `scheduled read-only` -> `scheduled-readonly`, and `scheduled draft` -> `scheduled-draft`.
 - `schemas/semantic-candidates.schema.json`: host AI output contract. Scripts consume this schema after packet selection; they do not use regex fallback as the primary loop-value judge.
 - `raw_ai_claims`: private copy of the host AI candidate before deterministic guardrails normalize render fields.
 - `normalized_render_fields`: fields defaulted only so draft artifacts can render; defaults do not make a loop delegable.
@@ -38,18 +39,18 @@ evidence:
     kind: "repeated-verification"
     snippet: "User asked agent to inspect failed CI logs."
 first_run_packet:
-  recommended_action: "adopt as goal-loop"
-  reply_to_confirm: "adopt ci-babysitter as goal-loop"
-  first_run_mode: "goal-loop"
+  recommended_action: "start ci-babysitter as PR draft"
+  reply_to_confirm: "start ci-babysitter as PR draft"
+  first_run_mode: "PR draft"
   state_file: ".session-to-loop/state/ci-babysitter.json"
   stop_after: "8 iterations or the same failure repeats twice"
   human_gate: "Do not push, merge, deploy, migrate, or change credentials without approval."
   starter_goal_prompt: |
-    Goal: Keep CI failures moving toward a verified fix without guessing.
-    Success criteria:
+    Objective: Keep CI failures moving toward a verified fix without guessing.
+    Acceptance checks:
     - Failed job logs are inspected before patching.
     - A focused verifier passes, or the blocker is recorded.
-    Each round:
+    First cycle:
     1. Observe CI status, failed logs, and current diff.
     2. Decide the next failure, action, verifier, and escalation path.
     3. Act on at most 1-3 directly evidenced failures.
@@ -131,7 +132,7 @@ managed_loop:
       - "Next action stays inside approved scope."
       - "A verifier can reject bad output."
       - "New evidence changed or is likely from the next verifier."
-      - "Risk stays below the approval boundary."
+      - "Risk stays below the approved mode and review boundary."
       - "Iteration and item budgets remain."
     done_when:
       - "Relevant local test passes."
@@ -147,8 +148,8 @@ managed_loop:
       - "Iteration, item, time, token, or cost cap is reached."
     status_protocol:
       CONTINUE: "Only when another cycle can increase verified certainty."
-      DONE: "Success criteria passed with required pass evidence; return for acceptance."
-      NEEDS_HUMAN: "Human judgment or explicit approval is required."
+      DONE: "Acceptance checks passed with required evidence; return for acceptance."
+      NEEDS_HUMAN: "Return for review because human judgment or explicit approval is required."
       BLOCKED: "Reliable progress is not possible with current evidence or verifier."
       BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
   change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
@@ -179,10 +180,12 @@ decision_card:
   can_confirm: "yes"
   can_delegate: "yes"
   missing_before_delegate: []
-  next_action: "adopt"
+  next_action: "start"
   confirmation_options:
-    - "adopt ci-babysitter as read-only"
-    - "adopt ci-babysitter as goal-loop"
+    - "start ci-babysitter as read-only"
+    - "start ci-babysitter as low-risk edit"
+    - "start ci-babysitter as worktree draft"
+    - "start ci-babysitter as PR draft"
     - "shrink ci-babysitter to skill"
     - "reject ci-babysitter"
 economics:
@@ -348,13 +351,13 @@ evidence:
     intent: "inspect_failed_ci_before_guessing"
     snippet: "CI is red again..."
 first_run_packet:
-  recommended_action: "adopt as goal-loop"
-  reply_to_confirm: "adopt ci-babysitter as goal-loop"
-  first_run_mode: "goal-loop"
+  recommended_action: "start ci-babysitter as PR draft"
+  reply_to_confirm: "start ci-babysitter as PR draft"
+  first_run_mode: "PR draft"
   state_file: ".session-to-loop/state/ci-babysitter.json"
   stop_after: "8 iterations or two repeated failure signatures"
   human_gate: "Do not push, merge, deploy, migrate, or change credentials without approval."
-  starter_goal_prompt: "Goal: Keep CI failures moving toward a verified fix without guessing..."
+  starter_goal_prompt: "Objective: Keep CI failures moving toward a verified fix without guessing..."
   observe: "Read previous state, current CI status, failed logs, and diff."
   decide: "Choose the next failure, verifier, and escalation path."
   act: "Attempt only low-risk fixes with direct evidence."
@@ -436,10 +439,12 @@ decision_card:
   can_confirm: "yes"
   can_delegate: "yes"
   missing_before_delegate: []
-  next_action: "adopt"
+  next_action: "start"
   confirmation_options:
-    - "adopt ci-babysitter as read-only"
-    - "adopt ci-babysitter as goal-loop"
+    - "start ci-babysitter as read-only"
+    - "start ci-babysitter as low-risk edit"
+    - "start ci-babysitter as worktree draft"
+    - "start ci-babysitter as PR draft"
     - "shrink ci-babysitter to skill"
     - "reject ci-babysitter"
 economics:
@@ -456,7 +461,7 @@ artifacts:
 
 ## Adoption Packet Manifest
 
-Generated only after a user confirms a candidate with an adoption level.
+Generated only after a user starts a candidate with a mode that needs durable state.
 
 ```yaml
 version: 1
@@ -506,8 +511,8 @@ loop_exit_contract:
     - "Iteration, item, time, token, or cost cap is reached."
   status_protocol:
     CONTINUE: "Only when another cycle can increase verified certainty."
-    DONE: "Success criteria passed with required pass evidence; return for acceptance."
-    NEEDS_HUMAN: "Human judgment or explicit approval is required."
+    DONE: "Acceptance checks passed with required evidence; return for acceptance."
+    NEEDS_HUMAN: "Return for review because human judgment or explicit approval is required."
     BLOCKED: "Reliable progress is not possible with current evidence or verifier."
     BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
 approval_boundary:
@@ -567,7 +572,7 @@ managed_loop:
       - "Command output, screenshot, CI status, review finding resolution, or explicit verifier note."
     reject_conditions:
       - "Same failure repeats twice."
-      - "A human approval boundary is reached."
+      - "A review boundary is reached."
     no_progress_policy: "Stop when no evidence changes across two iterations."
   loop_exit_contract:
     continue_only_if:
@@ -575,7 +580,7 @@ managed_loop:
       - "Next action stays inside approved scope."
       - "A verifier can reject bad output."
       - "New evidence changed or is likely from the next verifier."
-      - "Risk stays below the approval boundary."
+      - "Risk stays below the approved mode and review boundary."
       - "Iteration and item budgets remain."
     done_when:
       - "Target routes render without blocking errors."
@@ -590,8 +595,8 @@ managed_loop:
       - "Iteration, item, time, token, or cost cap is reached."
     status_protocol:
       CONTINUE: "Only when another cycle can increase verified certainty."
-      DONE: "Success criteria passed with required pass evidence; return for acceptance."
-      NEEDS_HUMAN: "Human judgment or explicit approval is required."
+      DONE: "Acceptance checks passed with required evidence; return for acceptance."
+      NEEDS_HUMAN: "Return for review because human judgment or explicit approval is required."
       BLOCKED: "Reliable progress is not possible with current evidence or verifier."
       BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
 subagent_team:

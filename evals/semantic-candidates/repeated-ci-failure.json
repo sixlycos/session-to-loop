@@ -97,8 +97,8 @@
           "budget_stopped_when": ["More than 3 item(s) would be required in one cycle.", "8 iteration(s) are reached."],
           "status_protocol": {
             "CONTINUE": "Only when another cycle can increase verified certainty.",
-            "DONE": "Success criteria passed with required pass evidence; return for acceptance.",
-            "NEEDS_HUMAN": "Human judgment or explicit approval is required.",
+            "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
+            "NEEDS_HUMAN": "Return for review because human judgment or explicit approval is required.",
             "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
             "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
           }

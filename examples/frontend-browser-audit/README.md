@@ -7,10 +7,10 @@ This example shows the goal-first path: start from a current frontend objective,
 | Stage | What happens |
 | --- | --- |
 | **Before** | The user repeatedly asks the agent to verify changed routes, screenshots, console/network state, and i18n fallback after UI work. |
-| **SixLoops output** | A Frontend Verification Loop with route discovery, screenshot evidence, state, verifier, and visual/product human gates. |
+| **SixLoops output** | A Frontend Verification Start Plan with route discovery, screenshot evidence, state, verifier, and visual/product review boundaries. |
 | **After** | The next agent can run a bounded browser verification cycle, fix only low-risk regressions, and stop when product or visual judgment is needed. |
 
-## Goal
+## Objective
 
 > After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed.
 
@@ -20,11 +20,12 @@ SixLoops designs a **Frontend Verification Loop**:
 
 - **Domain**: `frontend`
 - **Team mode**: `phased`
-- **Starting level**: `isolated-draft`
+- **Start mode**: `worktree draft`
+- **Internal level**: `isolated-draft`
 - **Verifier**: focused browser/static checks chosen during the Decide step
 - **Pass evidence**: route list, locale list, screenshot/snapshot summaries, console/network result, i18n summary
-- **Human gate**: visual direction, product copy, translation tone, route behavior, auth/data fixtures
-- **Exit statuses**: `CONTINUE`, `DONE`, `NEEDS_HUMAN`, `BLOCKED`, `BUDGET_STOPPED`
+- **Review boundary**: visual direction, product copy, translation tone, route behavior, auth/data fixtures
+- **Exit statuses**: `CONTINUE`, `DONE`, review-needed, `BLOCKED`, `BUDGET_STOPPED`
 
 ## After
 
@@ -39,11 +40,11 @@ The next agent should:
 
 ## Why This Is A Loop
 
-This is not just a checklist because verification often discovers new visible failures. It is not fully autonomous because visual direction and product copy remain human judgment boundaries.
+This is not just a checklist because verification often discovers new visible failures. It is not fully autonomous because visual direction and product copy need a stronger user-approved mode or review.
 
 ## Files
 
-- [GOAL.md](GOAL.md): delegated goal loop.
+- [GOAL.md](GOAL.md): runnable loop packet.
 - [TEAM.md](TEAM.md): planner, maker, verifier, reviewer, and integrator roles.
 - [STATE.json](STATE.json): resume ledger with post-run learning fields.
 - [HANDOFF.md](HANDOFF.md): how to run or resume.

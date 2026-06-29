@@ -56,8 +56,11 @@ For each candidate, decide:
   environment, hard budget/iteration/time stop, and human review before merge, deploy, dependency,
   credential, schema, data, payment, or production-impacting action.
 - Which heartbeat is cheapest and sufficient: `session`, `goal`, `scheduled`, or `event`.
-- Which adoption level should be recommended first: `read-only`, `goal-loop`,
-  `isolated-draft`, `verified-pr-draft`, `scheduled-readonly`, or `scheduled-draft`.
+- Which start mode should be recommended first: `read-only`, `low-risk edit`,
+  `worktree draft`, `PR draft`, `scheduled read-only`, or `scheduled draft`.
+  Map this to the internal maturity field when writing JSON:
+  `goal-loop` means low-risk edit, `isolated-draft` means worktree draft, and
+  `verified-pr-draft` means PR draft.
 - Whether the loop has an acceptance contract: success criteria, verifier commands or checks,
   evaluator, required pass evidence, reject conditions, no-progress policy, state schema, and human checkpoint.
 - Whether the loop has an exit contract: continue-only-if conditions, done conditions, needs-human boundaries, blocked conditions, and budget-stop conditions.
@@ -66,10 +69,10 @@ For each candidate, decide:
 
 Only recommend `loop` when the result can be handed to an agent as a managed goal loop after one
 explicit user approval. A loop must say how the agent can keep going without repeated user prompts,
-what it should inspect each cycle, how it picks the 1-3 highest-value items, what it may attempt,
-how it isolates low-risk changes, how it verifies, where it records state, how the next run resumes,
-the hard iteration limit for one run, when it must stop, which heartbeat should start it, and the
-lowest adoption level that would be useful.
+what it should inspect each cycle, how it picks the 1-3 highest-value items, what it may attempt
+in the recommended mode, how it isolates changes, how it verifies, where it records state, how the
+next run resumes, the hard iteration limit for one run, when it must stop, which heartbeat should
+start it, and the weakest useful start mode.
 
 If a candidate has repeated steps but no acceptance contract, state schema, resume policy,
 verification, stop condition, budget cap, or human checkpoint, recommend `skill` or `checklist`
@@ -78,8 +81,8 @@ instead of `loop`.
 If a candidate cannot say when to continue and when to return to the human, recommend a smaller mechanism. A loop is a controlled state machine, not a long prompt.
 
 If the work does not repeat, cannot be rejected by objective evidence, cannot be reproduced by the
-agent, lacks a hard stop, or depends on high-impact action without a human gate, do not recommend
-a managed loop.
+agent, lacks a hard stop, or depends on high-impact action without a matching start mode or review
+gate, do not recommend a managed loop.
 
 If the work is process-shaped and has no meaningful agent decision, recommend a script, hook, or
 traditional automation instead of a loop. If the work is tool-assisted but still needs frequent human
@@ -111,7 +114,7 @@ For each candidate include:
 - `verifier_habits`: checks the user expects before acceptance.
 - `approval_boundaries`: actions that need the user.
 - `why_this_loop`, `why_not_smaller`, `why_not_more_autonomous`, and `where_this_may_be_wrong`.
-- `managed_loop` only when the AI can specify objective, state, cycle, verifier, budget, stop/reject conditions, resume policy, human gate, and exit contract.
+- `managed_loop` only when the AI can specify objective, state, cycle, verifier, budget, stop/reject conditions, resume policy, review boundary, start mode, and exit contract.
 
 Do not rely on keyword or regex matches to decide loop value. The deterministic scripts may use
 regex for redaction or fallback evals, but your job is semantic judgment.
@@ -215,8 +218,8 @@ Write only JSON:
           "budget_stopped_when": ["More than 3 item(s) would be required in one cycle.", "8 iteration(s) are reached."],
           "status_protocol": {
             "CONTINUE": "Only when another cycle can increase verified certainty.",
-            "DONE": "Success criteria passed with required pass evidence; return for acceptance.",
-            "NEEDS_HUMAN": "Human judgment or explicit approval is required.",
+            "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
+            "NEEDS_HUMAN": "Return for review because human judgment or explicit approval is required.",
             "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
             "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
           }
@@ -239,7 +242,15 @@ Write only JSON:
         "can_confirm": "yes",
         "can_delegate": "yes",
         "missing_before_delegate": [],
-        "next_action": "adopt"
+        "next_action": "start",
+        "confirmation_options": [
+          "start ci-babysitter as read-only",
+          "start ci-babysitter as low-risk edit",
+          "start ci-babysitter as worktree draft",
+          "start ci-babysitter as PR draft",
+          "shrink ci-babysitter to skill",
+          "reject ci-babysitter"
+        ]
       },
       "artifacts": ["loop-card", "draft-skill"],
       "downgrade_notes": ""

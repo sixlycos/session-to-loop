@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "created_at": "2026-06-29T02:43:48.912895+00:00",
+  "created_at": "2026-06-29T06:32:44.193367+00:00",
   "design_model": "goal-to-loop-v1",
   "loop_id": "frontend-after-frontend-route-or-i18n-changes-351d3f2380",
   "name": "Frontend Verification Loop",
@@ -84,7 +84,7 @@
         "Next action stays inside approved scope.",
         "A verifier can reject bad output.",
         "New evidence changed or is likely from the next verifier.",
-        "Risk stays below the approval boundary.",
+        "Risk stays below the approved mode and review boundary.",
         "The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.",
         "Fewer than 3 item(s) are active in this cycle.",
         "Fewer than 8 iteration(s) have run."
@@ -96,13 +96,13 @@
         "i18n/copy output shows no missing key, raw key, or unintended fallback locale."
       ],
       "needs_human_when": [
-        "visual direction changes is required.",
-        "product copy decisions is required.",
-        "translation tone or terminology decisions is required.",
-        "route behavior changes is required.",
-        "auth or data fixture changes is required.",
-        "scope expansion is required.",
-        "irreversible changes is required."
+        "Review required for visual direction changes.",
+        "Review required for product copy decisions.",
+        "Review required for translation tone or terminology decisions.",
+        "Review required for route behavior changes.",
+        "Review required for auth or data fixture changes.",
+        "Review required for scope expansion.",
+        "Review required for irreversible changes."
       ],
       "blocked_when": [
         "Same visible failure repeats twice.",
@@ -117,8 +117,8 @@
       ],
       "status_protocol": {
         "CONTINUE": "Only when another cycle can increase verified certainty.",
-        "DONE": "Success criteria passed with required pass evidence; return for acceptance.",
-        "NEEDS_HUMAN": "Human judgment or explicit approval is required.",
+        "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
+        "NEEDS_HUMAN": "Return for review because human judgment or explicit approval is required.",
         "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
         "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
       }
@@ -153,7 +153,7 @@
           "recommended next action",
           "evidence or blocker"
         ],
-        "prompt": "You are the Planner for a SixLoops frontend goal. Goal: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
+        "prompt": "You are the Planner for a SixLoops frontend goal. Objective: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
       },
       {
         "id": "frontend-maker",
@@ -165,7 +165,7 @@
           "recommended next action",
           "evidence or blocker"
         ],
-        "prompt": "You are the Frontend Maker for a SixLoops frontend goal. Goal: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
+        "prompt": "You are the Frontend Maker for a SixLoops frontend goal. Objective: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
       },
       {
         "id": "browser-verifier",
@@ -177,7 +177,7 @@
           "screenshot or snapshot evidence",
           "console/network findings"
         ],
-        "prompt": "You are the Browser Verifier for a SixLoops frontend goal. Goal: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
+        "prompt": "You are the Browser Verifier for a SixLoops frontend goal. Objective: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
       },
       {
         "id": "reviewer",
@@ -189,7 +189,7 @@
           "missing verifier",
           "approval gate"
         ],
-        "prompt": "You are the Reviewer for a SixLoops frontend goal. Goal: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
+        "prompt": "You are the Reviewer for a SixLoops frontend goal. Objective: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
       },
       {
         "id": "integrator",
@@ -201,7 +201,7 @@
           "final status",
           "handoff summary"
         ],
-        "prompt": "You are the Integrator for a SixLoops frontend goal. Goal: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
+        "prompt": "You are the Integrator for a SixLoops frontend goal. Objective: After frontend route or i18n changes, verify browser screenshots, fix low-risk UI regressions, and stop when product or visual judgment is needed. Return only your role output, evidence, blockers, and next action. Do not expand scope. Do not perform high-impact actions without explicit approval."
       }
     ],
     "coordination": [

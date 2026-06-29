@@ -1,17 +1,17 @@
 {
   "version": 1,
-  "created_at": "2026-06-29T02:43:48.912895+00:00",
+  "created_at": "2026-06-29T06:32:44.193367+00:00",
   "loop_id": "frontend-after-frontend-route-or-i18n-changes-351d3f2380",
   "name": "Frontend Verification Loop",
   "domain": "frontend",
   "adoption_level": "isolated-draft",
   "team_mode": "phased",
   "files": {
-    "goal": ".session-to-loop\\tmp\\examples\\frontend-browser-audit\\frontend-after-frontend-route-or-i18n-changes-351d3f2380\\GOAL.md",
-    "team": ".session-to-loop\\tmp\\examples\\frontend-browser-audit\\frontend-after-frontend-route-or-i18n-changes-351d3f2380\\TEAM.md",
-    "state": ".session-to-loop\\tmp\\examples\\frontend-browser-audit\\frontend-after-frontend-route-or-i18n-changes-351d3f2380\\STATE.json",
-    "design": ".session-to-loop\\tmp\\examples\\frontend-browser-audit\\frontend-after-frontend-route-or-i18n-changes-351d3f2380\\goal-loop-design.json",
-    "handoff": ".session-to-loop\\tmp\\examples\\frontend-browser-audit\\frontend-after-frontend-route-or-i18n-changes-351d3f2380\\HANDOFF.md",
-    "agents_snippet": ".session-to-loop\\tmp\\examples\\frontend-browser-audit\\frontend-after-frontend-route-or-i18n-changes-351d3f2380\\AGENTS-snippet.md"
+    "goal": "examples/frontend-browser-audit/GOAL.md",
+    "team": "examples/frontend-browser-audit/TEAM.md",
+    "state": "examples/frontend-browser-audit/STATE.json",
+    "design": "examples/frontend-browser-audit/goal-loop-design.json",
+    "handoff": "examples/frontend-browser-audit/HANDOFF.md",
+    "agents_snippet": "examples/frontend-browser-audit/AGENTS-snippet.md"
   }
 }

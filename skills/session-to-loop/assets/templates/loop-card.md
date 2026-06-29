@@ -1,16 +1,20 @@
 # {{name}}
 
-## Control Card
+## Start Plan
 
-This loop will:
+Recommended start: `{{recommended_action}}`
+
+Mode: `{{mode_display}}`
+
+This loop will do:
 
 {{control_will_do}}
 
-This loop will not:
+This loop will not do in the current mode:
 
 {{control_will_not}}
 
-It must ask you before:
+It returns to you before:
 
 {{control_must_ask}}
 
@@ -32,10 +36,7 @@ Where this may be wrong:
 
 Reply with one:
 
-- `{{confirm_as_read_only}}`
-- `{{confirm_as_goal_loop}}`
-- `{{shrink_to_smaller_mechanism}}`
-- `{{reject_candidate}}`
+{{start_options}}
 
 ```yaml
 id: "{{id}}"
@@ -46,27 +47,24 @@ work_shape: "{{work_shape}}"
 loop_archetype: "{{loop_archetype}}"
 ```
 
-## Confirm This Loop
+## Start Options
 
-Recommended action: `{{recommended_action}}`
+Start from the weakest useful mode. Move up only when the verifier and review results justify it.
 
 Reply with one:
 
-- `{{confirm_as_read_only}}`
-- `{{confirm_as_goal_loop}}`
-- `{{shrink_to_smaller_mechanism}}`
-- `{{reject_candidate}}`
+{{start_options}}
 
-First run prompt:
+First cycle packet:
 
 ```text
-Goal:
+Objective:
 {{first_run_goal}}
 
-Success criteria:
+Acceptance checks:
 {{first_run_success_criteria}}
 
-Each round:
+First cycle:
 1. Observe: {{first_run_observe}}
 2. Decide: {{first_run_decide}}
 3. Act: {{first_run_act}}
@@ -76,13 +74,13 @@ Each round:
 Stop after:
 {{first_run_stop_after}}
 
-Human gate:
+Return for review:
 {{first_run_human_gate}}
 ```
 
-## Decision Card
+## Run Card
 
-Can use now: `{{can_use_now}}`
+Can start now: `{{can_use_now}}`
 
 Can confirm: `{{can_confirm}}`
 
@@ -134,7 +132,7 @@ PASS evidence:
 
 {{pass_evidence_required}}
 
-Status protocol:
+Internal status protocol:
 
 `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`
 
@@ -148,7 +146,7 @@ Return `DONE` when:
 
 {{exit_done_when}}
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 {{exit_needs_human_when}}
 
@@ -164,11 +162,11 @@ Status protocol:
 
 {{exit_status_protocol}}
 
-## Adoption Path
+## Mode Ladder
 
-Current rung: `{{current_rung}}`
+Current mode: `{{current_rung}}`
 
-Next rung: `{{next_rung}}`
+Next mode: `{{next_rung}}`
 
 Promotion criteria:
 
@@ -194,9 +192,9 @@ Demote if:
 
 {{demote_if}}
 
-## Managed Goal Loop Spec
+## Loop Runbook
 
-Goal:
+Objective:
 
 {{managed_objective}}
 
@@ -212,9 +210,13 @@ Heartbeat:
 
 `{{managed_heartbeat}}`
 
-Recommended starting level:
+Internal maturity:
 
 `{{managed_recommended_maturity}}`
+
+User-facing mode:
+
+`{{managed_display_mode}}`
 
 State file:
 
@@ -246,7 +248,7 @@ Max iterations per run:
 
 ## Acceptance Contract
 
-Success criteria:
+Acceptance checks:
 
 {{contract_success_criteria}}
 

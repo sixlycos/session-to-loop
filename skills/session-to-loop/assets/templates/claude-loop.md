@@ -2,7 +2,7 @@
 
 Use this as a managed agent goal after the user approves the loop.
 
-## Goal
+## Objective
 
 {{goal}}
 
@@ -38,7 +38,7 @@ Completion must resolve to one of: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`,
 
 Update the state file before reporting `DONE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
 
-Success criteria:
+Acceptance checks:
 
 {{contract_success_criteria}}
 
@@ -74,7 +74,7 @@ Return `DONE` when:
 
 {{exit_done_when}}
 
-Return `NEEDS_HUMAN` when:
+Return for review when:
 
 {{exit_needs_human_when}}
 
