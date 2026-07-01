@@ -2,33 +2,33 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**Turn development goals and coding evidence into stateful agent loops.**
+**Stop teaching agents the same engineering lesson twice.**
 
-SixLoops is an open-source Agent Skill collection for Codex and Claude Code.
-Start from a fresh development goal, project evidence, or local session logs;
-SixLoops then maps the change from current X to target B and recommends the
-useful mechanism for next time: a rule, skill, hook, checklist, decision
-packet, eval case, or managed loop.
+Every repo has a few sentences humans keep repeating:
 
-It is not a chat summarizer. It is a loop engineering assistant for developers
-who want agent work to become more repeatable, verifiable, and able to keep
-moving.
+- "Read the CI logs before guessing."
+- "After UI changes, open the changed routes and show me screenshots."
+- "Do not deploy until I approve."
+- "This is a product call, bring me options instead of pretending it is done."
+
+SixLoops turns those repeated corrections into durable agent mechanisms. It
+starts from a fresh development goal, bounded project evidence, or local session
+logs; then it maps current X to target B and recommends the smallest useful
+thing to add next: a rule, skill, hook, checklist, decision packet, eval case,
+or managed loop.
+
+The point is not to make an agent "try harder." The point is to remove repeated
+human rescue while keeping proof, state, budget, and return points explicit.
 
 SixLoops is model-led. Codex or Claude Code does the semantic extraction,
 naming, judgment, and explanation through skill prompts. The Python pipeline is
 deliberately boring: discover narrow inputs, redact, packetize, apply
 deterministic checks, and render model-authored artifacts.
 
-A real loop also has to progress naturally. Before a cycle continues, SixLoops
-artifacts require the agent to write `next_cursor`, `next_expected_evidence`,
-`next_verifier`, and `human_friction_delta`: where the next cycle resumes, what
-new evidence it expects, what can reject it, and whether repeated human
-explanation was reduced. Otherwise the loop should stop, return, or shrink to a
-smaller mechanism.
-When several next actions are plausible, the model should rank them by value,
-risk, reversibility, and verifier path, choose the best bounded step, and
-control the necessary subagent roles. It should ask the user only when human
-judgment or stronger approval is genuinely required.
+A real loop is allowed to continue only when it can name the next cursor, the
+next expected evidence, the verifier that can reject it, and whether the last
+cycle reduced human friction. Otherwise the right answer is not more autonomy;
+it is to stop, return with a decision packet, or shrink to a smaller mechanism.
 
 The product and repository are `sixloops`; the installed package is a small
 skill collection: `sixloops`, `sixloops-mine`, `sixloops-design`, and
@@ -38,25 +38,31 @@ skill collection: `sixloops`, `sixloops-mine`, `sixloops-design`, and
 
 ## The Core Idea
 
-Agent loop engineering usually starts from one of three inputs:
+SixLoops is for the moment when a one-off prompt has clearly become a recurring
+workflow. It separates three questions that agents often blur together:
 
-- **A fresh goal**: turn a workflow you want to delegate into a bounded agent
-  loop.
-- **Project evidence**: use browser audits, CI logs, eval output, or result files
-  to design the next useful mechanism.
-- **Repeated correction**: turn recurring agent failure into a rule, skill,
-  checklist, verifier, or loop.
+- **What keeps happening?** A failing CI pattern, browser audit, repeated user
+  correction, stale docs pass, or delivery checklist.
+- **What can actually reject bad output?** Tests, logs, screenshots, schemas,
+  assertions, or a tight rubric.
+- **What should not be automated yet?** Product vision, release calls, visual
+  taste, production actions, credentials, data, payments, and anything without
+  objective acceptance criteria.
 
-SixLoops helps decide which mechanism is actually worth adding.
+That distinction matters. A repeated task is not automatically a loop. Sometimes
+the right artifact is a one-line rule. Sometimes it is a reusable skill. Only
+when the agent can observe, decide, act, verify, write state, and stop cleanly
+does SixLoops recommend a managed loop.
 
 ![SixLoops semantic analysis turns noisy packets into loop cards](assets/readme/semantic-kitchen.png)
 
-| Input signal | Better artifact |
+| Human correction or signal | Durable artifact |
 | --- | --- |
 | "After UI changes, open changed routes and capture screenshots." | Browser Audit loop with route discovery and visual evidence. |
 | "Keep checking CI failures and draft low-risk fixes." | CI Babysitter loop with state, verifier, cap, and explicit return points. |
 | "Read the CI logs before guessing." | CI Babysitter loop with state, verifier, cap, and explicit return points. |
 | "Use pnpm here, not npm." | Package-manager rule or checklist. |
+| "Bring me product options; do not decide taste for me." | Decision packet, not an inner coding loop. |
 | "Deploy only after I approve." | Approval gate, not autonomous deployment. |
 
 Complete examples:
@@ -66,8 +72,11 @@ Complete examples:
 
 ## What It Produces
 
-For a direct development goal, the first useful screen is a **Change Map plus a
-Start Plan**, not a defensive task list or long transcript summary. The map explains:
+The first useful SixLoops screen is not a transcript summary. It is a choice the
+user can approve or reject.
+
+For a direct development goal, SixLoops leads with a **Change Map plus a Start
+Plan**. The map explains:
 
 - current X
 - target B
@@ -77,8 +86,8 @@ Start Plan**, not a defensive task list or long transcript summary. The map expl
 - rollout waves
 - when a decision packet must come back to the user
 
-For mined session evidence, the first screen is still **1-3 Start Plans**. Each
-plan explains:
+For mined session or project evidence, SixLoops leads with **1-3 Start Plans**.
+Each plan explains:
 
 - what the loop will do
 - what stays outside the current mode
@@ -86,7 +95,7 @@ plan explains:
 - when it stops
 - how the next cycle resumes naturally instead of rerunning the same prompt
 - when it returns to the user
-- whether it should start, shrink, or be rejected
+- whether it should start, shrink to a smaller mechanism, or be rejected
 
 SixLoops can render:
 
@@ -103,36 +112,38 @@ SixLoops can render:
 
 ```mermaid
 flowchart TD
-  A["Choose an entrypoint"] --> B{"Request type"}
+  A["Repeated agent friction<br/>or a fresh delegation goal"] --> B{"What do you have?"}
 
-  B -->|Direct goal| C["Host model drafts Change Map<br/>and model-design JSON"]
-  C --> D["Run design_goal_loop.py<br/>--model-design-file, then read artifacts"]
-  D --> L["Present Change Map + Start Plan<br/>blast radius, regression, verifier, state, return point"]
+  B -->|Fresh goal| C["Draft Change Map<br/>current X -> target B"]
+  C --> D["Model writes design JSON"]
+  D --> E["Render GOAL / STATE / TEAM<br/>with design_goal_loop.py"]
 
-  B -->|Session logs or project evidence| E["Run sixloops.py --input"]
-  E --> F{"Scope approved?"}
-  F -->|No| G["Present inventory and ask for narrow scope"]
-  G --> E
-  F -->|Yes| H["Redact, normalize, and build analysis-packets.jsonl"]
-  H --> I["Host AI uses sixloops-mine<br/>to write semantic-candidates.json"]
-  I --> J["Rerun sixloops.py with scope and semantic candidates"]
-  J --> K["Render checked artifacts and decision packets"]
-  K --> L
+  B -->|Project evidence| F["Inspect bounded repo evidence<br/>README, docs, examples, artifacts"]
+  F --> H["Model proposes 1-3 Start Plans"]
 
-  B -->|Start or continue an existing loop| M["Read latest runbook or adoption packet"]
-  M --> N["Infer approved mode and current state"]
-  N --> R["Run one stateful cycle"]
+  B -->|Session logs| I["Scope, redact, and packetize logs"]
+  I --> J{"Scope approved?"}
+  J -->|No| K["Ask for narrower scope"]
+  K --> I
+  J -->|Yes| L["Host model writes semantic candidates"]
+  L --> H
 
-  L --> O{"User decision"}
-  O -->|Start approved| P["Create adoption packet when stateful reuse is needed<br/>adopt_candidate.py"]
-  O -->|Shrink| Q["Keep as rule, skill, checklist, gate, or eval"]
-  O -->|Reject| Z["No automation"]
-  P --> R
+  E --> H
+  H --> M{"Smallest useful mechanism?"}
+  M -->|Rule / skill / checklist / gate / eval| N["Install the smaller artifact"]
+  M -->|Managed loop| O["Require verifier + state + cap + return point"]
+  M -->|Not worth it| Z["Reject automation"]
 
-  R --> S{"Exit contract"}
-  S -->|DONE| T["Accepted result"]
-  S -->|CONTINUE| R
-  S -->|Review needed, BLOCKED, or BUDGET_STOPPED| U["Return to human"]
+  O --> P{"User starts it?"}
+  P -->|start as approved mode| Q["Run one bounded stateful cycle"]
+  P -->|shrink or reject| N
+
+  B -->|Existing start string| Q
+
+  Q --> R{"Exit contract"}
+  R -->|CONTINUE| Q
+  R -->|DONE| S["Return evidence for acceptance"]
+  R -->|review / BLOCKED / BUDGET_STOPPED| T["Return to human<br/>with blocker or decision packet"]
 ```
 
 ## Quick Start

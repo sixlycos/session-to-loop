@@ -2,27 +2,30 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**把开发目标和编码证据，变成可状态化运行的 agent loop。**
+**别再一遍遍教 agent 同一件事。**
 
-SixLoops 是一个面向 Codex 和 Claude Code 的开源 Agent Skill 集合。你可以从一
-个新的开发目标、项目证据或本地会话日志开始；SixLoops 会先把当前 X 到目标 B 的
-改造图景画出来，再为下一次推荐真正有用的机制：规则、skill、hook、清单、决策包、
-eval case，或者一个可托管的 loop。
+每个仓库里都有几句话，人类会反复对 agent 说：
 
-它不是聊天记录总结器。它是给开发者使用的 loop engineering assistant，用来把
-agent 工作变得更可重复、可验证，并且能持续往前推进。
+- “先读 CI 日志，不要猜。”
+- “UI 改完后，打开变更路由，给我截图。”
+- “没有我批准，不要部署。”
+- “这是产品判断，给我选项，不要假装已经完成。”
+
+SixLoops 把这些反复纠正沉淀成可复用的 agent 机制。你可以从一个新的开发目标、
+有边界的项目证据，或本地会话日志开始；SixLoops 会先把当前 X 到目标 B 的改造图景
+画出来，再推荐下一次真正值得加入的东西：规则、skill、hook、清单、决策包、eval
+case，或者一个可托管的 loop。
+
+重点不是让 agent “更努力地试”。重点是减少重复的人类救场，同时把证据、状态、预算
+上限和返回点说清楚。
 
 SixLoops 是模型主导的。Codex 或 Claude Code 通过 skill prompt 完成语义抽取、
 命名、判断和解释。Python pipeline 刻意保持无聊：发现狭窄输入、脱敏、打包
 packets、做确定性检查，并渲染模型写出的产物。
 
-真正的 loop 还必须自然推进。每轮结束前，SixLoops 产物会要求 agent 写入
-`next_cursor`、`next_expected_evidence`、`next_verifier` 和
-`human_friction_delta`：下一轮从哪里接、预期拿到什么新证据、谁能拒绝它，以及本轮
-有没有减少重复人工解释。否则就不要继续，应该停止、交还或降级成更小机制。
-当存在多个可行下一步时，模型应该先按价值、风险、可回退性和验收路径自主选择一个
-最合适的有边界步骤，并控制必要的子角色启停；只有真正需要人类判断或更高授权时才
-请求用户帮助。
+真正的 loop 只有在能说清下一轮 cursor、下一轮预期证据、能够拒绝坏输出的 verifier，
+以及上一轮是否减少了人工摩擦时，才应该继续。否则正确答案不是更多自治，而是停止、
+交还决策包，或缩小成更轻的机制。
 
 产品名和仓库名是 `sixloops`；安装后是一个小 skill 集合：`sixloops`、
 `sixloops-mine`、`sixloops-design`、`sixloops-adopt`。
@@ -31,23 +34,28 @@ packets、做确定性检查，并渲染模型写出的产物。
 
 ## 核心理念
 
-Agent loop engineering 通常从三种输入开始：
+SixLoops 处理的是那个临界点：一次性 prompt 已经不够了，但你也不想把坏习惯自动化。
+它把 agent 经常混在一起的三个问题拆开：
 
-- **一个新目标**：把你想交给 agent 的工作流，设计成有边界的 loop。
-- **项目证据**：用 browser audits、CI logs、eval outputs 或结果文件，设计下一
-  个有用机制。
-- **反复纠正**：把重复出现的 agent 失败，沉淀成规则、skill、清单、验证器或 loop。
+- **什么事情反复发生？** CI 失败模式、browser audit、重复用户纠正、陈旧文档、
+  delivery checklist。
+- **什么东西能拒绝坏输出？** 测试、日志、截图、schema、断言，或足够明确的 rubric。
+- **什么现在还不该自动化？** 产品愿景、发布判断、视觉品味、生产操作、凭证、数据、
+  付款，以及所有缺少客观验收标准的事。
 
-SixLoops 帮你判断哪一种机制真的值得加入。
+这个区分很重要。重复出现的任务不一定值得做成 loop。有时正确答案只是一条规则；
+有时是一个 skill；只有当 agent 能观察、决策、行动、验证、写入状态并干净停止时，
+SixLoops 才会推荐可托管 loop。
 
 ![SixLoops semantic analysis turns noisy packets into loop cards](assets/readme/semantic-kitchen.png)
 
-| 输入信号 | 更合适的产物 |
+| 人类反复纠正或输入信号 | 可沉淀产物 |
 | --- | --- |
 | “UI 改完后，打开变更路由并截图。” | 带路由发现和视觉证据的 Browser Audit loop。 |
 | “持续检查 CI failure，并起草低风险修复。” | 带状态、验证器、上限和明确返回点的 CI Babysitter loop。 |
 | “先读 CI 日志，不要猜。” | 带状态、验证器、上限和明确返回点的 CI Babysitter loop。 |
 | “这里用 pnpm，不要用 npm。” | 包管理器规则或清单。 |
+| “产品方向给我选项，不要替我做品味判断。” | 决策包，而不是内层 coding loop。 |
 | “只有我批准后才能部署。” | 审批门，而不是自动部署。 |
 
 完整示例：
@@ -57,8 +65,9 @@ SixLoops 帮你判断哪一种机制真的值得加入。
 
 ## 它会产出什么
 
-对直接开发目标，第一个有用的界面应该是 **改造图景 + Start Plan**，而不是保守
-任务清单或很长的会话总结。改造图景会说明：
+SixLoops 的第一屏不应该是会话总结，而应该是一个用户能批准或拒绝的选择。
+
+对直接开发目标，SixLoops 先给 **改造图景 + Start Plan**。改造图景会说明：
 
 - 当前 X
 - 目标 B
@@ -68,7 +77,8 @@ SixLoops 帮你判断哪一种机制真的值得加入。
 - 推进波次
 - 哪些判断需要先形成决策包再交还给用户
 
-对从会话证据挖出的机会，第一屏仍然是 **1-3 个 Start Plan**。每个计划会说明：
+对从会话证据或项目证据挖出的机会，SixLoops 仍然先给 **1-3 个 Start Plan**。
+每个计划会说明：
 
 - 这个 loop 会做什么
 - 当前模式外先不碰什么
@@ -76,7 +86,7 @@ SixLoops 帮你判断哪一种机制真的值得加入。
 - 什么时候停止
 - 下一轮如何自然接上，而不是重跑同一个提示
 - 什么时候交还给人
-- 应该启动、缩小，还是拒绝
+- 应该启动、缩小成更轻机制，还是拒绝
 
 SixLoops 可以渲染：
 
@@ -93,36 +103,38 @@ SixLoops 可以渲染：
 
 ```mermaid
 flowchart TD
-  A["选择入口"] --> B{"请求类型"}
+  A["重复的 agent 摩擦<br/>或新的委托目标"] --> B{"你手里有什么？"}
 
-  B -->|直接目标| C["宿主模型先写 Change Map<br/>和 model-design JSON"]
-  C --> D["运行 design_goal_loop.py<br/>--model-design-file，并读取产物"]
-  D --> L["展示改造图景 + Start Plan<br/>波及面、回归、验证器、状态、返回点"]
+  B -->|新目标| C["先写 Change Map<br/>current X -> target B"]
+  C --> D["模型写 design JSON"]
+  D --> E["用 design_goal_loop.py 渲染<br/>GOAL / STATE / TEAM"]
 
-  B -->|会话日志或项目证据| E["运行 sixloops.py --input"]
-  E --> F{"scope 是否已批准？"}
-  F -->|否| G["展示 inventory，并要求确认狭窄 scope"]
-  G --> E
-  F -->|是| H["脱敏、标准化，并构建 analysis-packets.jsonl"]
-  H --> I["宿主 AI 使用 sixloops-mine<br/>写入 semantic-candidates.json"]
-  I --> J["带 scope 和 semantic candidates 重新运行 sixloops.py"]
-  J --> K["渲染已检查产物和决策包"]
-  K --> L
+  B -->|项目证据| F["读取有边界的 repo 证据<br/>README、docs、examples、artifacts"]
+  F --> H["模型提出 1-3 个 Start Plan"]
 
-  B -->|启动或继续已有 loop| M["读取最新 runbook 或 adoption packet"]
-  M --> N["推断已批准模式和当前状态"]
-  N --> R["运行一个状态化 cycle"]
+  B -->|会话日志| I["限定 scope、脱敏、打包日志"]
+  I --> J{"scope 是否批准？"}
+  J -->|否| K["要求更窄 scope"]
+  K --> I
+  J -->|是| L["宿主模型写 semantic candidates"]
+  L --> H
 
-  L --> O{"用户决策"}
-  O -->|批准启动| P["需要状态化复用时创建 adoption packet<br/>adopt_candidate.py"]
-  O -->|缩小| Q["保留为规则、skill、清单、审批门或 eval"]
-  O -->|拒绝| Z["不自动化"]
-  P --> R
+  E --> H
+  H --> M{"最小有用机制是什么？"}
+  M -->|规则 / skill / 清单 / gate / eval| N["安装或保留更轻产物"]
+  M -->|可托管 loop| O["必须具备 verifier + state + cap + return point"]
+  M -->|不值得自动化| Z["拒绝自动化"]
 
-  R --> S{"退出合同"}
-  S -->|DONE| T["结果被接受"]
-  S -->|CONTINUE| R
-  S -->|需要 review、BLOCKED 或 BUDGET_STOPPED| U["交还给人"]
+  O --> P{"用户启动？"}
+  P -->|start as approved mode| Q["运行一个有边界的状态化 cycle"]
+  P -->|shrink 或 reject| N
+
+  B -->|已有 start string| Q
+
+  Q --> R{"退出合同"}
+  R -->|CONTINUE| Q
+  R -->|DONE| S["带证据返回，等待接受"]
+  R -->|review / BLOCKED / BUDGET_STOPPED| T["交还给人<br/>附 blocker 或决策包"]
 ```
 
 ## 快速开始
