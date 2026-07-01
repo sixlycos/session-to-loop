@@ -14,6 +14,10 @@ Goal:
 
 {{user_value}}
 
+## Change Map
+
+{{change_map}}
+
 It will:
 
 {{control_will_do}}
@@ -31,7 +35,7 @@ Reply in this chat with one line:
 1. Clarify: {{first_run_observe}}; {{first_run_decide}}.
 2. Act: {{first_run_act}}.
 3. Verify: {{first_run_verify}}
-4. Deliver / Stop: update `{{managed_state_file}}`; stop after {{first_run_stop_after}}; review boundary: {{first_run_human_gate}}
+4. Deliver / Stop: update `{{managed_state_file}}`; stop after {{first_run_stop_after}}; return point: {{first_run_human_gate}}
 
 ## Verify And Stop
 
@@ -47,7 +51,7 @@ It returns to you before:
 
 {{control_must_ask}}
 
-This loop will not do in this mode:
+This stays outside the current mode:
 
 {{control_will_not}}
 
@@ -136,7 +140,7 @@ Return `DONE` when:
 
 {{exit_done_when}}
 
-Return for review when:
+Return to user when:
 
 {{exit_needs_human_when}}
 
@@ -294,15 +298,15 @@ Stop conditions:
 
 - {{stop_condition}}
 
-## Safety
+## Execution Authority
 
 Autonomy level: `{{autonomy_level}}`
 
-Requires approval for:
+Ask before finalizing:
 
 - {{approval_required_action}}
 
-Human checkpoint:
+Return point:
 
 - {{human_checkpoint}}
 
@@ -310,7 +314,7 @@ Budget caps:
 
 - {{budget_caps}}
 
-## Rejection or Downgrade Notes
+## Smaller-Mechanism Notes
 
 {{downgrade_notes}}
 

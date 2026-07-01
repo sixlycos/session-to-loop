@@ -545,7 +545,7 @@ def apply_gates(candidate: dict) -> dict:
             if fallback not in mechanisms:
                 mechanisms.append(fallback)
         candidate["decision"] = "needs-human"
-        downgrades.append("Changed to needs-human because high-impact actions require an explicit review boundary.")
+        downgrades.append("Changed to needs-human because high-impact actions require an explicit return point.")
 
     if delegate_gate.get("stale_or_conflicting_evidence"):
         if candidate.get("decision") == "commit":
@@ -585,7 +585,7 @@ def apply_gates(candidate: dict) -> dict:
     candidate["delegation_gate"] = delegate_gate
     candidate["decision_card"] = decision_card(candidate, mechanisms, loop_gate, delegate_gate)
     candidate["decision_trace"] = {
-        "analysis_basis": "Model-authored semantic candidate with scope, recurrence, loop, and safety downgrade gates applied.",
+        "analysis_basis": "Model-authored semantic candidate with scope, recurrence, loop, and deterministic execution checks applied.",
         "primary_role": "user" if role_counts(candidate.get("evidence", [])).get("user", 0) else "unknown",
         "role_counts": role_counts(candidate.get("evidence", [])),
         "user_session_count": user_session_count(candidate.get("evidence", [])),
@@ -621,7 +621,7 @@ def semantic_candidates(data: dict) -> list[dict]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Apply safety downgrade gates to model-authored semantic candidates.")
+    parser = argparse.ArgumentParser(description="Apply deterministic execution checks to model-authored semantic candidates.")
     parser.add_argument("--semantic-candidates", default=str(DEFAULT_SEMANTIC), help=f"AI candidates JSON. Default: {DEFAULT_SEMANTIC}")
     parser.add_argument("--packet-index", default=str(DEFAULT_PACKET_INDEX), help=f"Packet index JSON. Default: {DEFAULT_PACKET_INDEX}")
     parser.add_argument("--out", default=str(DEFAULT_OUT), help=f"Guarded candidates output. Default: {DEFAULT_OUT}")
@@ -636,7 +636,7 @@ def main() -> int:
     output = {
         "version": 1,
         "created_at": now_iso(),
-        "analysis_model": "ai-semantic-with-safety-guardrails-v1",
+        "analysis_model": "ai-semantic-with-execution-checks-v1",
         "scope_policy": packet_index.get("scope_policy", {}),
         "source": packet_index.get("source", {}),
         "redaction": packet_index.get("redaction", {}),
@@ -645,7 +645,7 @@ def main() -> int:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"Applied guardrails to {len(candidates)} semantic candidate(s): {out}")
+    print(f"Applied execution checks to {len(candidates)} semantic candidate(s): {out}")
     return 0
 
 

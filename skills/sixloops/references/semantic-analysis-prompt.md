@@ -43,9 +43,9 @@ For each candidate, decide:
 
 - What the user repeatedly corrects, requests, forbids, approves, or verifies.
 - What tool usage reveals about repeated commands, failed paths, polling loops, browser checks, CI checks, or verification habits.
-- Which failure path repeats: wrong assumption, missing context, bad command, failed verifier, stale state, unsafe action, or human decision boundary.
+- Which failure path repeats: wrong assumption, missing context, bad command, failed verifier, stale state, overreaching action, or human decision point.
 - Which validation behavior is a habit rather than a one-off.
-- Which approval or human judgment boundary must return to the user.
+- Which approval or human judgment point must return to the user.
 - Whether it appears across sessions or only once.
 - Whether tool usage confirms a recurring observe-decide-act-verify cycle.
 - Whether the work shape is `process-shaped`, `tool-assisted`, or `goal-driven`.
@@ -56,7 +56,7 @@ For each candidate, decide:
 - Whether the mechanism should be `rule`, `memory`, `skill`, `hook`, `loop`, `checklist`,
   `approval-gate`, or no automation.
 - Whether loop eligibility is justified: trigger or cadence, observable state, prioritization,
-  repeatable actions, verification, state persistence, resume policy, stop conditions, and safety gate.
+  repeatable actions, verification, state persistence, resume policy, stop conditions, and explicit return point.
 - Whether the fast loop check passes: recurring cadence, objective rejection gate, reproducible
   environment, hard budget/iteration/time stop, and human review before merge, deploy, dependency,
   credential, schema, data, payment, or production-impacting action.
@@ -67,34 +67,36 @@ For each candidate, decide:
   `goal-loop` means low-risk edit, `isolated-draft` means worktree draft, and
   `verified-pr-draft` means PR draft.
 - Whether the loop has an acceptance contract: success criteria, verifier commands or checks,
-  evaluator, required pass evidence, reject conditions, no-progress policy, state schema, and human checkpoint.
+  evaluator, required pass evidence, reject conditions, no-progress policy, state schema, and explicit return point.
 - Whether the loop has an exit contract: continue-only-if conditions, done conditions, needs-human boundaries, blocked conditions, and budget-stop conditions.
+- Whether the loop has a Change Map: current X, target B, user perception, affected product/technical surfaces, regression or compatibility path, rollout waves, and decision packet triggers.
 
 ## Loop Standard
 
 Only recommend `loop` when the result can be handed to an agent as a managed goal loop after one
-explicit user approval. A loop must say how the agent can keep going without repeated user prompts,
-what it should inspect each cycle, how it picks the 1-3 highest-value items, what it may attempt
-in the recommended mode, how it isolates changes, how it verifies, where it records state, how the
-next run resumes, the hard iteration limit for one run, when it must stop, which heartbeat should
-start it, and the weakest useful start mode.
+explicit user approval. A loop must say how X becomes B, what the user perceives, what product and
+technical surfaces it touches, how it regresses or remains compatible, how the agent can keep going
+without repeated user prompts, what it should inspect each cycle, how it picks the 1-3 highest-value
+items, what it may attempt in the recommended mode, how it isolates changes, how it verifies, where
+it records state, how the next run resumes, the hard iteration limit for one run, when it must stop,
+which heartbeat should start it, and the strongest useful start mode justified by evidence, reversibility, verification, and approval.
 
 If a candidate has repeated steps but no acceptance contract, state schema, resume policy,
-verification, stop condition, budget cap, or human checkpoint, recommend `skill` or `checklist`
+verification, stop condition, budget cap, or explicit return point, recommend `skill` or `checklist`
 instead of `loop`.
 
 If a candidate cannot say when to continue and when to return to the human, recommend a smaller mechanism. A loop is a controlled state machine, not a long prompt.
 
 If the work does not repeat, cannot be rejected by objective evidence, cannot be reproduced by the
-agent, lacks a hard stop, or depends on high-impact action without a matching start mode or review
-gate, do not recommend a managed loop.
+agent, lacks a hard stop, or depends on high-impact action without a matching start mode or return
+point, do not recommend a managed loop.
 
 If the work is process-shaped and has no meaningful agent decision, recommend a script, hook, or
 traditional automation instead of a loop. If the work is tool-assisted but still needs frequent human
-direction, recommend a skill, checklist, or approval gate before a managed loop.
+direction, recommend a skill, checklist, or decision packet before a managed loop.
 
 Be decisive when evidence is repeated and actionable. Do not over-index on privacy language; the
-scripts already run locally, redact packets, and apply hard gates. Focus your judgment on whether
+scripts already run locally, redact packets, and apply deterministic checks. Focus your judgment on whether
 the mechanism would actually help the next agent run better.
 
 When presenting results to the user, lead with what the proposed loop looks like and why it helps.
@@ -106,6 +108,16 @@ Before writing contracts, write the candidate as a product promise a skeptical p
 understand. The user should not need to know what "loop", "state", "heartbeat", "autopilot",
 "observe-decide-act-verify", or "exit contract" means.
 
+Before writing cycle steps, write a `change_map`. It should answer:
+
+- What is current X?
+- What is target B?
+- How will the user or operator perceive the transformation?
+- Which product and technical surfaces are affected?
+- Which checks regress or preserve compatibility?
+- What rollout waves connect research, code mining, product function change, implementation, and verification?
+- When should the loop produce a decision packet before returning for review?
+
 For every non-rejected candidate, include `user_value`: one natural sentence that answers:
 
 - What annoying or repeated work does this remove from the user?
@@ -115,7 +127,7 @@ For every non-rejected candidate, include `user_value`: one natural sentence tha
 
 Bad `user_value`:
 
-- "Runs an observe-decide-act-verify loop with state and review boundary."
+- "Runs an observe-decide-act-verify loop with state and a return point."
 - "Creates a managed loop for frontend verification."
 - "Improves agent performance."
 
@@ -126,6 +138,7 @@ Good `user_value`:
 
 Write `summary`, `why_this_loop`, `managed_loop.objective`, and the first 3 `managed_loop.cycle_steps`
 in the same concrete style. Use agent-control terms only in contract fields where precision matters.
+The first cycle step of a loop should refresh the Change Map, not jump straight into a fix.
 
 ## Output Contract
 
@@ -150,7 +163,7 @@ For each candidate include:
 - `verifier_habits`: checks the user expects before acceptance.
 - `approval_boundaries`: actions that need the user.
 - `why_this_loop`, `why_not_smaller`, `why_not_more_autonomous`, and `where_this_may_be_wrong`.
-- `managed_loop` only when the AI can specify objective, state, cycle, verifier, budget, stop/reject conditions, resume policy, review boundary, start mode, and exit contract.
+- `managed_loop` only when the AI can specify objective, state, cycle, verifier, budget, stop/reject conditions, resume policy, explicit return point, start mode, and exit contract.
 
 Use the dominant language of the user's instructions for user-facing candidate text such as `name`, `summary`, `user_semantics`, `why_this_loop`, `why_not_smaller`, `why_not_more_autonomous`, `where_this_may_be_wrong`, managed-loop objectives, cycle descriptions, acceptance criteria, and review explanations. Keep schema keys, ids, status codes, file paths, and exact confirmation strings in English.
 
@@ -189,7 +202,7 @@ Write only JSON:
       "failure_paths": ["Guessing before reading logs creates repeated CI triage churn."],
       "verifier_habits": ["Focused local test or CI status must pass before handoff."],
       "approval_boundaries": ["push", "merge"],
-      "why_this_loop": "CI failures recur and have observable state, bounded actions, verifiers, and human gates.",
+      "why_this_loop": "CI failures recur and have observable state, bounded actions, verifiers, and explicit return points.",
       "why_not_smaller": "A rule would remind the agent to read logs, but would not preserve state across repeated CI failures.",
       "why_not_more_autonomous": "Push and merge require human approval.",
       "where_this_may_be_wrong": ["The packet set may omit current CI configuration."],
@@ -259,7 +272,7 @@ Write only JSON:
           "status_protocol": {
             "CONTINUE": "Only when another cycle can increase verified certainty.",
             "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
-            "NEEDS_HUMAN": "Return for review because human judgment or explicit approval is required.",
+            "NEEDS_HUMAN": "Return to user because human judgment or explicit approval is required.",
             "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
             "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
           }

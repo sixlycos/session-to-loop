@@ -17,6 +17,7 @@ Use these structures when producing machine-readable artifacts. Markdown reports
 - `normalized_render_fields`: fields defaulted only so draft artifacts can render; defaults do not make a loop delegable.
 - `delegation_gate`: raw-AI-claims-only eligibility check for `can_delegate=yes`.
 - `first_run_packet`: the confirmable starter contract: `recommended_action`, `reply_to_confirm`, `starter_goal_prompt`, `first_run_mode`, `state_file`, `observe`, `decide`, `act`, `verify`, `stop_after`, and `human_gate`.
+- `change_map`: the product/technical transformation picture for goal-ready loops: `current_x`, `target_b`, `user_perception`, `transformation_thesis`, `affected_surfaces`, `regression_plan`, `rollback_or_compatibility`, `research_questions`, `waves`, and `decision_packet_required_when`.
 - `managed_loop.completion_contract`: mandatory for real loops; defines success criteria, verifier commands, evaluator, pass evidence, reject conditions, and no-progress policy.
 - `managed_loop.loop_exit_contract`: mandatory for goal-ready loops; defines when to continue, return done, ask a human, block, or stop by budget.
 - `schemas/loop-exit-contract.schema.json`: machine-readable shape for the mandatory exit contract.
@@ -58,7 +59,7 @@ first_run_packet:
     3. Act on at most 1-3 directly evidenced failures.
     4. Verify with the focused project check.
     5. Update .sixloops/state/ci-babysitter.json before stopping.
-    Stop after 8 iterations, two repeated failure signatures, or a human gate.
+    Stop after 8 iterations, two repeated failure signatures, or a return point.
 trigger:
   - "Open PR has pending or failed CI."
 inputs:
@@ -104,7 +105,31 @@ managed_loop:
     - "BLOCKED: same failure repeats twice or no progress across two iterations."
     - "NEEDS_HUMAN: approval, product judgment, or uncertain verifier is required."
     - "BUDGET_STOPPED: token, time, item, or iteration cap is reached."
+  change_map:
+    current_x: "What the project/user experiences today."
+    target_b: "What should be true after the loop succeeds."
+    user_perception: "How the user/operator will notice X became B."
+    transformation_thesis: "The product or technical idea that turns X into B."
+    affected_surfaces:
+      - "product behavior"
+      - "technical contracts"
+      - "tests or verification"
+    regression_plan:
+      - "focused verifier command"
+      - "manual smoke path when commands cannot decide"
+    rollback_or_compatibility:
+      - "compatibility wrapper or reversible worktree slice"
+    research_questions:
+      - "What evidence proves current X?"
+      - "Which surfaces must change for target B?"
+    waves:
+      - "map evidence"
+      - "draft first compatible slice"
+      - "verify and update state"
+    decision_packet_required_when:
+      - "The next action changes product semantics or requires stronger approval."
   cycle_steps:
+    - "Refresh the Change Map: current X, target B, affected surfaces, regression plan, and rollout waves."
     - "Read the previous state file if it exists."
     - "Inspect CI status, failed logs, and current git diff."
     - "Decide at most 1-3 actionable failures by impact, confidence, and risk."
@@ -134,7 +159,7 @@ managed_loop:
       - "Next action stays inside approved scope."
       - "A verifier can reject bad output."
       - "New evidence changed or is likely from the next verifier."
-      - "Risk stays below the approved mode and review boundary."
+      - "Risk stays below the approved mode and explicit return points."
       - "Iteration and item budgets remain."
     done_when:
       - "Relevant local test passes."
@@ -151,7 +176,7 @@ managed_loop:
     status_protocol:
       CONTINUE: "Only when another cycle can increase verified certainty."
       DONE: "Acceptance checks passed with required evidence; return for acceptance."
-      NEEDS_HUMAN: "Return for review because human judgment or explicit approval is required."
+      NEEDS_HUMAN: "Return to user because human judgment or explicit approval is required."
       BLOCKED: "Reliable progress is not possible with current evidence or verifier."
       BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
   change_policy: "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval."
@@ -514,7 +539,7 @@ loop_exit_contract:
   status_protocol:
     CONTINUE: "Only when another cycle can increase verified certainty."
     DONE: "Acceptance checks passed with required evidence; return for acceptance."
-    NEEDS_HUMAN: "Return for review because human judgment or explicit approval is required."
+    NEEDS_HUMAN: "Return to user because human judgment or explicit approval is required."
     BLOCKED: "Reliable progress is not possible with current evidence or verifier."
     BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
 approval_boundary:
@@ -574,7 +599,7 @@ managed_loop:
       - "Command output, screenshot, CI status, review finding resolution, or explicit verifier note."
     reject_conditions:
       - "Same failure repeats twice."
-      - "A review boundary is reached."
+      - "A return point is reached."
     no_progress_policy: "Stop when no evidence changes across two iterations."
   loop_exit_contract:
     continue_only_if:
@@ -582,7 +607,7 @@ managed_loop:
       - "Next action stays inside approved scope."
       - "A verifier can reject bad output."
       - "New evidence changed or is likely from the next verifier."
-      - "Risk stays below the approved mode and review boundary."
+      - "Risk stays below the approved mode and explicit return points."
       - "Iteration and item budgets remain."
     done_when:
       - "Target routes render without blocking errors."
@@ -598,7 +623,7 @@ managed_loop:
     status_protocol:
       CONTINUE: "Only when another cycle can increase verified certainty."
       DONE: "Acceptance checks passed with required evidence; return for acceptance."
-      NEEDS_HUMAN: "Return for review because human judgment or explicit approval is required."
+      NEEDS_HUMAN: "Return to user because human judgment or explicit approval is required."
       BLOCKED: "Reliable progress is not possible with current evidence or verifier."
       BUDGET_STOPPED: "Item, iteration, time, token, or cost cap was reached."
 subagent_team:

@@ -14,7 +14,7 @@
 
 - The `start ...`, `shrink ...`, and `reject ...` strings are one-line replies in this chat, not terminal commands.
 - After a start reply, the agent reads/updates the state file and runs until `DONE`, review-needed, `BLOCKED`, or `BUDGET_STOPPED` without step-by-step prompting.
-- Each card contains the first-cycle steps, verifier, exit contract, and review boundary; `claude-loops/<id>.md` is the handoff file for another agent.
+- Each card contains the first-cycle steps, verifier, exit contract, and explicit return points; `claude-loops/<id>.md` is the handoff file for another agent.
 
 ## Candidate Summaries
 
@@ -22,7 +22,7 @@
 
 ## Details And Smaller Options
 
-These are useful only if you reject or downgrade the loop proposals.
+These are useful when you choose not to launch one of the loop proposals yet.
 
 ### Rules and Memory Candidates
 

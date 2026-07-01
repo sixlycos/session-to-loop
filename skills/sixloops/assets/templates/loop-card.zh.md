@@ -20,6 +20,10 @@
 
 {{user_value}}
 
+### 2.5 改造图景
+
+{{change_map}}
+
 启动后会：
 
 {{control_will_do}}
@@ -33,9 +37,9 @@
 1. 观察 / 决策：{{first_run_observe}}；{{first_run_decide}}。
 2. 执行：{{first_run_act}}。
 3. 验证：{{first_run_verify}}
-4. 交付 / 停止：更新 `{{managed_state_file}}`；停止于 {{first_run_stop_after}}；人审边界：{{first_run_human_gate}}
+4. 交付 / 停止：更新 `{{managed_state_file}}`；停止于 {{first_run_stop_after}}；返回点：{{first_run_human_gate}}
 
-### 5. 不会做
+### 5. 当前模式外
 
 {{control_will_not}}
 
@@ -47,7 +51,7 @@
 
 {{control_stop}}
 
-它还会在这些动作前停下：
+这些动作完成前会先交还给你：
 
 {{control_must_ask}}
 

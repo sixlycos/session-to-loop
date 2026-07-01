@@ -68,8 +68,9 @@ ZH_TEXT = {
     "Objective is unchanged.": "目标没有变化。",
     "Next action stays inside approved scope.": "下一步仍在已批准范围内。",
     "A verifier can reject bad output.": "验收器能够拒绝错误产出。",
+    "The Change Map can be updated or the next action can produce evidence for it.": "Change Map 可以被更新，或下一步能为它产生证据。",
     "New evidence changed or is likely from the next verifier.": "已有新证据变化，或下一轮验收可能产生新证据。",
-    "Risk stays below the approved mode and review boundary.": "风险仍低于当前批准模式和审查边界。",
+    "Risk stays below the approved mode and explicit return points.": "风险仍低于当前批准模式和明确返回点。",
     "The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.": "上一轮改变了证据、收窄了范围、减少了失败，或明确了阻塞点。",
     "Token, time, cost, or tool budget is reached.": "token、时间、成本或工具预算达到上限。",
 }
@@ -79,7 +80,10 @@ def zh_text(value: str) -> str:
     if value in ZH_TEXT:
         return ZH_TEXT[value]
     if value.startswith("Start as "):
-        return "先从当前批准模式启动；只有在验收证据和人工门禁稳定后，才升级到更高自动化。"
+        return "先从当前批准模式启动；只有在验收证据和明确批准点稳定后，才升级到更高自动化。"
+    match = re.fullmatch(r"Approval required for (.+) after options, impact, and regression evidence are recorded\.", value)
+    if match:
+        return f"需要批准：{match.group(1)}。批准前必须已记录选项、影响和回归证据。"
     match = re.fullmatch(r"Fewer than (\d+) item\(s\) are active in this cycle\.", value)
     if match:
         return f"本轮活跃事项少于 {match.group(1)} 个。"
@@ -153,6 +157,70 @@ def candidate_contract(candidate: dict) -> tuple[dict, dict]:
     return managed_loop, contract
 
 
+def change_map_for_candidate(candidate: dict, managed_loop: dict, contract: dict) -> dict:
+    raw = candidate.get("change_map") if isinstance(candidate.get("change_map"), dict) else {}
+    raw = raw or managed_loop.get("change_map") if isinstance(managed_loop.get("change_map"), dict) else raw
+    verifiers = strings(contract.get("verifier_commands") or candidate.get("verification"))
+    return {
+        "current_x": raw.get("current_x") or candidate.get("summary") or managed_loop.get("objective") or "Current state is not mapped yet.",
+        "target_b": raw.get("target_b") or managed_loop.get("objective") or candidate.get("summary") or "Target outcome is not mapped yet.",
+        "user_perception": raw.get("user_perception") or candidate.get("user_value") or "The user should see a concrete change with verifier evidence.",
+        "transformation_thesis": raw.get("transformation_thesis") or candidate.get("why_this_loop") or "Turn observed evidence into verified progress.",
+        "affected_surfaces": strings(raw.get("affected_surfaces") or candidate.get("inputs") or managed_loop.get("discovery_sources")),
+        "regression_plan": strings(raw.get("regression_plan") or verifiers),
+        "rollback_or_compatibility": strings(raw.get("rollback_or_compatibility") or managed_loop.get("change_policy")),
+        "research_questions": strings(raw.get("research_questions") or ["What evidence proves current X?", "Which surfaces must change for target B?", "Which verifier rejects a bad result?"]),
+        "waves": strings(raw.get("waves") or managed_loop.get("cycle_steps")),
+        "decision_packet_required_when": strings(raw.get("decision_packet_required_when") or candidate.get("approval_boundaries") or (candidate.get("safety") or {}).get("requires_approval_for")),
+    }
+
+
+def render_change_map(change_map: dict, language: str) -> str:
+    if language == "zh":
+        return f"""- 当前 X：{change_map["current_x"]}
+- 目标 B：{change_map["target_b"]}
+- 用户感知：{change_map["user_perception"]}
+- 转换假设：{change_map["transformation_thesis"]}
+
+波及面：
+
+{bullet(change_map["affected_surfaces"], language)}
+
+回归 / 兼容：
+
+{bullet(change_map["regression_plan"] + change_map["rollback_or_compatibility"], language)}
+
+推进波次：
+
+{numbered(change_map["waves"], language)}
+
+决策包触发：
+
+{bullet(change_map["decision_packet_required_when"], language)}
+"""
+    return f"""- Current X: {change_map["current_x"]}
+- Target B: {change_map["target_b"]}
+- User perception: {change_map["user_perception"]}
+- Transformation thesis: {change_map["transformation_thesis"]}
+
+Affected surfaces:
+
+{bullet(change_map["affected_surfaces"], language)}
+
+Regression / compatibility:
+
+{bullet(change_map["regression_plan"] + change_map["rollback_or_compatibility"], language)}
+
+Rollout waves:
+
+{numbered(change_map["waves"], language)}
+
+Decision packet triggers:
+
+{bullet(change_map["decision_packet_required_when"], language)}
+"""
+
+
 def exit_contract(candidate: dict) -> dict:
     managed_loop, contract = candidate_contract(candidate)
     safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
@@ -191,7 +259,7 @@ def rationale(candidate: dict, managed_loop: dict, level: str) -> dict:
         ),
         "why_not_more_autonomous": first_text(
             candidate.get("why_not_more_autonomous"),
-            f"Start as {mode}; stronger autonomy needs accepted verifier evidence and the recorded human gates.",
+            f"Start as {mode}; stronger autonomy needs accepted verifier evidence and the recorded approval points.",
         ),
         "human_gates": strings(safety.get("requires_approval_for")),
     }
@@ -200,6 +268,7 @@ def rationale(candidate: dict, managed_loop: dict, level: str) -> dict:
 def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
     managed_loop, contract = candidate_contract(candidate)
     safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
+    change_map = change_map_for_candidate(candidate, managed_loop, contract)
     return {
         "version": 1,
         "loop_id": candidate.get("id"),
@@ -211,6 +280,7 @@ def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
         "objective": managed_loop.get("objective") or candidate.get("summary"),
         "heartbeat": managed_loop.get("heartbeat", "goal"),
         "state_schema": managed_loop.get("state_schema", {}),
+        "change_map": change_map,
         "success_criteria": strings(contract.get("success_criteria") or candidate.get("verification")),
         "reject_conditions": strings(contract.get("reject_conditions") or candidate.get("stop_conditions")),
         "loop_exit_contract": exit_contract(candidate),
@@ -218,6 +288,8 @@ def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
         "budget_caps": strings(safety.get("budget_caps")),
         "items": [],
         "attempts": [],
+        "active_wave": None,
+        "decision_packets": [],
         "failure_signatures": [],
         "progress_metrics": [],
         "human_queue": [],
@@ -239,6 +311,7 @@ def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
 def render_goal(candidate: dict, level: str) -> str:
     managed_loop, contract = candidate_contract(candidate)
     exits = exit_contract(candidate)
+    change_map = change_map_for_candidate(candidate, managed_loop, contract)
     candidate_id = str(candidate.get("id"))
     state_file = "STATE.json"
     suggested_state = managed_loop.get("state_file", f".sixloops/state/{candidate_id}.json")
@@ -270,6 +343,10 @@ def render_goal(candidate: dict, level: str) -> str:
 
 {managed_loop.get("objective") or candidate.get("summary", "运行这个 loop。")}
 
+## 改造图景
+
+{render_change_map(change_map, language)}
+
 ## 为什么是这个 loop
 
 - 为什么值得跑：{zh_text(reasons["why_this_loop"])}
@@ -296,7 +373,7 @@ def render_goal(candidate: dict, level: str) -> str:
 
 {bullet(reject_conditions, language)}
 
-还要在以下情况停止：达到 `{max_iterations}` 轮、连续两轮没有进展，或触达审查边界。
+还要在以下情况停止：达到 `{max_iterations}` 轮、连续两轮没有进展，或触达返回点。
 
 ## 退出协议
 
@@ -308,7 +385,7 @@ def render_goal(candidate: dict, level: str) -> str:
 
 {bullet(zh_items(exits["done_when"]), language)}
 
-返回人工审查的条件：
+交还给用户的条件：
 
 {bullet(zh_items(exits["needs_human_when"]), language)}
 
@@ -327,9 +404,9 @@ def render_goal(candidate: dict, level: str) -> str:
 ## 状态记录
 
 结束前只能返回一个状态：`DONE`、`CONTINUE`、`BLOCKED`、`NEEDS_HUMAN` 或 `BUDGET_STOPPED`。
-面向用户说明时，把 `NEEDS_HUMAN` 写成“返回人工审查”。
+面向用户说明时，把 `NEEDS_HUMAN` 写成“交还给用户判断”。
 
-下一次运行前，在 `STATE.json` 记录：是否减少了人工纠正、是否产生误报、是否过度依赖人工判断、是否应该降级成 skill/checklist，或是否已有足够被接受的产出。
+下一次运行前，在 `STATE.json` 记录：是否减少了人工纠正、是否产生误报、是否过度依赖人工判断、是否应该改成 skill/checklist，或是否已有足够被接受的产出。
 """
     return f"""# {candidate.get("name", candidate_id)} Run Packet
 
@@ -338,6 +415,10 @@ Use this after the user starts `{candidate_id}` as `{mode}`.
 ## Objective
 
 {managed_loop.get("objective") or candidate.get("summary", "Run the loop.")}
+
+## Change Map
+
+{render_change_map(change_map, language)}
 
 ## Why This Loop
 
@@ -375,7 +456,7 @@ Use this after the user starts `{candidate_id}` as `{mode}`.
 
 {bullet(reject_conditions)}
 
-Also stop after `{max_iterations}` iteration(s), no progress across two iterations, or any review boundary.
+Also stop after `{max_iterations}` iteration(s), no progress across two iterations, or any return point.
 
 ## Exit Contract
 
@@ -387,7 +468,7 @@ Return `DONE` when:
 
 {bullet(exits["done_when"])}
 
-Return for review when:
+Return to user when:
 
 {bullet(exits["needs_human_when"])}
 
@@ -399,7 +480,7 @@ Return `BUDGET_STOPPED` when:
 
 {bullet(exits["budget_stopped_when"])}
 
-## Human Gate
+## Explicit Approval Points
 
 {bullet(approval_boundary or ["Ask before expanding scope, making irreversible changes, or changing product/release/data boundaries."])}
 
@@ -414,20 +495,21 @@ Return one status at the end:
 - `DONE`: all success criteria passed with verifier evidence.
 - `CONTINUE`: progress changed and budget remains.
 - `BLOCKED`: repeated failure, no progress, missing input, or uncertain verifier.
-- `NEEDS_HUMAN`: return for review because approval or human judgment is required.
+- `NEEDS_HUMAN`: return for review after a decision packet is ready or explicit approval is required.
 - `BUDGET_STOPPED`: item, iteration, time, or token cap was reached.
 
 ## First Run Retro
 
 Before the next run, update `STATE.json` with whether this loop reduced repeated human correction,
-created false positives, required too much human judgment, should be downgraded to a skill/checklist,
+created false positives, required too much human judgment, should become a skill/checklist,
 or has enough accepted output to keep its current autonomy level.
 """
 
 
 def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
-    managed_loop, _ = candidate_contract(candidate)
+    managed_loop, contract = candidate_contract(candidate)
     exits = exit_contract(candidate)
+    change_map = change_map_for_candidate(candidate, managed_loop, contract)
     candidate_id = str(candidate.get("id"))
     mode = level_to_mode(level)
     reasons = rationale(candidate, managed_loop, level)
@@ -439,7 +521,11 @@ def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
 
 ## 从哪里开始
 
-把 `GOAL.md` 作为已委托目标；`STATE.json` 放在旁边，停止前必须更新。
+把 `GOAL.md` 作为已委托目标；先更新改造图景，`STATE.json` 放在旁边，停止前必须更新。
+
+## 改造图景
+
+{render_change_map(change_map, language)}
 
 ## 为什么存在
 
@@ -461,7 +547,7 @@ def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
 
 {bullet(zh_items(exits["done_when"]), language)}
 
-返回人工审查的条件：
+交还给用户的条件：
 
 {bullet(zh_items(exits["needs_human_when"]), language)}
 
@@ -475,7 +561,7 @@ def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
 
 ## 复盘记录
 
-第一轮结束后，在 `STATE.json` 记录节省的人工纠正、误报、人工接受度、下一步调整和是否建议降级。
+第一轮结束后，在 `STATE.json` 记录节省的人工纠正、误报、人工接受度、下一步调整和是否建议改成更小机制。
 
 ## 文件
 
@@ -490,7 +576,11 @@ This packet was generated after starting `{candidate_id}` as `{mode}`.
 
 ## What To Run
 
-Paste or attach `GOAL.md` as the delegated goal. Keep `STATE.json` beside it and update it before stopping.
+Paste or attach `GOAL.md` as the delegated goal. Refresh the Change Map first. Keep `STATE.json` beside it and update it before stopping.
+
+## Change Map
+
+{render_change_map(change_map, language)}
 
 ## Why This Exists
 
@@ -512,7 +602,7 @@ Return `DONE` when:
 
 {bullet(exits["done_when"])}
 
-Return for review when:
+Return to user when:
 
 {bullet(exits["needs_human_when"])}
 
@@ -554,9 +644,10 @@ def render_agents_snippet(candidate: dict, level: str) -> str:
 
 - 运行模式：`{mode}`（内部级别 `{level}`）。
 - 目标：{managed_loop.get("objective") or candidate.get("summary", "未记录目标。")}
-- 停止前必须读取并更新 loop 状态。
+- 每轮先更新改造图景：当前 X、目标 B、波及面、回归 / 兼容路径和推进波次。
+- 停止前必须读取并更新 Change Map 与 loop 状态。
 - 每轮最多处理 {managed_loop.get("max_items_per_cycle", 3)} 个事项。
-- 达到 {managed_loop.get("max_iterations_per_run", 8)} 轮、重复失败、没有进展或触达审查边界时停止。
+- 达到 {managed_loop.get("max_iterations_per_run", 8)} 轮、重复失败、没有进展或触达返回点时停止。
 - 验证方式：{join_items(verifier, language) if verifier else "运行聚焦项目验证"}。
 - 需要先询问：{join_items(strings(safety.get("requires_approval_for")), language) or "不可逆、发布、数据或产品边界变更"}。
 """
@@ -568,9 +659,10 @@ When `{candidate_id}` is triggered:
 
 - Run mode: `{mode}` (`{level}` internally).
 - Objective: {managed_loop.get("objective") or candidate.get("summary", "No objective recorded.")}
-- Read and update the loop state before stopping.
+- Refresh the Change Map first each cycle: current X, target B, affected surfaces, regression / compatibility path, and rollout waves.
+- Read and update the Change Map and loop state before stopping.
 - Handle at most {managed_loop.get("max_items_per_cycle", 3)} item(s) per cycle.
-- Stop after {managed_loop.get("max_iterations_per_run", 8)} iteration(s), repeated failure, no progress, or a review boundary.
+- Stop after {managed_loop.get("max_iterations_per_run", 8)} iteration(s), repeated failure, no progress, or a return point.
 - Verify with: {", ".join(verifier) if verifier else "the focused project verifier"}.
 - Ask before: {", ".join(strings(safety.get("requires_approval_for"))) or "irreversible, release, data, or product-boundary changes"}.
 """

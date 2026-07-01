@@ -5,15 +5,15 @@ Use this workflow when the user replies with `start ...`, `continue ...`,
 
 ## Goal
 
-Run one controlled cycle inside the approved mode, update state, and return one
-clear status: `DONE`, `CONTINUE`, review-needed, `BLOCKED`, or
-`BUDGET_STOPPED`.
+Run the next useful cycle inside the approved mode, update the Change Map and
+state, and return one clear status: `DONE`, `CONTINUE`, review-needed,
+`BLOCKED`, or `BUDGET_STOPPED`.
 
 ## Workflow
 
 1. Identify the selected candidate and mode.
    - Use the exact reply string when present.
-   - Prefer the weakest useful mode.
+   - Prefer the most capable mode that is approved, reversible, and verifiable.
    - Do not infer approval for merge, deploy, production, credentials, data,
      payment, deletion, or schema changes.
 
@@ -35,20 +35,28 @@ clear status: `DONE`, `CONTINUE`, review-needed, `BLOCKED`, or
 
 4. Run one bounded cycle.
    - Read state first.
+   - Refresh the Change Map: current X, target B, user perception, affected
+     surfaces, regression path, rollout waves, and open decisions.
    - Select at most 1-3 active items.
+   - Prefer the next wave that improves the Change Map, lowers blast radius, or
+     produces verifier evidence.
    - Act only inside the approved mode.
+   - When a product, architecture, release, data, UI, or migration judgment is
+     needed, write a decision packet with options, impact, regression path, and
+     recommendation before returning for review.
    - Verify with the listed verifier.
    - Update state before stopping.
 
 5. Return status.
    - `DONE`: acceptance checks passed with evidence.
-   - `CONTINUE`: another cycle can improve verified certainty and budget
-     remains.
-   - review-needed: human judgment or explicit approval is required.
+   - `CONTINUE`: another cycle can improve the Change Map, verified certainty,
+     or regression evidence and budget remains.
+   - review-needed: human judgment or explicit approval is required after the
+     decision packet or approval evidence is ready.
    - `BLOCKED`: reliable progress is not possible with current evidence.
    - `BUDGET_STOPPED`: item, iteration, time, token, or cost cap was reached.
 
-## Never Do Silently
+## Ask Before High-Impact Finalization
 
 - Install `AGENTS-snippet.md` into project instructions.
 - Push, merge, deploy, migrate, delete data, change credentials, alter billing,

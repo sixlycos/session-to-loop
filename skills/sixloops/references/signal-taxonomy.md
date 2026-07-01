@@ -14,7 +14,7 @@ Likely mechanism:
 
 - Stable project instruction: rule.
 - Person-specific preference: memory.
-- Safety boundary: approval gate.
+- High-impact action: decision packet or approval gate.
 
 ## Repeated Failure
 
@@ -50,13 +50,13 @@ Signals:
 
 - Browser audits, screenshots, snapshots, i18n checks, soak tests, eval outputs, CI logs, or result files show repeated observe-decide-act-verify work.
 - The evidence is project-specific but not a complete Codex or Claude transcript.
-- The loop shape is concrete enough to define trigger, inputs, cycle steps, verification, stop conditions, start mode, and review boundary.
+- The loop shape is concrete enough to define trigger, inputs, cycle steps, verification, stop conditions, start mode, and return point.
 
 Likely mechanism:
 
 - Draft loop when the cycle is reversible, bounded, and verifiable.
 - Skill when the workflow is on-demand but does not need state or resume behavior.
-- Checklist or approval gate when the evidence includes release, production, migration, credentials, billing, or product judgment.
+- Checklist, decision packet, or approval gate when the evidence includes release, production, migration, credentials, billing, or product judgment.
 
 ## Repeated Context Repair
 

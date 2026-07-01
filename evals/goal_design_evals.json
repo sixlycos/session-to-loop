@@ -1,5 +1,22 @@
 [
   {
+    "id": "architecture-user-resource-group-split",
+    "goal": "为 snolaxmeow-api 设计一个 loop：扫描项目并把用户身份组和资源/渠道组从产品语义、代码边界、UI配置、订阅语义和回归验证上拆开。用户需要先看到 X 如何通过产品和技术思路变成 B，波及面是多少，如何回归，再推进 worktree 草稿。",
+    "expected": {
+      "domain": "architecture",
+      "team_mode": "subagent-team",
+      "adoption_level": "isolated-draft",
+      "roles": ["architect", "risk-reviewer", "implementation-planner", "verifier", "integrator"],
+      "approval_for": ["large refactor", "schema migration", "public API change", "product tradeoff"],
+      "require_exit_contract": true,
+      "require_learning_fields": true,
+      "require_handoff_exit_contract": true,
+      "require_change_map": true,
+      "change_map_contains": ["用户身份组", "资源/渠道组"],
+      "must_include": ["GOAL.md", "STATE.json", "RUN.md", "VERIFY.md", "TEAM.md", "HANDOFF.md"]
+    }
+  },
+  {
     "id": "frontend-browser-team",
     "goal": "After frontend route or i18n changes, verify browser screenshots and fix low-risk UI regressions.",
     "expected": {

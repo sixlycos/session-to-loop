@@ -29,14 +29,14 @@ to: "What repeated work should I stop manually re-explaining to agents?"
    - Treat user packets as primary evidence and tool packets as support.
    - Write `semantic-candidates.json` as model-authored output.
    - Include `user_value`, `summary`, `why_this_loop`, concrete cycle steps,
-     verifier, stop/review boundary, and source limitations.
+     verifier, stop condition, return point, and source limitations.
    - Use `schemas/semantic-candidates.schema.json` only as the handoff
      envelope.
 
 4. Continue the prepared command.
    - Run the `continue_command` from `analysis-run.json`, or rerun
      `scripts/sixloops.py` with `--semantic-candidates`.
-   - Safety gates may downgrade or reject. They must not invent meaning.
+   - Deterministic execution checks may shrink or reject. They must not invent meaning.
 
 5. Present Start Plans.
    - Lead with the decision table and exact reply strings.
@@ -47,5 +47,5 @@ to: "What repeated work should I stop manually re-explaining to agents?"
 - The pattern appears once.
 - The verifier is mostly subjective.
 - The agent cannot inspect or reproduce the changed system.
-- High-impact action lacks an explicit human gate.
+- High-impact action lacks an explicit return point.
 - The candidate cannot explain its `user_value` in plain project language.

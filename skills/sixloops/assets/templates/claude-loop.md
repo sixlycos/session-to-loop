@@ -6,6 +6,10 @@ Use this as a managed agent goal after the user approves the loop.
 
 {{goal}}
 
+## Change Map
+
+{{managed_change_map}}
+
 ## Cadence or Trigger
 
 {{cadence_or_trigger}}
@@ -78,7 +82,7 @@ Return `DONE` when:
 
 {{exit_done_when}}
 
-Return for review when:
+Return to user when:
 
 {{exit_needs_human_when}}
 
@@ -146,14 +150,14 @@ Demotion criteria:
 
 {{stop_condition}}
 
-## Safety Boundaries
+## Execution Authority
 
 - Autonomy level: `{{autonomy_level}}`
-- Requires approval for:
+- Ask before finalizing:
 
 {{approval_required_action}}
 
-- Human checkpoint:
+- Return point:
 
 {{human_checkpoint}}
 
@@ -162,4 +166,4 @@ Demotion criteria:
 {{budget_caps}}
 
 - Do not push, merge, deploy, delete data, migrate schemas, change permissions, or call production APIs without explicit user approval.
-- Stop and ask the user when the next action requires product, release, security, or data-loss judgment.
+- When the next action requires product, release, security, or data-loss judgment, package options, impact, regression path, and a recommendation before returning.

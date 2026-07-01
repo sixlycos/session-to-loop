@@ -2,18 +2,19 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**把开发目标和编码证据，变成受控的 agent loop。**
+**把开发目标和编码证据，变成可状态化运行的 agent loop。**
 
 SixLoops 是一个面向 Codex 和 Claude Code 的开源 Agent Skill 集合。你可以从一
-个新的开发目标、项目证据或本地会话日志开始；SixLoops 会为下一次推荐最小但真正
-有用的机制：规则、skill、hook、清单、审批门、eval case，或者一个可托管的 loop。
+个新的开发目标、项目证据或本地会话日志开始；SixLoops 会先把当前 X 到目标 B 的
+改造图景画出来，再为下一次推荐真正有用的机制：规则、skill、hook、清单、决策包、
+eval case，或者一个可托管的 loop。
 
 它不是聊天记录总结器。它是给开发者使用的 loop engineering assistant，用来把
-agent 工作变得更可重复、可验证、可约束。
+agent 工作变得更可重复、可验证，并且能持续往前推进。
 
 SixLoops 是模型主导的。Codex 或 Claude Code 通过 skill prompt 完成语义抽取、
 命名、判断和解释。Python pipeline 刻意保持无聊：发现狭窄输入、脱敏、打包
-packets、做安全降级，并渲染模型写出的产物。
+packets、做确定性检查，并渲染模型写出的产物。
 
 产品名和仓库名是 `sixloops`；安装后是一个小 skill 集合：`sixloops`、
 `sixloops-mine`、`sixloops-design`、`sixloops-adopt`。
@@ -36,8 +37,8 @@ SixLoops 帮你判断哪一种机制真的值得加入。
 | 输入信号 | 更合适的产物 |
 | --- | --- |
 | “UI 改完后，打开变更路由并截图。” | 带路由发现和视觉证据的 Browser Audit loop。 |
-| “持续检查 CI failure，并起草低风险修复。” | 带状态、验证器、上限和 review 边界的 CI Babysitter loop。 |
-| “先读 CI 日志，不要猜。” | 带状态、验证器、上限和 review 边界的 CI Babysitter loop。 |
+| “持续检查 CI failure，并起草低风险修复。” | 带状态、验证器、上限和明确返回点的 CI Babysitter loop。 |
+| “先读 CI 日志，不要猜。” | 带状态、验证器、上限和明确返回点的 CI Babysitter loop。 |
 | “这里用 pnpm，不要用 npm。” | 包管理器规则或清单。 |
 | “只有我批准后才能部署。” | 审批门，而不是自动部署。 |
 
@@ -48,10 +49,21 @@ SixLoops 帮你判断哪一种机制真的值得加入。
 
 ## 它会产出什么
 
-第一个有用的界面应该是 **1-3 个 Start Plan**，而不是很长的会话总结。每个计划会说明：
+对直接开发目标，第一个有用的界面应该是 **改造图景 + Start Plan**，而不是保守
+任务清单或很长的会话总结。改造图景会说明：
+
+- 当前 X
+- 目标 B
+- 用户或运营者如何感知这个变化
+- 产品和技术波及面
+- 回归、恢复或兼容检查
+- 推进波次
+- 哪些判断需要先形成决策包再交还给用户
+
+对从会话证据挖出的机会，第一屏仍然是 **1-3 个 Start Plan**。每个计划会说明：
 
 - 这个 loop 会做什么
-- 这个 loop 不会做什么
+- 当前模式外先不碰什么
 - 如何验证成功
 - 什么时候停止
 - 什么时候交还给人
@@ -65,7 +77,7 @@ SixLoops 可以渲染：
 - `GOAL.md`、`STATE.json`、`HANDOFF.md`，以及可选的 `TEAM.md`
 - draft Agent Skills
 - draft `AGENTS.md` / `CLAUDE.md` 片段
-- 审批门和清单
+- 决策包、审批门和清单
 - eval cases
 
 ## 工作流程
@@ -76,7 +88,7 @@ flowchart TD
 
   B -->|直接目标| C["运行 design_goal_loop.py"]
   C --> D["读取 GOAL、STATE、HANDOFF、TEAM 和 goal-loop-design"]
-  D --> L["展示 Start Plan<br/>验证器、状态、停止策略、review 边界"]
+  D --> L["展示改造图景 + Start Plan<br/>波及面、回归、验证器、状态、返回点"]
 
   B -->|会话日志或项目证据| E["运行 sixloops.py --input"]
   E --> F{"scope 是否已批准？"}
@@ -85,12 +97,12 @@ flowchart TD
   F -->|是| H["脱敏、标准化，并构建 analysis-packets.jsonl"]
   H --> I["宿主 AI 使用 sixloops-mine<br/>写入 semantic-candidates.json"]
   I --> J["带 scope 和 semantic candidates 重新运行 sixloops.py"]
-  J --> K["应用安全 guardrails，并渲染产物"]
+  J --> K["渲染已检查产物和决策包"]
   K --> L
 
   B -->|启动或继续已有 loop| M["读取最新 runbook 或 adoption packet"]
   M --> N["推断已批准模式和当前状态"]
-  N --> R["运行一个受控 cycle"]
+  N --> R["运行一个状态化 cycle"]
 
   L --> O{"用户决策"}
   O -->|批准启动| P["需要状态化复用时创建 adoption packet<br/>adopt_candidate.py"]
@@ -167,8 +179,8 @@ Codex：
 
 ```text
 Use SixLoops to find the first loop in this repo worth trying.
-Return 1-3 Start Plans with verifier, state, stop condition, and review boundary.
-Reject weak patterns.
+Return 1-3 Start Plans with verifier, state, stop condition, return point, and exact start string.
+Use a smaller mechanism when a loop is not ready.
 ```
 
 Codex 显式触发：
@@ -226,6 +238,9 @@ python skills/sixloops/scripts/design_goal_loop.py \
 
 输出目录会包含 `GOAL.md`、`TEAM.md`、`STATE.json`、`HANDOFF.md` 和
 `AGENTS-snippet.md`。
+
+对直接目标，`GOAL.md` 会先展示改造图景，再展示执行合同。它应该说明 X 如何变成 B、
+波及哪些面、如何回归或兼容，以及 loop 会按哪些波次推进。
 
 ![SixLoops can design a small agent team around one controlled loop](assets/readme/subagent-loop-table.png)
 
@@ -296,7 +311,7 @@ loop 是一个受控状态机：它找到工作，把工作交给 agent，检查
 - **客观验证器**：测试、类型检查、构建、lint、截图、日志、断言或严格 rubric
 - **agent 可复现证据**：agent 能检查失败，并看到是否改善
 - **硬停止条件**：迭代、时间、token、事项或成本上限
-- **review 边界**：merge、deploy、dependency、credential、schema、data、payment 和生产影响操作都需要匹配的已批准模式
+- **明确返回点**：merge、deploy、dependency、credential、schema、data、payment 和生产影响操作都需要匹配的已批准模式
 
 好的第一批 loops 应该小、重复、可机器验证：
 
@@ -307,7 +322,7 @@ loop 是一个受控状态机：它找到工作，把工作交给 agent，检查
 - 在测试充分的代码库中做 issue-to-PR drafts
 - UI 变更后的 frontend route/browser audit
 
-应该拒绝或降级的弱 loops：
+不应该直接做成 loop 的情况：
 
 - 架构重写
 - auth、payments、credentials 或安全敏感流程
@@ -316,7 +331,7 @@ loop 是一个受控状态机：它找到工作，把工作交给 agent，检查
 - “done” 主要取决于品味、政治或策略的事项
 
 真正重要的指标是 **每个被接受变更的成本**。如果少于一半的 loop 输出能通过 review，
-就缩小范围、改进 gate，或者把 loop 降级为 skill / checklist。
+就缩小范围、改进验证器，或者先把机制做成 skill / checklist，等它重新赢回 loop。
 
 ## 支持的输入
 
@@ -326,7 +341,7 @@ loop 是一个受控状态机：它找到工作，把工作交给 agent，检查
 - 带 `user`、`assistant` 或 `tool` 记录的通用 JSONL 日志
 - 项目证据，例如 browser audits、soak tests、CI logs、eval outputs 和结果 JSONL 文件
 
-## 安全边界
+## 本地与隐私
 
 - 本地 pipeline 不需要网络访问。
 - 默认不会扫描整盘或宽泛的 home 目录。

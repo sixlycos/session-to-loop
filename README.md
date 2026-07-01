@@ -2,20 +2,22 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-**Turn development goals and coding evidence into controlled agent loops.**
+**Turn development goals and coding evidence into stateful agent loops.**
 
 SixLoops is an open-source Agent Skill collection for Codex and Claude Code.
 Start from a fresh development goal, project evidence, or local session logs;
-SixLoops then recommends the smallest useful mechanism for next time: a rule,
-skill, hook, checklist, approval gate, eval case, or managed loop.
+SixLoops then maps the change from current X to target B and recommends the
+useful mechanism for next time: a rule, skill, hook, checklist, decision
+packet, eval case, or managed loop.
 
 It is not a chat summarizer. It is a loop engineering assistant for developers
-who want agent work to become more repeatable, verifiable, and bounded.
+who want agent work to become more repeatable, verifiable, and able to keep
+moving.
 
 SixLoops is model-led. Codex or Claude Code does the semantic extraction,
 naming, judgment, and explanation through skill prompts. The Python pipeline is
-deliberately boring: discover narrow inputs, redact, packetize, apply safety
-downgrades, and render model-authored artifacts.
+deliberately boring: discover narrow inputs, redact, packetize, apply
+deterministic checks, and render model-authored artifacts.
 
 The product and repository are `sixloops`; the installed package is a small
 skill collection: `sixloops`, `sixloops-mine`, `sixloops-design`, and
@@ -41,8 +43,8 @@ SixLoops helps decide which mechanism is actually worth adding.
 | Input signal | Better artifact |
 | --- | --- |
 | "After UI changes, open changed routes and capture screenshots." | Browser Audit loop with route discovery and visual evidence. |
-| "Keep checking CI failures and draft low-risk fixes." | CI Babysitter loop with state, verifier, cap, and review boundary. |
-| "Read the CI logs before guessing." | CI Babysitter loop with state, verifier, cap, and review boundary. |
+| "Keep checking CI failures and draft low-risk fixes." | CI Babysitter loop with state, verifier, cap, and explicit return points. |
+| "Read the CI logs before guessing." | CI Babysitter loop with state, verifier, cap, and explicit return points. |
 | "Use pnpm here, not npm." | Package-manager rule or checklist. |
 | "Deploy only after I approve." | Approval gate, not autonomous deployment. |
 
@@ -53,14 +55,25 @@ Complete examples:
 
 ## What It Produces
 
-The first useful screen should be **1-3 Start Plans**, not a long transcript
-summary. Each plan explains:
+For a direct development goal, the first useful screen is a **Change Map plus a
+Start Plan**, not a defensive task list or long transcript summary. The map explains:
+
+- current X
+- target B
+- how the user or operator will perceive the transformation
+- affected product and technical surfaces
+- regression, recovery, or compatibility checks
+- rollout waves
+- when a decision packet must come back to the user
+
+For mined session evidence, the first screen is still **1-3 Start Plans**. Each
+plan explains:
 
 - what the loop will do
-- what it will not do
+- what stays outside the current mode
 - how it verifies success
 - when it stops
-- when it returns to a human
+- when it returns to the user
 - whether it should start, shrink, or be rejected
 
 SixLoops can render:
@@ -71,7 +84,7 @@ SixLoops can render:
 - `GOAL.md`, `STATE.json`, `HANDOFF.md`, and optional `TEAM.md`
 - draft Agent Skills
 - draft `AGENTS.md` / `CLAUDE.md` snippets
-- approval gates and checklists
+- decision packets, approval gates, and checklists
 - eval cases
 
 ## Workflow
@@ -82,7 +95,7 @@ flowchart TD
 
   B -->|Direct goal| C["Run design_goal_loop.py"]
   C --> D["Read GOAL, STATE, HANDOFF, TEAM, and goal-loop-design"]
-  D --> L["Present Start Plan<br/>verifier, state, stop policy, review boundary"]
+  D --> L["Present Change Map + Start Plan<br/>blast radius, regression, verifier, state, return point"]
 
   B -->|Session logs or project evidence| E["Run sixloops.py --input"]
   E --> F{"Scope approved?"}
@@ -91,12 +104,12 @@ flowchart TD
   F -->|Yes| H["Redact, normalize, and build analysis-packets.jsonl"]
   H --> I["Host AI uses sixloops-mine<br/>to write semantic-candidates.json"]
   I --> J["Rerun sixloops.py with scope and semantic candidates"]
-  J --> K["Apply safety guardrails and render artifacts"]
+  J --> K["Render checked artifacts and decision packets"]
   K --> L
 
   B -->|Start or continue an existing loop| M["Read latest runbook or adoption packet"]
   M --> N["Infer approved mode and current state"]
-  N --> R["Run one controlled cycle"]
+  N --> R["Run one stateful cycle"]
 
   L --> O{"User decision"}
   O -->|Start approved| P["Create adoption packet when stateful reuse is needed<br/>adopt_candidate.py"]
@@ -175,8 +188,8 @@ Codex:
 
 ```text
 Use SixLoops to find the first loop in this repo worth trying.
-Return 1-3 Start Plans with verifier, state, stop condition, and review boundary.
-Reject weak patterns.
+Return 1-3 Start Plans with verifier, state, stop condition, return point, and exact start string.
+Use a smaller mechanism when a loop is not ready.
 ```
 
 Explicit Codex trigger:
@@ -234,6 +247,10 @@ python skills/sixloops/scripts/design_goal_loop.py \
 
 The output folder contains `GOAL.md`, `TEAM.md`, `STATE.json`, `HANDOFF.md`, and
 `AGENTS-snippet.md`.
+
+For direct goals, `GOAL.md` starts with a Change Map before the execution
+contract. It should show how X becomes B, what the change touches, how it
+regresses or rolls back, and which waves the loop will run.
 
 ![SixLoops can design a small agent team around one controlled loop](assets/readme/subagent-loop-table.png)
 
@@ -314,8 +331,8 @@ Use a loop only when the work has:
 - **agent-reproducible evidence**: the agent can inspect the failure and see
   whether it improved
 - **hard stop**: iteration, time, token, item, or cost cap
-- **review boundary**: merge, deploy, dependency, credential, schema, data,
-  payment, and production-impacting actions need the matching approved mode
+- **explicit return points**: merge, deploy, dependency, credential, schema,
+  data, payment, and production-impacting actions need the matching approved mode
 
 Good first loops are small, recurring, and machine-checkable:
 
@@ -326,7 +343,7 @@ Good first loops are small, recurring, and machine-checkable:
 - issue-to-PR drafts on codebases with strong tests
 - frontend route/browser audit after UI changes
 
-Reject or downgrade weak loops:
+Use a smaller mechanism when a loop is not ready:
 
 - architecture rewrites
 - auth, payments, credentials, or security-sensitive flows
@@ -335,8 +352,8 @@ Reject or downgrade weak loops:
 - anything where "done" is mostly taste, politics, or strategy
 
 The metric that matters is **cost per accepted change**. If fewer than half of
-loop outputs survive review, shrink the scope, improve the gate, or demote the
-loop to a skill/checklist.
+loop outputs survive review, narrow the scope, improve the verifier, or turn
+the mechanism into a skill/checklist until it earns a loop again.
 
 ## Supported Inputs
 
@@ -347,7 +364,7 @@ loop to a skill/checklist.
 - project evidence such as browser audits, soak tests, CI logs, eval outputs,
   and result JSONL files
 
-## Safety Boundaries
+## Local And Privacy Notes
 
 - No network access is needed by the local pipeline.
 - No whole-disk or broad home-directory scan is performed by default.

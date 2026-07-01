@@ -1,4 +1,4 @@
 interface:
   display_name: "SixLoops"
-  short_description: "Design reusable goal loops for agent work"
-  default_prompt: "Use SixLoops to design the first useful goal loop for this repo. If I give a fresh goal, create GOAL/STATE/TEAM artifacts; if I ask for history, mine local sessions. Keep verifier, state, stop condition, and human gate explicit."
+  short_description: "Map X-to-B changes and design reusable agent loops"
+  default_prompt: "Use SixLoops to design the first useful goal loop for this repo. If I give a fresh goal, start with a Change Map: current X, target B, user perception, affected surfaces, regression path, and rollout waves, then create GOAL/STATE/TEAM artifacts. If I ask for history, mine local sessions. Keep verifier, state, stop condition, decision packet, and high-impact return point explicit."

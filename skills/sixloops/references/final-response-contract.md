@@ -27,7 +27,7 @@ Start with:
 
 Do not expand Observe / Decide / Act / Verify / State for every candidate on the first screen. Put that execution protocol in the individual card or adoption packet after the user chooses a plan.
 
-For demand-driven goal design, lead with the generated start plan: objective, first cycle, team shape, verifier, stop condition, review boundary, and artifact paths. Make clear that the source is the user's current objective rather than historical transcript evidence.
+For demand-driven goal design, lead with the generated Change Map before the start plan: current X, target B, user perception, affected surfaces, regression or compatibility path, rollout waves, first cycle, team shape, verifier, stop condition, return point, and artifact paths. Make clear that the source is the user's current objective rather than historical transcript evidence.
 
 For each proposal in the first screen, include only:
 
@@ -37,9 +37,9 @@ For each proposal in the first screen, include only:
 - Run card: can start now, can confirm, can delegate, and next action.
 - Objective: what the loop improves for this project.
 - Recommended mode: read-only, low-risk edit, worktree draft, PR draft, scheduled read-only, or scheduled draft.
-- Verifier, stop or review boundary, and the path to the full card.
+- Verifier, stop condition or return point, and the path to the full card.
 
-Put the full first-cycle packet, mechanism decision, heartbeat, trigger, cycle steps, verifier box, iteration cap, acceptance contract, exit contract, review boundary, and loop economics in the individual card or adoption packet. Do not make the user read those before choosing.
+Put the full first-cycle packet, mechanism decision, heartbeat, trigger, cycle steps, verifier box, iteration cap, acceptance contract, exit contract, explicit return points, and loop economics in the individual card or adoption packet. Do not make the user read those before choosing.
 
 ## Confirmation Shape
 
@@ -57,7 +57,7 @@ Make the execution surface explicit: `start <candidate-id> as <mode>` is a reply
 - `reject <candidate-id>`
 - `rerun with narrower evidence`
 
-Use scheduled options only for candidates whose recommended maturity is scheduled. If `can_delegate=no`, the safe start option is `read-only`; otherwise shrink, reject, or rerun with better evidence.
+Use scheduled options only for candidates whose recommended maturity is scheduled. If `can_delegate=no`, the first start option is `read-only`; otherwise shrink, reject, or rerun with better evidence.
 
 Ask once. Do not make the user approve each internal pipeline step after the scope has been confirmed.
 
@@ -77,7 +77,7 @@ that mode or generate the adoption packet with
 snippet into project instructions.
 
 When the user asks to design from a goal, generate the goal-design packet with
-`scripts/design_goal_loop.py`. Lead with the `GOAL.md` execution contract. The agent-facing
+`scripts/design_goal_loop.py`. Lead with the `GOAL.md` Change Map and execution contract. The agent-facing
 harness files are `STATE.json`, `RUN.md`, `VERIFY.md`, `TEAM.md`, `HANDOFF.md`, and
 `goal-loop-design.json`.
 
@@ -93,7 +93,7 @@ Use English only for internal JSON fields, script names, file paths, artifact id
 
 When the input is multilingual, choose the dominant language of the user's instruction and preserve exact code/status/command tokens as code spans. If the user writes in Chinese, the readable product surface should be Chinese first; do not force the user to parse English review labels.
 
-For Chinese output, translate product labels such as "candidate", "recommendation", "review boundary", "first cycle", "verification", and "state" into Chinese. Keep only stable protocol tokens in English: candidate ids, file paths, commands, mode strings, status codes, and exact replies.
+For Chinese output, translate product labels such as "candidate", "recommendation", "return point", "first cycle", "verification", and "state" into Chinese. Keep only stable protocol tokens in English: candidate ids, file paths, commands, mode strings, status codes, and exact replies.
 
 ## Evidence Placement
 

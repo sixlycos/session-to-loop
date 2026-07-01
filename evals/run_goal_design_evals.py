@@ -120,6 +120,71 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
             if missing_learning:
                 failures.append(f"missing post-adoption learning fields: {missing_learning}")
 
+    if expected.get("require_change_map", True):
+        change_map = design.get("change_map")
+        if not isinstance(change_map, dict):
+            failures.append("missing top-level change_map")
+        else:
+            required_change_map = {
+                "current_x",
+                "target_b",
+                "user_perception",
+                "transformation_thesis",
+                "affected_surfaces",
+                "regression_plan",
+                "rollback_or_compatibility",
+                "research_questions",
+                "waves",
+                "decision_packet_required_when",
+            }
+            missing_change_map = sorted(required_change_map - set(change_map))
+            if missing_change_map:
+                failures.append(f"missing change_map keys: {missing_change_map}")
+            for list_key in (
+                "affected_surfaces",
+                "regression_plan",
+                "rollback_or_compatibility",
+                "research_questions",
+                "waves",
+                "decision_packet_required_when",
+            ):
+                if not isinstance(change_map.get(list_key), list) or not change_map.get(list_key):
+                    failures.append(f"empty change_map list: {list_key}")
+            change_map_text = json.dumps(change_map, ensure_ascii=False)
+            for marker in expected.get("change_map_contains", []):
+                if marker not in change_map_text:
+                    failures.append(f"change_map missing semantic marker {marker!r}")
+
+        managed_change_map = design.get("managed_loop", {}).get("change_map")
+        if not isinstance(managed_change_map, dict):
+            failures.append("missing managed_loop.change_map")
+
+        state_path = design_dir / "STATE.json"
+        if state_path.exists():
+            state = load_json(state_path)
+            if not isinstance(state.get("change_map"), dict):
+                failures.append("missing STATE.json change_map")
+            for key in ("active_wave", "decision_packets"):
+                if key not in state:
+                    failures.append(f"missing STATE.json field {key}")
+
+        rendered_markers = {
+            "GOAL.md": ("## Change Map", "## 改造图景"),
+            "HANDOFF.md": ("## Change Map", "## 改造图景"),
+            "RUN.md": ("Change Map", "改造图景"),
+            "VERIFY.md": ("Change Map Verification", "图景验收"),
+        }
+        for filename, markers in rendered_markers.items():
+            path = design_dir / filename
+            if path.exists():
+                text = path.read_text(encoding="utf-8", errors="ignore")
+                if not any(marker in text for marker in markers):
+                    failures.append(f"{filename} missing Change Map marker")
+                if filename in {"GOAL.md", "HANDOFF.md", "RUN.md"} and not any(
+                    marker in text for marker in ("Decision packet triggers", "决策包触发")
+                ):
+                    failures.append(f"{filename} missing decision packet trigger marker")
+
     for filename in expected.get("must_include", []):
         if not (design_dir / filename).exists():
             failures.append(f"missing artifact {filename}")

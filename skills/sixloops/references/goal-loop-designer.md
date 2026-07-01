@@ -12,13 +12,21 @@ Use the demand-driven goal designer when the user says things like:
 - "Let the user放手不管 after confirmation."
 - "Use a subagent team if appropriate."
 
-This mode is different from transcript mining. It starts from the user's current objective, then produces a goal-ready loop design that can later be improved with historical evidence.
+This mode is different from transcript mining. It starts from the user's current objective, produces a Change Map, then produces a goal-ready loop design that can later be improved with historical evidence.
 
 ## Design Standard
 
 Every goal loop must include:
 
 - A concrete objective.
+- A Change Map:
+  - current X,
+  - target B,
+  - how the user or operator will perceive X becoming B,
+  - affected product and technical surfaces,
+  - regression, recovery, or compatibility checks,
+  - rollout waves,
+  - decision packet triggers for judgment that cannot be delegated.
 - A domain: `frontend`, `backend`, `fullstack`, `architecture`, `review`, `delivery`, `maintenance`, or `general`.
 - A trigger or cadence.
 - Discovery sources.
@@ -27,7 +35,7 @@ Every goal loop must include:
 - Verifier commands or checks.
 - Success criteria and pass evidence.
 - Stop conditions and no-progress policy.
-- Loop exit contract with `CONTINUE`, `DONE`, review-needed, `BLOCKED`, and `BUDGET_STOPPED` boundaries. Internal JSON may still use `NEEDS_HUMAN`.
+- Loop exit contract with `CONTINUE`, `DONE`, review-needed, `BLOCKED`, and `BUDGET_STOPPED` boundaries. Internal JSON may still use `NEEDS_HUMAN`. `NEEDS_HUMAN` should mean that a decision packet or approval boundary is ready, not that the agent merely noticed uncertainty.
 - State file and resume policy.
 - Run protocol and verifier protocol.
 - Review boundary and the mode required for higher-impact actions.
@@ -41,9 +49,29 @@ Before designing a managed loop, run the same fit test used for transcript-deriv
 - Objective checks can reject bad output.
 - The agent can inspect or run the changed system.
 - The loop has explicit item, iteration, time, token, or cost caps.
-- High-impact actions require the matching user-approved mode or review before merge, deploy, dependency, credential, schema, data, payment, or production changes.
+- High-impact actions require the matching user-approved mode or explicit approval before merge, deploy, dependency, credential, schema, data, payment, or production changes.
 
-If the fit test fails, return a read-only loop, skill, checklist, approval gate, or rejection instead of a delegated loop.
+If the fit test fails, return a Change Map, read-only loop, skill, checklist, decision packet, approval gate, or rejection instead of a delegated loop.
+
+## Change Map Standard
+
+The first useful output for a direct goal is the transformation picture. The user should be able to answer:
+
+- What is X today?
+- What is B after the product or technical change?
+- What product or technical idea turns X into B?
+- What is the blast radius?
+- How will the loop verify or regress it?
+- What sequence of research, code mining, product function change, implementation, and verification waves will run?
+
+For the user-group/resource-group example, the Change Map should make the picture concrete:
+
+- X: user identity group, resource/channel group, and subscription upgrade group reuse one group namespace.
+- B: product and code distinguish identity groups from resource routing groups while preserving existing data compatibility.
+- User perception: operators see separate concepts and safer configuration rather than one overloaded "group" table.
+- Affected surfaces: models, service helpers, controllers, rename behavior, settings UI, subscription validation, tests, and migration/release notes.
+- Regression: focused group service tests, subscription tests, rename tests, admin UI smoke, compatibility checks, and migration dry run when applicable.
+- Waves: evidence map, vocabulary boundary, compatible code slice, UI/config split, subscription decision packet, migration/release plan.
 
 ## Subagent Team Policy
 
@@ -102,18 +130,23 @@ Use `--domain frontend|backend|fullstack|architecture|review|delivery|maintenanc
 
 Use `--team-mode subagent-team` only when team decomposition is useful. Use `--team-mode phased` when the same agent should run the roles sequentially.
 
-Before presenting the result, check `loop-exit-contract.md`. The generated loop must explain when another cycle will add verified certainty and when it must return to the human. User-facing presentation should lead with the `GOAL.md` execution contract and one recommended confirmation reply; `RUN.md`, `VERIFY.md`, and `STATE.json` are agent-facing harness files.
+Before presenting the result, check `loop-exit-contract.md`. The generated loop must explain when another cycle will add verified certainty and when it must return to the human. User-facing presentation should lead with the `GOAL.md` Change Map, then the execution contract and one recommended confirmation reply; `RUN.md`, `VERIFY.md`, and `STATE.json` are agent-facing harness files.
 
 ## Output First
 
-Lead with the Start Plan:
+Lead with the Change Map, then the Start Plan:
 
-1. Objective.
-2. First cycle.
-3. Team shape if any.
-4. Verifier.
-5. Stop condition.
-6. Review boundary and selected mode.
-7. Generated artifact paths.
+1. Current X.
+2. Target B.
+3. User perception.
+4. Affected surfaces.
+5. Regression or compatibility path.
+6. Rollout waves.
+7. First cycle.
+8. Team shape if any.
+9. Verifier.
+10. Stop condition.
+11. Review boundary and selected mode.
+12. Generated artifact paths.
 
 Put evidence limitations after the loop design. In demand-driven mode, the source is the user's current goal, not historical transcript evidence.

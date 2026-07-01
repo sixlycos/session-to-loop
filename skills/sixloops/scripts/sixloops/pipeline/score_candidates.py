@@ -87,7 +87,7 @@ PROFILES = {
         "stop_conditions": ["Approval is missing.", "Rollback path is unclear.", "Production action would be triggered."],
         "requires_approval_for": ["production deploy", "database migration", "release approval"],
         "artifacts": ["approval checklist"],
-        "downgrade_notes": "Hard downgrade from automation because production deploys and migrations are high-impact actions.",
+        "downgrade_notes": "Keep as a decision packet because production deploys and migrations are high-impact actions.",
     },
     "provider-acceptance-soak": {
         "summary": "Provider or channel changes need a bounded relay acceptance loop that separates transport success from schema, semantic assertion, and latency quality.",

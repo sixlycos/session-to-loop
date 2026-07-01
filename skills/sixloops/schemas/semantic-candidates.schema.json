@@ -59,6 +59,10 @@
           "why_this_loop": { "type": "string" },
           "why_not_smaller": { "type": "string" },
           "why_not_more_autonomous": { "type": "string" },
+          "change_map": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "where_this_may_be_wrong": { "type": "array", "items": { "type": "string" } },
           "evidence": {
             "type": "array",

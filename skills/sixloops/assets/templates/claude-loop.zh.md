@@ -6,11 +6,15 @@
 
 {{goal}}
 
-## 2. 自动运行
+## 2. 改造图景
+
+{{managed_change_map}}
+
+## 3. 自动运行
 
 {{autopilot_contract}}
 
-## 3. 状态
+## 4. 状态
 
 先读这个文件；停止前必须更新：
 
@@ -20,7 +24,7 @@
 
 {{state_schema}}
 
-## 4. 执行范围
+## 5. 执行范围
 
 每轮最多处理 {{max_items_per_cycle}} 个事项，单次最多 {{max_iterations_per_run}} 轮。
 
@@ -30,7 +34,7 @@
 
 {{selection_policy}}
 
-## 5. 验收方式
+## 6. 验收方式
 
 验收标准：
 
@@ -44,7 +48,7 @@
 
 {{contract_pass_evidence_required}}
 
-## 6. 停止和交还
+## 7. 停止和交还
 
 停止条件：
 
@@ -58,10 +62,10 @@
 
 {{contract_no_progress_policy}}
 
-变更边界：
+变更策略：
 
 {{change_policy}}
 
-需要先问用户的动作：
+完成前需要明确批准的动作：
 
 {{approval_required_action}}

@@ -119,7 +119,7 @@ def write_analysis_run(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run the local guardrail pipeline. Without --approve or --scope, this stops after "
+            "Run the local execution-check pipeline. Without --approve or --scope, this stops after "
             "creating a scope proposal so the host agent can ask the user once."
         )
     )

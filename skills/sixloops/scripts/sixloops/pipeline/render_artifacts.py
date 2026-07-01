@@ -55,8 +55,8 @@ UI = {
         "cost_edit": "medium, local edits",
         "cost_draft": "medium, review needed",
         "cost_scheduled": "high, needs automation setup",
-        "cost_human": "high, human gate",
-        "cost_gate_suffix": "human gate for high-impact actions",
+        "cost_human": "high, explicit approval point",
+        "cost_gate_suffix": "return point for high-impact actions",
         "recommended_start": "Recommended start",
         "decision_line": "Decision: `{decision}` | Mechanism: `{mechanisms}` | Confidence: `{confidence}`",
         "run_card_line": "Can start now: `{can_use_now}` | Can confirm: `{can_confirm}` | Can delegate: `{can_delegate}`",
@@ -82,7 +82,7 @@ UI = {
         "loop_exits": "Loop exits:",
         "continue_only_if": "Continue only if:",
         "done_when": "Return `DONE` when:",
-        "review_when": "Return for review when:",
+        "review_when": "Return to user when:",
         "blocked_when": "Return `BLOCKED` when:",
         "budget_when": "Return `BUDGET_STOPPED` when:",
         "why_mechanism": "Why this mechanism",
@@ -132,7 +132,7 @@ UI = {
         "cost_edit": "中，本地修改",
         "cost_draft": "中，需要审查",
         "cost_scheduled": "高，需要自动化设置",
-        "cost_human": "高，需要人工门禁",
+        "cost_human": "高，需要明确批准点",
         "cost_gate_suffix": "高影响动作需人工确认",
         "recommended_start": "推荐启动方式",
         "decision_line": "评估：`{decision}` | 做法：`{mechanisms}` | 置信度：`{confidence}`",
@@ -154,12 +154,12 @@ UI = {
         "verification": "验证方式：",
         "stop_conditions": "停止条件：",
         "iteration_cap": "迭代上限：{count} 轮",
-        "review_boundary": "审查边界：{boundary}",
+        "review_boundary": "返回点：{boundary}",
         "acceptance_checks": "验收标准：",
         "loop_exits": "退出协议：",
         "continue_only_if": "仅在以下条件成立时继续：",
         "done_when": "返回 `DONE` 的条件：",
-        "review_when": "需要返回人工审查的条件：",
+        "review_when": "需要交还用户的条件：",
         "blocked_when": "返回 `BLOCKED` 的条件：",
         "budget_when": "返回 `BUDGET_STOPPED` 的条件：",
         "why_mechanism": "为什么是这个机制",
@@ -234,6 +234,76 @@ def mapping_block(value: dict, language: str = "en") -> str:
     return "\n".join(
         f"- {key}: {localized_text(item, language, '该字段或状态的含义已记录。', str(item))}"
         for key, item in value.items()
+    )
+
+
+def change_map_for_candidate(candidate: dict, managed_loop: dict) -> dict:
+    raw = candidate.get("change_map") if isinstance(candidate.get("change_map"), dict) else {}
+    raw = raw or managed_loop.get("change_map") if isinstance(managed_loop.get("change_map"), dict) else raw
+    return {
+        "current_x": raw.get("current_x") or candidate.get("summary") or managed_loop.get("objective") or "Current state is not mapped yet.",
+        "target_b": raw.get("target_b") or managed_loop.get("objective") or candidate.get("summary") or "Target outcome is not mapped yet.",
+        "user_perception": raw.get("user_perception") or candidate.get("user_value") or "The user should see a concrete change with verifier evidence.",
+        "transformation_thesis": raw.get("transformation_thesis") or candidate.get("why_this_loop") or "Use a bounded loop to turn observed evidence into verified progress.",
+        "affected_surfaces": as_list(raw.get("affected_surfaces") or candidate.get("inputs") or managed_loop.get("discovery_sources")),
+        "regression_plan": as_list(raw.get("regression_plan") or candidate.get("verification") or managed_loop.get("completion_contract", {}).get("verifier_commands")),
+        "rollback_or_compatibility": as_list(raw.get("rollback_or_compatibility") or [managed_loop.get("change_policy")]),
+        "research_questions": as_list(raw.get("research_questions") or ["What evidence proves current X?", "Which surfaces must change for target B?", "Which verifier rejects a bad result?"]),
+        "waves": as_list(raw.get("waves") or managed_loop.get("cycle_steps")),
+        "decision_packet_required_when": as_list(raw.get("decision_packet_required_when") or candidate.get("approval_boundaries") or candidate.get("safety", {}).get("requires_approval_for")),
+    }
+
+
+def change_map_block(candidate: dict, managed_loop: dict, language: str = "en") -> str:
+    change_map = change_map_for_candidate(candidate, managed_loop)
+    if language == "zh":
+        return "\n".join(
+            [
+                f"- 当前 X：{localized_text(change_map['current_x'], language, '当前状态尚未建图。')}",
+                f"- 目标 B：{localized_text(change_map['target_b'], language, '目标状态尚未建图。')}",
+                f"- 用户感知：{localized_text(change_map['user_perception'], language, '用户应看到可验证的变化。')}",
+                f"- 转换假设：{localized_text(change_map['transformation_thesis'], language, '用有边界的 loop 把证据变成可验证进展。')}",
+                "",
+                "波及面：",
+                "",
+                bullet_block(localized_items(change_map["affected_surfaces"], language, ["待下一轮补齐真实波及面。"]), language),
+                "",
+                "回归 / 兼容：",
+                "",
+                bullet_block(localized_items(change_map["regression_plan"] + change_map["rollback_or_compatibility"], language, ["待下一轮补齐回归或兼容路径。"]), language),
+                "",
+                "推进波次：",
+                "",
+                bullet_block(localized_items(change_map["waves"], language, ["先补齐 Change Map，再执行第一轮。"]), language),
+                "",
+                "决策包触发：",
+                "",
+                bullet_block(localized_items(change_map["decision_packet_required_when"], language, ["需要产品、架构、发布、数据或更高权限判断时。"]), language),
+            ]
+        )
+    return "\n".join(
+        [
+            f"- Current X: {change_map['current_x']}",
+            f"- Target B: {change_map['target_b']}",
+            f"- User perception: {change_map['user_perception']}",
+            f"- Transformation thesis: {change_map['transformation_thesis']}",
+            "",
+            "Affected surfaces:",
+            "",
+            bullet_block(change_map["affected_surfaces"] or ["Map affected surfaces in the next cycle."], language),
+            "",
+            "Regression / compatibility:",
+            "",
+            bullet_block((change_map["regression_plan"] + change_map["rollback_or_compatibility"]) or ["Map regression or compatibility checks in the next cycle."], language),
+            "",
+            "Rollout waves:",
+            "",
+            bullet_block(change_map["waves"] or ["Refresh the Change Map before the first action."], language),
+            "",
+            "Decision packet triggers:",
+            "",
+            bullet_block(change_map["decision_packet_required_when"] or ["Product, architecture, release, data, or stronger-approval judgment is required."], language),
+        ]
     )
 
 
@@ -379,7 +449,7 @@ def stop_items(candidate: dict, contract: dict, language: str) -> list[str]:
     return localized_items(
         contract.get("reject_conditions", candidate.get("stop_conditions", [])),
         language,
-        ["验证失败重复出现、缺少可行动证据、触达审查边界，或达到迭代上限。"],
+        ["验证失败重复出现、缺少可行动证据、触达返回点，或达到迭代上限。"],
     )
 
 
@@ -666,9 +736,9 @@ def first_run_defaults(
         )),
         "first_run_decide": str(packet.get(
             "decide",
-            f"最多选择 {managed_loop.get('max_items_per_cycle', 3)} 个事项、下一步动作和审查边界"
+            f"最多选择 {managed_loop.get('max_items_per_cycle', 3)} 个事项、下一步动作和返回点"
             if language == "zh"
-            else f"choose at most {managed_loop.get('max_items_per_cycle', 3)} item(s), the next action, and any review boundary",
+            else f"choose at most {managed_loop.get('max_items_per_cycle', 3)} item(s), the next action, and any return point",
         )),
         "first_run_act": str(packet.get(
             "act",
@@ -679,9 +749,9 @@ def first_run_defaults(
         "first_run_verify": localized_text(packet.get("verify", verifier), language, first(verification_items(candidate, contract, language))),
         "first_run_stop_after": str(packet.get(
             "stop_after",
-            f"{max_iterations} 轮迭代、重复失败、连续两轮无进展，或触达审查边界"
+            f"{max_iterations} 轮迭代、重复失败、连续两轮无进展，或触达返回点"
             if language == "zh"
-            else f"{max_iterations} iterations, repeated failure, no progress across two iterations, or a review boundary",
+            else f"{max_iterations} iterations, repeated failure, no progress across two iterations, or a return point",
         )),
         "first_run_human_gate": str(human_gate),
     }
@@ -772,7 +842,7 @@ def render_trace(candidate: dict, language: str = "en") -> str:
     missing_label = "缺失的 Loop 条件" if language == "zh" else "Missing loop criteria"
     lines.extend(["", f"{missing_label}: {', '.join(missing) if missing else ui(language, 'none')}"])
     downgrades = trace.get("downgrades", [])
-    downgrade_label = "强制降级" if language == "zh" else "Hard downgrades"
+    downgrade_label = "执行收缩" if language == "zh" else "Execution shrinkage"
     lines.extend(["", f"{downgrade_label}: {' '.join(downgrades) if downgrades else ui(language, 'none')}", ""])
     return "\n".join(lines)
 
@@ -781,7 +851,7 @@ def approval_boundary(candidate: dict, language: str = "en") -> str:
     approvals = candidate.get("safety", {}).get("requires_approval_for", [])
     if approvals:
         return "；".join(approvals) if language == "zh" else "; ".join(approvals)
-    return "除常规仓库审查外，没有记录额外审查边界。" if language == "zh" else "No extra review boundary recorded beyond normal repo review."
+    return "除常规仓库审查外，没有记录额外返回点。" if language == "zh" else "No extra return point recorded beyond normal repo review."
 
 
 def control_will_not(candidate: dict, managed_loop: dict, language: str = "en") -> list[str]:
@@ -790,7 +860,7 @@ def control_will_not(candidate: dict, managed_loop: dict, language: str = "en") 
     if approvals:
         approval_text = "、".join(str(item) for item in approvals) if language == "zh" else ", ".join(str(item) for item in approvals)
         items.append(
-            f"在没有匹配模式的情况下落地或完成审查边界动作：{approval_text}。"
+            f"在没有匹配模式的情况下落地或完成需要返回确认的动作：{approval_text}。"
             if language == "zh"
             else f"Land or finalize review-boundary actions without the matching mode: {approval_text}."
         )
@@ -967,7 +1037,7 @@ def default_next_step(candidates: list[dict], language: str = "en") -> str:
         )
     return (
         f"`{action}`\n\n"
-        "Reply with this one line. After that, the agent keeps running from the state file until verification passes, a review boundary is hit, it blocks, or the budget stops."
+        "Reply with this one line. After that, the agent keeps running from the state file until verification passes, a return point is reached, it blocks, or the budget stops."
     )
 
 
@@ -990,7 +1060,7 @@ def autopilot_contract(candidate: dict, managed_loop: dict, contract: dict, lang
                 f"每轮最多处理 {max_items} 个事项，单次最多 {max_iterations} 轮。",
                 "只要目标未变、风险未越界、验证器还能判断，就自动继续下一轮，不逐步问你。",
                 "只在做完、需要你判断、卡住，或达到轮数上限时回来。",
-                f"回来前的人审边界：{first_run['first_run_human_gate']}",
+                f"完成前需要明确交还：{first_run['first_run_human_gate']}",
             ],
             language,
         )
@@ -1075,7 +1145,7 @@ def render_loop_proposals(candidates: list[dict], language: str = "en") -> str:
         first_cycle_label = "First cycle" if language == "en" else "第一轮"
         verify_stop_label = "Verify and stop" if language == "en" else "验证和停止"
         details_label = "Details kept in the full card" if language == "en" else "完整细节保留在单独卡片"
-        review_label = "Review boundary" if language == "en" else "审查边界"
+        review_label = "Return point" if language == "en" else "返回点"
         label_sep = ":" if language == "en" else "："
         if language == "zh":
             blocks.append(
@@ -1388,6 +1458,7 @@ def candidate_card(candidate: dict, scope: dict | None = None, language: str = "
         "mode_display": display_mode_label(mode, language),
         "start_options": start_options_text,
         "user_value": candidate_user_value(candidate, managed_loop, language),
+        "change_map": change_map_block(candidate, managed_loop, language),
         "autopilot_contract": autopilot_contract(candidate, managed_loop, contract, language),
         "first_run_goal": first_run["first_run_goal"],
         "first_run_success_criteria": first_run["first_run_success_criteria"],
@@ -1419,7 +1490,7 @@ def candidate_card(candidate: dict, scope: dict | None = None, language: str = "
             localized_items(
                 economics.get("automatic_rejection_signals", candidate.get("verification", [])),
                 language,
-                ["验证信号不足、审查边界被触发，或当前事项不再可行动。"],
+                ["验证信号不足、触达返回点，或当前事项不再可行动。"],
             ),
             language,
         ),
@@ -1427,8 +1498,8 @@ def candidate_card(candidate: dict, scope: dict | None = None, language: str = "
         "demote_if": localized_text(
             economics.get("demote_if"),
             language,
-            "当已审查产出少于一半被接受、验证证据持续较弱，或人工判断主导该 Loop 时降级。",
-            "Demote when fewer than half of reviewed outputs are accepted, verifier evidence stays weak, or human judgment dominates the loop.",
+            "当已审查产出少于一半被接受、验证证据持续较弱，或人工判断主导该 Loop 时改成更小机制。",
+            "Shrink to a smaller mechanism when fewer than half of reviewed outputs are accepted, verifier evidence stays weak, or human judgment dominates the loop.",
         ),
         "summary": localized_text(candidate.get("summary"), language, "该候选用于处理重复出现、可验证、需要边界控制的问题。", candidate.get("summary", "")),
         "source": first_evidence.get("source", "n/a"),
@@ -1463,6 +1534,7 @@ def candidate_card(candidate: dict, scope: dict | None = None, language: str = "
             localized_items(managed_loop.get("discovery_sources", candidate.get("inputs", [])), language, ["当前输入、状态文件、相关日志或项目上下文。"]),
             language,
         ),
+        "managed_change_map": change_map_block(candidate, managed_loop, language),
         "managed_heartbeat": managed_loop.get("heartbeat", "goal"),
         "managed_recommended_maturity": maturity,
         "managed_display_mode": display_mode_label(mode, language),
@@ -1525,7 +1597,7 @@ def candidate_card(candidate: dict, scope: dict | None = None, language: str = "
             language,
         ),
         "managed_demotion_criteria": bullet_block(
-            localized_items(managed_loop.get("demotion_criteria", []), language, ["产出反复被拒、验证不稳定、成本上升或人工判断长期主导时降级。"]),
+            localized_items(managed_loop.get("demotion_criteria", []), language, ["产出反复被拒、验证不稳定、成本上升或人工判断长期主导时改成更小机制。"]),
             language,
         ),
         "autonomy_level": candidate.get("safety", {}).get("autonomy_level", "draft-only"),
@@ -1547,6 +1619,7 @@ def claude_loop(candidate: dict, language: str = "en") -> str:
     values = {
         "loop_name": candidate_display_name(candidate, language),
         "goal": candidate_objective(candidate, managed_loop, language),
+        "managed_change_map": change_map_block(candidate, managed_loop, language),
         "cadence_or_trigger": bullet_block(trigger_items(candidate, managed_loop, language), language),
         "heartbeat": managed_loop.get("heartbeat", "goal"),
         "recommended_maturity": managed_loop.get(
@@ -1579,7 +1652,7 @@ def claude_loop(candidate: dict, language: str = "en") -> str:
         "failure_policy": localized_text(managed_loop.get("failure_policy"), language, "验证失败或需要人工判断时记录阻塞并停止。", "Record the blocker and stop when verification fails or human judgment is required."),
         "stop_condition": bullet_block(stop_items(candidate, contract, language), language),
         "promotion_criteria": bullet_block(localized_items(managed_loop.get("promotion_criteria", []), language, ["多次运行通过验证且人工审查持续接受产出后再升级。"]), language),
-        "demotion_criteria": bullet_block(localized_items(managed_loop.get("demotion_criteria", []), language, ["产出反复被拒、验证不稳定、成本上升或人工判断长期主导时降级。"]), language),
+        "demotion_criteria": bullet_block(localized_items(managed_loop.get("demotion_criteria", []), language, ["产出反复被拒、验证不稳定、成本上升或人工判断长期主导时改成更小机制。"]), language),
         "autonomy_level": candidate.get("safety", {}).get("autonomy_level", "draft-only"),
         "approval_required_action": bullet_block(candidate.get("safety", {}).get("requires_approval_for", []), language),
         "human_checkpoint": bullet_block(candidate.get("safety", {}).get("human_checkpoint", []), language),

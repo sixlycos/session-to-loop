@@ -95,10 +95,24 @@ DOMAIN_KEYWORDS = {
         "split",
         "roadmap",
         "refactor",
+        "boundary",
+        "semantics",
+        "blast radius",
+        "impact surface",
+        "worktree",
+        "rollout",
         "架构",
         "方案",
         "拆分",
         "重构",
+        "语义",
+        "边界",
+        "波及",
+        "回归",
+        "调研",
+        "挖掘",
+        "产品和技术",
+        "技术思路",
     ),
     "review": ("review", "audit", "self-review", "regression", "风险", "审查", "评审", "复查"),
     "delivery": ("deploy", "release", "pr", "merge", "ci", "handoff", "交付", "发布", "上线", "合并"),
@@ -109,6 +123,7 @@ DOMAIN_KEYWORDS = {
 BASE_STATE_SCHEMA = {
     "status": "pending, discovering, active, verifying, done, blocked, needs_human, budget_stopped",
     "objective_hash": "Stable hash of objective and success criteria.",
+    "change_map": "Durable X-to-B map: current state, target outcome, user perception, affected surfaces, regression plan, rollout waves, and decision packets.",
     "items": "Tracked work items with id, status, evidence, owner_role, verifier, and risk.",
     "attempts": "Attempt log with role, action, changed evidence, verification result, and timestamp.",
     "evidence_delta": "What changed since the previous cycle; CONTINUE requires changed or likely new verifier evidence.",
@@ -117,6 +132,157 @@ BASE_STATE_SCHEMA = {
     "human_queue": "Decisions, approvals, or missing context that require a human.",
     "budgets": "Item, iteration, time, token, or cost caps for the current run.",
     "next_cursor": "Where the next run should resume.",
+}
+
+
+CHANGE_MAP_PROFILES = {
+    "frontend": {
+        "current_x": "Current UI behavior, routes, states, copy, and browser-visible regressions are not yet mapped against the requested product outcome.",
+        "target_b": "Users can complete the intended path on the affected routes, with stable copy, layout, interaction, and locale behavior.",
+        "user_perception": "The user should feel the changed path works in the real browser, not just that files changed.",
+        "affected_surfaces": ["routes", "components", "state/data loading", "copy and i18n", "responsive layout", "browser console and network"],
+        "regression_plan": ["focused static check", "desktop/mobile browser pass", "console/network inspection", "i18n fallback check"],
+        "rollback_or_compatibility": ["keep route contracts stable", "avoid broad visual direction changes without review", "isolate local UI fixes"],
+        "waves": ["map changed routes", "fix obvious reversible UI regressions", "verify real browser paths", "package product/visual decisions for review"],
+    },
+    "backend": {
+        "current_x": "Current API, data, provider, auth, or queue behavior is not yet mapped against the requested backend outcome.",
+        "target_b": "The changed backend path has explicit contracts, stable data behavior, and focused verification evidence.",
+        "user_perception": "Operators and integrators should see predictable API behavior, not hidden contract drift.",
+        "affected_surfaces": ["API/controller contracts", "service/domain logic", "data model", "auth/permission boundary", "provider or queue behavior", "logs and CI"],
+        "regression_plan": ["focused unit/integration checks", "contract tests", "auth/data boundary checks", "log or CI evidence"],
+        "rollback_or_compatibility": ["preserve public fields until migration is approved", "avoid production config or data mutation without review"],
+        "waves": ["map contracts and data ownership", "draft reversible local fix", "verify focused behavior", "package migration or production decisions"],
+    },
+    "fullstack": {
+        "current_x": "Current product behavior crosses frontend, backend, contract, and delivery surfaces without one verified transformation map.",
+        "target_b": "The user-facing outcome, API contract, data behavior, and release path line up through an end-to-end verifier.",
+        "user_perception": "The user should experience one coherent product change, even though the implementation spans layers.",
+        "affected_surfaces": ["user journey", "frontend route/state", "API contract", "data model", "auth/session", "delivery and release checks"],
+        "regression_plan": ["per-layer focused checks", "contract verification", "integrated user-path check", "handoff risk review"],
+        "rollback_or_compatibility": ["sequence layers by dependency", "keep old contracts until compatibility is proven", "gate schema/release decisions"],
+        "waves": ["map user path and contracts", "draft first compatible slice", "verify per layer", "verify integrated path", "package release decisions"],
+    },
+    "architecture": {
+        "current_x": "Current product semantics, code boundaries, data ownership, and operation surfaces are not yet mapped into one transformation plan.",
+        "target_b": "The system reaches the target product behavior through ordered, compatible slices with known blast radius and regression checks.",
+        "user_perception": "The user should understand what changes from X to B, why the first slice matters, what it touches, and how it can be rolled back or verified.",
+        "affected_surfaces": ["product semantics", "data model and persistence", "service/domain helpers", "API/controller contracts", "admin or user UI", "tests, build, migration, and docs"],
+        "regression_plan": ["domain/helper tests", "contract/API tests", "admin or user-path smoke", "backward compatibility check", "migration/rename dry-run when applicable"],
+        "rollback_or_compatibility": ["prefer compatibility wrappers before deletion", "avoid schema/API migration before decision packet", "keep reversible worktree slices"],
+        "waves": ["build evidence map", "name and isolate boundaries", "draft first compatible code slice", "split UI/config surface", "package product/schema decisions", "prepare migration/release after approval"],
+    },
+    "review": {
+        "current_x": "Current implementation intent, diff, risk surface, and verifier evidence are not yet tied together.",
+        "target_b": "The handoff has a clear behavior map, highest-risk findings, focused verification, and explicit unresolved decisions.",
+        "user_perception": "The reviewer should see what changed, what could break, what was verified, and what still needs judgment.",
+        "affected_surfaces": ["intended behavior", "diff surface", "tests and build", "user paths", "data/auth/release risk", "handoff notes"],
+        "regression_plan": ["highest-risk diff review", "focused tests", "build or lint check", "manual risk checklist"],
+        "rollback_or_compatibility": ["do not hide unverified risk", "keep unrelated refactors out of review scope"],
+        "waves": ["map intent and diff", "rank risks", "patch evidenced issues when approved", "verify focused checks", "handoff remaining decisions"],
+    },
+    "delivery": {
+        "current_x": "Current release state, CI/build evidence, diff risk, and approval needs are not yet aligned.",
+        "target_b": "The change is ready for handoff or release review with explicit verification, risks, and approvals.",
+        "user_perception": "The project owner should know whether the change can move forward and exactly what blocks it.",
+        "affected_surfaces": ["diff", "CI", "build output", "test evidence", "release notes", "approval gates"],
+        "regression_plan": ["CI status", "focused build/test", "release checklist", "handoff risk review"],
+        "rollback_or_compatibility": ["do not push, merge, deploy, or release without approval", "keep rollback notes visible"],
+        "waves": ["map release state", "fix local reversible blockers", "verify delivery checks", "prepare PR/handoff draft", "return for release approval"],
+    },
+    "maintenance": {
+        "current_x": "Current recurring signals, logs, CI failures, TODOs, and user feedback are not yet triaged into a maintained system picture.",
+        "target_b": "The project has a current issue map, ranked next actions, verified fixes when reversible, and a durable next cursor.",
+        "user_perception": "The user should receive a useful maintenance pass, not a pile of raw logs.",
+        "affected_surfaces": ["recent errors", "CI failures", "TODOs", "user feedback", "state file", "low-risk code paths"],
+        "regression_plan": ["focused verifier per selected item", "repeat-signature detection", "before/after status summary"],
+        "rollback_or_compatibility": ["keep broad scans read-only until scoped", "attempt only reversible local fixes"],
+        "waves": ["collect bounded signals", "rank 1-3 items", "investigate causes", "fix reversible items", "verify and update next cursor"],
+    },
+    "general": {
+        "current_x": "Current situation, desired outcome, affected surfaces, and verifier path are not yet mapped.",
+        "target_b": "The goal becomes a sequence of evidenced, bounded actions with a clear verifier and return boundary.",
+        "user_perception": "The user should see what changes, why it matters, where it reaches, and how the loop proves progress.",
+        "affected_surfaces": ["user-visible outcome", "relevant files or systems", "state and assumptions", "verification path", "handoff surface"],
+        "regression_plan": ["focused project verifier", "before/after evidence", "manual check path when commands cannot decide"],
+        "rollback_or_compatibility": ["keep actions reversible until approval", "return decisions with options and impact"],
+        "waves": ["map X to B", "gather evidence", "choose first bounded item", "act or draft decision packet", "verify and update state"],
+    },
+}
+
+ZH_CHANGE_MAP_PROFILES = {
+    "frontend": {
+        "current_x": "当前 UI 行为、路由、状态、文案和浏览器可见问题还没有映射到目标产品结果。",
+        "target_b": "用户可以在受影响路由上完成目标路径，文案、布局、交互和多语言行为稳定。",
+        "user_perception": "用户感知到真实浏览器路径可用，而不是只看到文件被修改。",
+        "affected_surfaces": ["路由", "组件", "状态 / 数据加载", "文案和 i18n", "响应式布局", "浏览器控制台和网络"],
+        "regression_plan": ["聚焦静态检查", "桌面 / 移动浏览器验证", "控制台 / 网络检查", "i18n fallback 检查"],
+        "rollback_or_compatibility": ["保持路由契约稳定", "没有审查前不改变整体视觉方向", "隔离局部 UI 修复"],
+        "waves": ["映射变更路由", "修复明显可回退 UI 回归", "验证真实浏览器路径", "把产品 / 视觉判断打包交还用户"],
+    },
+    "backend": {
+        "current_x": "当前 API、数据、供应商、认证或队列行为还没有映射到目标后端结果。",
+        "target_b": "变更后的后端路径有明确契约、稳定数据行为和聚焦验证证据。",
+        "user_perception": "运营者和集成方看到的是可预测的 API 行为，而不是隐藏的契约漂移。",
+        "affected_surfaces": ["API / controller 契约", "service / domain 逻辑", "数据模型", "认证 / 权限边界", "供应商或队列行为", "日志和 CI"],
+        "regression_plan": ["聚焦单元 / 集成检查", "契约测试", "认证 / 数据边界检查", "日志或 CI 证据"],
+        "rollback_or_compatibility": ["迁移批准前保留公开字段", "没有审查前不改生产配置或真实数据"],
+        "waves": ["映射契约和数据归属", "草拟可回退本地修复", "验证聚焦行为", "把迁移或生产决策打包交还用户"],
+    },
+    "fullstack": {
+        "current_x": "当前产品行为跨前端、后端、契约和交付面，但还没有一张已验证的转换图。",
+        "target_b": "用户路径、API 契约、数据行为和发布路径通过端到端验证对齐。",
+        "user_perception": "用户感知到一个连贯的产品变化，即使实现跨多个层。",
+        "affected_surfaces": ["用户路径", "前端路由 / 状态", "API 契约", "数据模型", "认证 / 会话", "交付和发布检查"],
+        "regression_plan": ["分层聚焦检查", "契约验证", "集成用户路径检查", "交接风险审查"],
+        "rollback_or_compatibility": ["按依赖顺序推进各层", "兼容性验证前保留旧契约", "schema / 发布决策进入返回点"],
+        "waves": ["映射用户路径和契约", "草拟第一个兼容切片", "分层验证", "验证集成路径", "打包发布决策"],
+    },
+    "architecture": {
+        "current_x": "当前产品语义、代码边界、数据归属和运营入口还没有形成一张统一改造图。",
+        "target_b": "系统通过有顺序、可兼容的切片抵达目标产品行为，并且波及面和回归检查清楚。",
+        "user_perception": "用户能看懂 X 如何变成 B、第一刀为什么重要、会碰到哪里，以及如何回滚或验证。",
+        "affected_surfaces": ["产品语义", "数据模型和持久化", "service / domain helper", "API / controller 契约", "管理端或用户端 UI", "测试、构建、迁移和文档"],
+        "regression_plan": ["domain / helper 测试", "契约 / API 测试", "管理端或用户路径 smoke", "向后兼容检查", "适用时做迁移 / rename dry run"],
+        "rollback_or_compatibility": ["删除前优先保留兼容 wrapper", "决策包前不做 schema / API 迁移", "使用可回退 worktree 切片"],
+        "waves": ["建立证据地图", "命名并隔离边界", "草拟第一个兼容代码切片", "拆分 UI / 配置入口", "打包产品 / schema 决策", "批准后准备迁移 / 发布"],
+    },
+    "review": {
+        "current_x": "当前实现意图、diff、风险面和验证证据还没有串成一张图。",
+        "target_b": "交接材料能清楚说明行为变化、高风险发现、聚焦验证和待决事项。",
+        "user_perception": "审查者能看到改了什么、可能坏在哪里、验证了什么、还需要判断什么。",
+        "affected_surfaces": ["预期行为", "diff 表面", "测试和构建", "用户路径", "数据 / 认证 / 发布风险", "交接说明"],
+        "regression_plan": ["最高风险 diff 审查", "聚焦测试", "构建或 lint 检查", "人工风险清单"],
+        "rollback_or_compatibility": ["不隐藏未验证风险", "不把无关重构塞进审查范围"],
+        "waves": ["映射意图和 diff", "排序风险", "在批准范围内修复有证据的问题", "验证聚焦检查", "交接剩余决策"],
+    },
+    "delivery": {
+        "current_x": "当前发布状态、CI / build 证据、diff 风险和审批需求还没有对齐。",
+        "target_b": "变更可以进入交接或发布审查，并带有明确验证、风险和审批状态。",
+        "user_perception": "项目 owner 能判断是否能继续推进，以及具体卡在哪里。",
+        "affected_surfaces": ["diff", "CI", "build 输出", "测试证据", "发布说明", "明确批准点"],
+        "regression_plan": ["CI 状态", "聚焦构建 / 测试", "发布清单", "交接风险审查"],
+        "rollback_or_compatibility": ["没有批准前不 push、不 merge、不 deploy、不 release", "保持回滚说明可见"],
+        "waves": ["映射发布状态", "修复本地可回退阻塞", "验证交付检查", "准备 PR / handoff 草稿", "返回发布审批"],
+    },
+    "maintenance": {
+        "current_x": "当前周期性信号、日志、CI 失败、TODO 和用户反馈还没有被分诊成维护图景。",
+        "target_b": "项目拥有当前问题地图、排序后的下一步、可回退时的验证修复，以及可恢复的 next cursor。",
+        "user_perception": "用户收到的是有用维护推进，而不是一堆原始日志。",
+        "affected_surfaces": ["最近错误", "CI 失败", "TODO", "用户反馈", "状态文件", "低风险代码路径"],
+        "regression_plan": ["每个事项的聚焦验证", "重复签名检测", "前后状态摘要"],
+        "rollback_or_compatibility": ["宽泛扫描默认只读直到收窄", "只尝试可回退本地修复"],
+        "waves": ["收集已限定信号", "排序 1-3 个事项", "调查原因", "修复可回退事项", "验证并更新 next cursor"],
+    },
+    "general": {
+        "current_x": "当前情况、目标结果、波及面和验证路径还没有建图。",
+        "target_b": "目标被拆成有证据、范围清楚、有验证路径的连续动作。",
+        "user_perception": "用户能看到改什么、为什么重要、会影响哪里、loop 如何证明进展。",
+        "affected_surfaces": ["用户可见结果", "相关文件或系统", "状态和假设", "验证路径", "交接表面"],
+        "regression_plan": ["聚焦项目验证", "前后证据", "命令无法判断时的手动检查路径"],
+        "rollback_or_compatibility": ["批准前保持动作可回退", "带选项和影响返回决策"],
+        "waves": ["映射 X 到 B", "收集证据", "选择第一个范围清楚事项", "行动或草拟决策包", "验证并更新状态"],
+    },
 }
 
 
@@ -185,17 +351,19 @@ ZH_START_CARD_TEXT = {
     "Acceptance checks pass with required evidence.": "验收标准通过，并留下必要证据。",
     "Same failure repeats twice.": "同一失败重复两次。",
     "No evidence changes across two iterations.": "连续两轮证据没有变化。",
-    "A review boundary is reached.": "触达需要人工审查的边界。",
+    "A return point is reached.": "触达需要交还用户的返回点。",
     "The verifier is unavailable or ambiguous.": "验收信号不可用或结论不清。",
     "Verifier is unavailable or ambiguous.": "验收信号不可用或结论不清。",
     "Objective is unchanged.": "目标没有变化。",
     "Next action stays inside approved scope.": "下一步仍在已批准范围内。",
     "A verifier can reject bad output.": "验收器能够拒绝错误产出。",
+    "The Change Map can be updated or the next action can produce evidence for it.": "Change Map 可以被更新，或下一步能为它产生证据。",
     "New evidence changed or is likely from the next verifier.": "已有新证据变化，或下一轮验收可能产生新证据。",
-    "Risk stays below the approved mode and review boundary.": "风险仍低于当前批准模式和审查边界。",
+    "Risk stays below the approved mode and explicit return points.": "风险仍低于当前批准模式和明确返回点。",
     "The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.": "上一轮改变了证据、收窄了范围、减少了失败，或明确了阻塞点。",
     "Token, time, cost, or tool budget is reached.": "token、时间、成本或工具预算达到上限。",
     "Review required for human judgment or approval.": "需要人工判断或批准。",
+    "Human decision required after the decision packet includes options, impact, regression path, and recommendation.": "决策包已经包含选项、影响、回归路径和推荐后，需要人工决定。",
     "Target routes render without blocking errors.": "目标路由能渲染，且没有阻塞性错误。",
     "Desktop/mobile screenshots or snapshots confirm the main path.": "桌面端和移动端截图或快照能确认主路径正常。",
     "Console and network checks show no blocking errors.": "控制台和网络检查没有阻塞性错误。",
@@ -212,7 +380,7 @@ ZH_START_CARD_TEXT = {
     "i18n/copy finding summary.": "i18n/文案发现摘要。",
     "Choose at most 3 item(s) per cycle.": "每轮最多选择 3 个事项。",
     "Prefer high-impact work with clear verifier evidence.": "优先处理影响高且验证证据清楚的事项。",
-    "Defer work that needs product, release, data, or architecture judgment.": "需要产品、发布、数据或架构判断的事项先延后并返回审查。",
+    "Defer work that needs product, release, data, or architecture judgment.": "需要产品、发布、数据或架构判断的事项先打包决策信息再交还用户。",
     "A checklist can remind an agent what to do, but it cannot preserve item state, verifier evidence, failure signatures, and the next cursor across repeated runs.": "清单只能提醒要做什么，不能在多轮运行之间保留事项状态、验收证据、失败签名和下一步位置。",
     "Execute roles sequentially in the current agent.": "在当前智能体内按顺序执行这些角色。",
     "Planner defines at most 1-3 items and verifier paths.": "规划者最多定义 1-3 个事项和对应验收路径。",
@@ -258,6 +426,20 @@ ZH_START_CARD_TEXT = {
     "Merge role outputs into one state update and final status. Do not hide blockers.": "把各角色输出合并成一次状态更新和最终状态。不要隐藏阻塞点。",
     "Verify the real UI path with browser evidence, not visual guesses.": "用浏览器证据验证真实 UI 路径，不靠视觉猜测。",
     "Review the diff and plan against objective, project rules, and likely regressions.": "按目标、项目规则和可能回归审查 diff 与计划。",
+    "Design has a bounded implementation path.": "设计具备范围清楚的实现路径。",
+    "Each slice has a verifier.": "每个切片都有对应验收器。",
+    "Ambiguities and human decisions are explicit.": "不确定点和人工决策点已明确。",
+    "Prefer work that clarifies the X-to-B map, reduces blast radius, or produces verifier evidence.": "优先处理能澄清 X→B 图景、降低波及风险或产生验收证据的事项。",
+    "When product, release, data, or architecture judgment appears, first produce a decision packet with options, impact, regression plan, and recommendation.": "遇到产品、发布、数据或架构判断时，先产出包含选项、影响、回归计划和推荐的决策包。",
+    "Build or refresh the Change Map: current X, target B, user perception, affected surfaces, regression plan, and rollout waves.": "建立或刷新 Change Map：当前 X、目标 B、用户感知、波及面、回归计划和推进波次。",
+    "Scan project evidence that can confirm or falsify the map; record file paths, commands, logs, and unknowns.": "扫描能确认或推翻图景的项目证据；记录文件路径、命令、日志和未知点。",
+    "When judgment is needed, produce a decision packet with options, impact, regression path, and recommendation before returning for review.": "需要判断时，先产出包含选项、影响、回归路径和推荐的决策包，再交还用户。",
+    "Update Change Map and STATE.json before choosing CONTINUE, DONE, NEEDS_HUMAN, BLOCKED, or BUDGET_STOPPED.": "选择 `CONTINUE`、`DONE`、`NEEDS_HUMAN`、`BLOCKED` 或 `BUDGET_STOPPED` 前，先更新 Change Map 和 `STATE.json`。",
+    "Read prior state, goal, constraints, and relevant project instructions.": "读取既有状态、目标、约束和相关项目规则。",
+    "Map affected modules, contracts, risks, and dependency order.": "映射受影响模块、契约、风险和依赖顺序。",
+    "Choose at most 1-3 design decisions or implementation slices with verifiers.": "最多选择 1-3 个带验收器的设计决策或实现切片。",
+    "Draft the smallest reversible plan or local proof before broad refactors.": "在大范围重构前，先草拟最小可回退方案或本地证明。",
+    "Review the plan against risks and update state with next action or return point.": "按风险审查方案，并用下一步动作或返回点更新状态。",
     "Same visible failure repeats twice.": "同一可见问题重复出现两次。",
     "No new screenshot, console, network, or i18n evidence appears across two iterations.": "连续两轮没有新的截图、控制台、网络或 i18n 证据。",
     "The browser verifier or dev server is unavailable.": "浏览器验证器或开发服务器不可用。",
@@ -270,6 +452,9 @@ ZH_START_CARD_TEXT = {
     "production action": "生产环境操作",
     "destructive changes": "破坏性变更",
     "large refactor": "大范围重构",
+    "schema migration": "schema 迁移",
+    "public API change": "公开 API 变更",
+    "product tradeoff": "产品取舍",
     "scope expansion": "范围扩张",
     "irreversible changes": "不可逆变更",
 }
@@ -283,6 +468,9 @@ def start_card_text(value: str, language: str) -> str:
     review_match = re.fullmatch(r"Review required for (.+)\.", value)
     if review_match:
         return f"需要审查：{start_card_text(review_match.group(1), language)}。"
+    approval_match = re.fullmatch(r"Approval required for (.+) after options, impact, and regression evidence are recorded\.", value)
+    if approval_match:
+        return f"需要批准：{start_card_text(approval_match.group(1), language)}。批准前必须已记录选项、影响和回归证据。"
     fewer_items = re.fullmatch(r"Fewer than (\d+) item\(s\) are active in this cycle\.", value)
     if fewer_items:
         return f"本轮活跃事项少于 {fewer_items.group(1)} 个。"
@@ -296,7 +484,7 @@ def start_card_text(value: str, language: str) -> str:
     if iterations_reached:
         return f"达到 {iterations_reached.group(1)} 轮上限。"
     if value.startswith("This goal is loop-shaped because"):
-        return "这个目标适合做成 loop，因为每轮都需要发现输入、选择少量高价值事项、验证结果、更新状态，并在明确边界处停止。"
+        return "这个目标适合做成 loop，因为每轮都需要发现输入、选择少量高价值事项、验证结果、更新状态，并在明确返回点交还。"
     if value.startswith("Start as "):
         return "先从当前批准模式启动；只有在验收证据和人工接受度稳定后，才升级到更高自动化。"
     if value.startswith("Domain `"):
@@ -318,7 +506,7 @@ def first_cycle_card(design: dict) -> str:
     contract = managed_loop["completion_contract"]
     max_items = managed_loop["max_items_per_cycle"]
     max_iterations = managed_loop["max_iterations_per_run"]
-    verifier = start_card_text(first(contract["verifier_commands"], "Run the focused verifier."), language)
+    verifier = start_card_text(first(contract["verifier_commands"], "Run the focused verifier."), language).rstrip("。.;；")
     mode = start_card_text(level_to_mode(design["adoption_level"]), language)
     approval_separator = "、" if language == "zh" else ", "
     approvals = approval_separator.join(start_card_items(design["safety"]["requires_approval_for"], language))
@@ -326,19 +514,19 @@ def first_cycle_card(design: dict) -> str:
     if language == "zh":
         return "\n".join(
             [
-                f"1. 确认：读取 `STATE.json`、当前目标、项目规则和输入；本轮最多选择 {max_items} 个事项。",
-                f"2. 执行：只在“{mode}”边界内处理有直接证据支撑的事项。",
-                f"3. 验收：{verifier}",
-                f"4. 交还：更新 `STATE.json`；达到 {max_iterations} 轮、重复无进展、触达审查边界，或需要{approvals}时返回。",
+                f"1. 建图：读取 `STATE.json`、Change Map、当前目标、项目规则和输入；先更新 X→B、波及面和回归路径。",
+                f"2. 选择：本轮最多选择 {max_items} 个能推进图景、降低风险或产生验收证据的事项。",
+                f"3. 执行：只按“{mode}”允许的动作处理有直接证据支撑的事项；遇到判断题先产出决策包。",
+                f"4. 验收 / 交还：{verifier}；更新 Change Map 和 `STATE.json`；达到 {max_iterations} 轮、无可推进证据、触达返回点，或需要{approvals}时返回。",
             ]
         )
 
     return "\n".join(
         [
-            f"1. Clarify: read `STATE.json`, the current goal, project rules, and inputs; choose at most {max_items} item(s).",
-            f"2. Act: work only inside `{level_to_mode(design['adoption_level'])}` with directly evidenced items.",
-            f"3. Verify: {verifier}",
-            f"4. Deliver / Stop: update `STATE.json`; return after {max_iterations} iterations, repeated no-progress, a review boundary, or approval needs: {approvals}.",
+            "1. Map: read `STATE.json`, the Change Map, the current goal, project rules, and inputs; refresh X-to-B, affected surfaces, and regression path.",
+            f"2. Select: choose at most {max_items} item(s) that advance the map, reduce risk, or produce verifier evidence.",
+            f"3. Act: work only inside `{level_to_mode(design['adoption_level'])}` with directly evidenced items; turn judgment into a decision packet first.",
+            f"4. Verify / Deliver: {verifier}; update Change Map and `STATE.json`; return after {max_iterations} iterations, no bounded evidence step remains, a return point is reached, or approval is needed for: {approvals}.",
         ]
     )
 
@@ -399,8 +587,8 @@ def resolve_level(goal: str, requested: str) -> str:
         return "read-only"
     if not has_enough_goal_detail(goal):
         return "read-only"
-    edit_terms = re.search(r"\b(apply|fix|patch|implement|change)\b", lowered)
-    if edit_terms or any(term in lowered for term in ("修", "改", "实现", "尝试修复")):
+    edit_terms = re.search(r"\b(apply|fix|patch|implement|change|worktree|draft)\b", lowered)
+    if edit_terms or any(term in lowered for term in ("修", "改", "实现", "尝试修复", "草稿")):
         return "isolated-draft"
     return "goal-loop"
 
@@ -504,7 +692,7 @@ def base_profile(domain: str) -> dict:
                 "Map affected modules, contracts, risks, and dependency order.",
                 "Choose at most 1-3 design decisions or implementation slices with verifiers.",
                 "Draft the smallest reversible plan or local proof before broad refactors.",
-                "Review the plan against risks and update state with next action or review boundary.",
+                "Review the plan against risks and update state with next action or return point.",
             ],
             "verification": ["Design has a bounded implementation path.", "Each slice has a verifier.", "Ambiguities and human decisions are explicit."],
             "approval": ["large refactor", "schema migration", "public API change", "product tradeoff"],
@@ -574,6 +762,134 @@ def base_profile(domain: str) -> dict:
     return profiles.get(domain, profiles["general"])
 
 
+def goal_change_map_overrides(goal: str, is_zh: bool) -> dict[str, str]:
+    if is_zh:
+        # ponytail: narrow phrase parser; replace with model-authored X/B when goal design accepts structured fields.
+        match = re.search(r"把(.+?)从(.+?)(?:上)?拆开", goal)
+        if match:
+            subject = compact(match.group(1), 90)
+            surfaces = compact(match.group(2), 90)
+            return {
+                "current_x": f"{subject}在{surfaces}上仍然混在一起或边界不清。",
+                "target_b": f"{subject}在{surfaces}上被拆成清晰、可验证、可回归的边界。",
+            }
+    return {}
+
+
+def build_change_map(goal: str, domain: str, profile: dict, verifier_commands: list[str]) -> dict:
+    is_zh = contains_cjk_text(goal)
+    profile_set = ZH_CHANGE_MAP_PROFILES if is_zh else CHANGE_MAP_PROFILES
+    defaults = profile_set.get(domain, profile_set["general"])
+    overrides = goal_change_map_overrides(goal, is_zh)
+    verification = verifier_commands or profile.get("verification", [])
+    return {
+        "current_x": overrides.get("current_x", defaults["current_x"]),
+        "target_b": overrides.get("target_b", defaults["target_b"]),
+        "user_perception": defaults["user_perception"],
+        "transformation_thesis": (
+            f"把用户目标转成明确的 X→B 改造路径：{compact(goal, 180)}"
+            if is_zh
+            else f"Turn the requested goal into an explicit X-to-B path: {compact(goal, 180)}"
+        ),
+        "affected_surfaces": defaults["affected_surfaces"],
+        "regression_plan": list(dict.fromkeys(defaults["regression_plan"] + verification)),
+        "rollback_or_compatibility": defaults["rollback_or_compatibility"],
+        "research_questions": (
+            [
+                "哪些文件、路由、命令、日志或文档能证明当前 X？",
+                "哪些产品或技术面必须变化，B 才算真实发生？",
+                "哪些检查能证明 B，而不是依赖 agent 自我判断？",
+                "哪些决策只有在选项、影响和回归证据存在后才需要交给人？",
+            ]
+            if is_zh
+            else [
+                "Which files, routes, commands, logs, or docs prove the current X?",
+                "Which product or technical surfaces must change for B to be real?",
+                "Which checks prove B without relying on the agent's opinion?",
+                "Which decisions need a human only after options, impact, and regression evidence exist?",
+            ]
+        ),
+        "waves": defaults["waves"],
+        "decision_packet_required_when": (
+            [
+                "证据建图后，产品语义仍然不明确。",
+                "下一步需要 schema、API、数据、计费、权限、生产、发布或不可逆动作。",
+                "仍存在多条可行路径，且选择会改变用户体验、运营方式或架构。",
+            ]
+            if is_zh
+            else [
+                "Product semantics are ambiguous after evidence is mapped.",
+                "Schema, API, data, billing, permission, production, release, or irreversible action is required.",
+                "Multiple viable paths remain and the choice changes user experience, operations, or architecture.",
+            ]
+        ),
+    }
+
+
+def change_map_cycle_steps(profile: dict) -> list[str]:
+    return [
+        "Build or refresh the Change Map: current X, target B, user perception, affected surfaces, regression plan, and rollout waves.",
+        "Scan project evidence that can confirm or falsify the map; record file paths, commands, logs, and unknowns.",
+        *profile["cycle_steps"],
+        "When judgment is needed, produce a decision packet with options, impact, regression path, and recommendation before returning for review.",
+        "Update Change Map and STATE.json before choosing CONTINUE, DONE, NEEDS_HUMAN, BLOCKED, or BUDGET_STOPPED.",
+    ]
+
+
+def render_change_map(change_map: dict, language: str) -> str:
+    if language == "zh":
+        return f"""- 当前 X：{change_map["current_x"]}
+- 目标 B：{change_map["target_b"]}
+- 用户感知：{change_map["user_perception"]}
+- 转换假设：{change_map["transformation_thesis"]}
+
+波及面：
+
+{bullet(start_card_items(change_map["affected_surfaces"], language))}
+
+回归 / 兼容：
+
+{bullet(start_card_items(change_map["regression_plan"] + change_map["rollback_or_compatibility"], language))}
+
+推进波次：
+
+{numbered(start_card_items(change_map["waves"], language))}
+
+需要人工决策前，先补齐这些问题：
+
+{bullet(start_card_items(change_map["research_questions"], language))}
+
+决策包触发：
+
+{bullet(start_card_items(change_map["decision_packet_required_when"], language))}
+"""
+    return f"""- Current X: {change_map["current_x"]}
+- Target B: {change_map["target_b"]}
+- User perception: {change_map["user_perception"]}
+- Transformation thesis: {change_map["transformation_thesis"]}
+
+Affected surfaces:
+
+{bullet(change_map["affected_surfaces"])}
+
+Regression / compatibility:
+
+{bullet(change_map["regression_plan"] + change_map["rollback_or_compatibility"])}
+
+Rollout waves:
+
+{numbered(change_map["waves"])}
+
+Answer before returning for human judgment:
+
+{bullet(change_map["research_questions"])}
+
+Decision packet triggers:
+
+{bullet(change_map["decision_packet_required_when"])}
+"""
+
+
 def build_rationale(goal: str, domain: str, profile: dict, level: str, team_mode: str) -> dict:
     source_summary = ", ".join(profile["discovery_sources"][:3])
     trigger_summary = "; ".join(item.rstrip(".") for item in profile["trigger"][:2])
@@ -589,7 +905,7 @@ def build_rationale(goal: str, domain: str, profile: dict, level: str, team_mode
         ),
         "why_not_more_autonomous": (
             f"Start as {mode} because the trigger is {trigger_summary or 'user delegation'}; higher-impact actions "
-            "still need the recorded human gates before scope expansion, irreversible changes, or production work."
+            "still need the recorded approval points before scope expansion, irreversible changes, or production work."
         ),
         "fit_summary": (
             f"Domain `{domain}` with `{team_mode}` team mode and `{level}` internal level; promote only after accepted "
@@ -631,7 +947,7 @@ def role_prompt(role_id: str, goal: str, domain: str) -> dict:
         "integration-verifier": ["per-layer verifier result", "integrated path result", "remaining blocker"],
         "checker": ["findings ordered by severity", "file/line evidence", "regression risk"],
         "reviewer": ["diff risks", "missing verifier", "approval gate"],
-        "risk-reviewer": ["risk map", "human decisions", "safe next slice"],
+        "risk-reviewer": ["risk map", "human decisions", "reversible next slice"],
     }.get(role_id, ["finding summary", "recommended next action", "evidence or blocker"])
     mission = {
         "integrator": "Merge role outputs into one state update and final status. Do not hide blockers.",
@@ -673,12 +989,13 @@ def build_design(args: argparse.Namespace) -> dict:
     approval_boundary = list(dict.fromkeys(profile["approval"] + ["scope expansion", "irreversible changes"]))
     success_criteria = args.success_criteria or profile["verification"]
     verifier_commands = args.verifier or profile["verification"]
+    change_map = build_change_map(goal, domain, profile, verifier_commands)
     reject_conditions = profile.get(
         "reject_conditions",
         [
             "Same failure repeats twice.",
             "No evidence changes across two iterations.",
-            "A review boundary is reached.",
+            "A return point is reached.",
             "The verifier is unavailable or ambiguous.",
         ],
     )
@@ -702,11 +1019,12 @@ def build_design(args: argparse.Namespace) -> dict:
         "discovery_sources": profile["discovery_sources"],
         "state_file": state_file,
         "state_schema": BASE_STATE_SCHEMA,
-        "cycle_steps": profile["cycle_steps"],
+        "change_map": change_map,
+        "cycle_steps": change_map_cycle_steps(profile),
         "selection_policy": [
             f"Choose at most {max_items} item(s) per cycle.",
-            "Prefer high-impact work with clear verifier evidence.",
-            "Defer work that needs product, release, data, or architecture judgment.",
+            "Prefer work that clarifies the X-to-B map, reduces blast radius, or produces verifier evidence.",
+            "When product, release, data, or architecture judgment appears, first produce a decision packet with options, impact, regression plan, and recommendation.",
         ],
         "max_items_per_cycle": max_items,
         "max_iterations_per_run": max_iterations,
@@ -716,16 +1034,16 @@ def build_design(args: argparse.Namespace) -> dict:
             "evaluator_agent": "Use deterministic checks first; use a reviewer or verifier role when commands cannot decide.",
             "pass_evidence_required": pass_evidence_required,
             "reject_conditions": reject_conditions,
-            "no_progress_policy": "Stop when no evidence changes across two iterations, then record the blocker and next human decision.",
+            "no_progress_policy": "If evidence stops changing, try to convert the unknown into a narrower scan or decision packet; stop only when no bounded next action can improve the Change Map or verifier evidence.",
         },
         "loop_exit_contract": loop_exit_contract,
         "change_policy": (
             "Read-only until edit scope is approved. For draft-producing levels, use a local reversible change set "
             "or isolated branch/worktree. Do not push, merge, deploy, migrate, delete data, or change credentials without approval."
         ),
-        "deliverables": ["Updated STATE.json", "status summary", "verifier evidence", "patch/PR draft or blocker report when applicable"],
-        "resume_policy": "Read STATE.json first and continue unresolved active or blocked items before selecting new work.",
-        "failure_policy": "Record repeated failures, missing inputs, and human decisions; stop instead of guessing.",
+        "deliverables": ["Updated Change Map", "Updated STATE.json", "status summary", "verifier evidence", "patch/PR draft or decision packet when applicable"],
+        "resume_policy": "Read STATE.json and the Change Map first; continue unresolved waves, decisions, or active items before selecting new work.",
+        "failure_policy": "Record repeated failures, missing inputs, and human decisions. Convert ambiguity into a bounded evidence scan or decision packet before stopping for review.",
         "promotion_criteria": ["Promote autonomy only after repeated accepted runs with reliable verifier evidence."],
         "demotion_criteria": ["Demote when human review rejects outputs, verifier evidence is weak, or cost exceeds value."],
     }
@@ -743,6 +1061,7 @@ def build_design(args: argparse.Namespace) -> dict:
         "adoption_level": level,
         "team_mode": team_mode,
         "project_root": str(Path(args.project_root)),
+        "change_map": change_map,
         **rationale,
         "managed_loop": managed_loop,
         "subagent_team": {
@@ -788,12 +1107,15 @@ def build_state(design: dict) -> dict:
         "domain": design["domain"],
         "team_mode": design["team_mode"],
         "state_schema": managed_loop["state_schema"],
+        "change_map": design["change_map"],
         "success_criteria": contract["success_criteria"],
         "reject_conditions": contract["reject_conditions"],
         "loop_exit_contract": managed_loop["loop_exit_contract"],
         "approval_boundary": design["safety"]["requires_approval_for"],
         "items": [],
         "attempts": [],
+        "active_wave": None,
+        "decision_packets": [],
         "evidence_delta": [],
         "failure_signatures": [],
         "progress_metrics": [],
@@ -825,11 +1147,12 @@ def render_goal(design: dict) -> str:
     mode_display = start_card_text(mode, language)
     team_display = start_card_text(design["team_mode"], language)
     intro = (
-        "先看这张执行合同。确认后，智能体按 `RUN.md` 运行，按 `VERIFY.md` 验收，并在触达边界时返回审查。"
+        "先看改造图景和执行合同。确认后，智能体按 `RUN.md` 运行、按 `VERIFY.md` 验收，并在触达返回点时交还给你。"
         if language == "zh"
-        else "Start with this execution contract. After confirmation, the agent follows `RUN.md`, verifies with `VERIFY.md`, and returns at review boundaries."
+        else "Start with the Change Map and execution contract. After confirmation, the agent follows `RUN.md`, verifies with `VERIFY.md`, and returns at explicit return points."
     )
     contract_label = "执行合同" if language == "zh" else "Execution Contract"
+    map_label = "改造图景" if language == "zh" else "Change Map"
     reply_label = "推荐回复" if language == "zh" else "Recommended reply"
     reply_text = "开始执行" if language == "zh" else "start"
     mode_label = "运行模式" if language == "zh" else "Mode"
@@ -837,12 +1160,16 @@ def render_goal(design: dict) -> str:
     goal_label = "目标" if language == "zh" else "Goal"
     will_do_label = "我会做" if language == "zh" else "I will do"
     verify_label = "验证方式" if language == "zh" else "Verifier"
-    stop_label = "停止/返回审查" if language == "zh" else "Stop / return for review"
-    ask_label = "返回审查前需要批准" if language == "zh" else "Ask before"
+    stop_label = "停止 / 返回点" if language == "zh" else "Stop / return point"
+    ask_label = "完成前需要明确批准" if language == "zh" else "Explicit approval before"
     if language == "zh":
         return f"""# {design["name"]}
 
 {intro}
+
+## {map_label}
+
+{render_change_map(design["change_map"], language)}
 
 ## {contract_label}
 
@@ -909,7 +1236,7 @@ def render_goal(design: dict) -> str:
 
 {bullet(start_card_items(contract["reject_conditions"], language))}
 
-还要在达到 `{managed_loop["max_iterations_per_run"]}` 轮、重复无进展或触达审查边界时停止。
+还要在达到 `{managed_loop["max_iterations_per_run"]}` 轮、重复无进展或触达返回点时停止。
 
 ## 退出协议
 
@@ -921,7 +1248,7 @@ def render_goal(design: dict) -> str:
 
 {bullet(start_card_items(exit_contract["done_when"], language))}
 
-返回人工审查的条件：
+交还给用户的条件：
 
 {bullet(start_card_items(exit_contract["needs_human_when"], language))}
 
@@ -939,22 +1266,26 @@ def render_goal(design: dict) -> str:
 - 工作前先读状态。
 - 返回任何最终状态前必须更新状态。
 
-## 人工门禁
+## 明确批准点
 
 {bullet(start_card_items(design["safety"]["requires_approval_for"], language))}
 
 ## 最终状态
 
 结束前只能返回一个内部状态：`DONE`、`CONTINUE`、`BLOCKED`、`NEEDS_HUMAN` 或 `BUDGET_STOPPED`。
-面向用户说明时，把 `NEEDS_HUMAN` 写成“返回人工审查”。
+面向用户说明时，把 `NEEDS_HUMAN` 写成“交还给用户判断”。
 
 ## 首轮复盘
 
-下一次运行前，在 `STATE.json` 记录：这个 loop 是否减少了重复人工纠正、是否产生误报、是否过度依赖人工判断、是否应该降级成 skill/checklist，或是否已有足够被接受的产出。
+下一次运行前，在 `STATE.json` 记录：这个 loop 是否减少了重复人工纠正、是否产生误报、是否过度依赖人工判断、是否应该改成 skill/checklist，或是否已有足够被接受的产出。
 """
     return f"""# {design["name"]}
 
 {intro}
+
+## {map_label}
+
+{render_change_map(design["change_map"], language)}
 
 ## {contract_label}
 
@@ -1025,7 +1356,7 @@ Required pass evidence:
 
 {bullet(contract["reject_conditions"])}
 
-Also stop after `{managed_loop["max_iterations_per_run"]}` iteration(s), repeated no-progress, or a review boundary.
+Also stop after `{managed_loop["max_iterations_per_run"]}` iteration(s), repeated no-progress, or a return point.
 
 ## Exit Contract
 
@@ -1037,7 +1368,7 @@ Return `DONE` when:
 
 {bullet(exit_contract["done_when"])}
 
-Return for review when:
+Return to user when:
 
 {bullet(exit_contract["needs_human_when"])}
 
@@ -1055,19 +1386,19 @@ Return `BUDGET_STOPPED` when:
 - Read state before work.
 - Update state before returning any final status.
 
-## Human Gate
+## Explicit Approval Points
 
 {bullet(design["safety"]["requires_approval_for"])}
 
 ## Final Status
 
 Return exactly one internal status: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, or `BUDGET_STOPPED`.
-In user-facing copy, treat `NEEDS_HUMAN` as return-for-review.
+In user-facing copy, treat `NEEDS_HUMAN` as return-to-user.
 
 ## First Run Retro
 
 Before the next run, update `STATE.json` with whether this loop reduced repeated human correction,
-created false positives, required too much human judgment, should be downgraded to a skill/checklist,
+created false positives, required too much human judgment, should become a skill/checklist,
 or has enough accepted output to keep its current autonomy level.
 """
 
@@ -1160,22 +1491,27 @@ def render_handoff(design: dict, artifact_dir: Path) -> str:
     mode_display = start_card_text(mode, language)
     team_display = start_card_text(design["team_mode"], language)
     intro = (
-        "这个目录是一份可执行 loop 运行包。先看 `GOAL.md` 的执行合同，再按 `RUN.md` 运行、按 `VERIFY.md` 验收。"
+        "这个目录是一份可执行 loop 运行包。先看 `GOAL.md` 的改造图景和执行合同，再按 `RUN.md` 运行、按 `VERIFY.md` 验收。"
         if language == "zh"
-        else "This folder contains an executable loop harness. Start with the `GOAL.md` execution contract, then run with `RUN.md` and verify with `VERIFY.md`."
+        else "This folder contains an executable loop harness. Start with the `GOAL.md` Change Map and execution contract, then run with `RUN.md` and verify with `VERIFY.md`."
     )
     contract_label = "执行合同" if language == "zh" else "Execution Contract"
+    map_label = "改造图景" if language == "zh" else "Change Map"
     mode_label = "运行模式" if language == "zh" else "Mode"
     team_label = "协作方式" if language == "zh" else "Team mode"
     goal_label = "目标" if language == "zh" else "Goal"
     will_do_label = "我会做" if language == "zh" else "I will do"
     verify_label = "验证方式" if language == "zh" else "Verifier"
-    stop_label = "停止/返回审查" if language == "zh" else "Stop / return for review"
-    ask_label = "返回审查前需要批准" if language == "zh" else "Ask before"
+    stop_label = "停止 / 返回点" if language == "zh" else "Stop / return point"
+    ask_label = "完成前需要明确批准" if language == "zh" else "Explicit approval before"
     if language == "zh":
         return f"""# {design["name"]} 交接说明
 
 {intro}
+
+## {map_label}
+
+{render_change_map(design["change_map"], language)}
 
 ## {contract_label}
 
@@ -1226,7 +1562,7 @@ def render_handoff(design: dict, artifact_dir: Path) -> str:
 
 {bullet(start_card_items(exits["done_when"], language))}
 
-返回人工审查的条件：
+交还给用户的条件：
 
 {bullet(start_card_items(exits["needs_human_when"], language))}
 
@@ -1240,7 +1576,7 @@ def render_handoff(design: dict, artifact_dir: Path) -> str:
 
 ## 复盘记录
 
-每轮结束后，在 `STATE.json` 记录基线摩擦、运行结果、节省的人工纠正、误报、人工接受度、下一步调整和是否建议降级。
+每轮结束后，在 `STATE.json` 记录基线摩擦、运行结果、节省的人工纠正、误报、人工接受度、下一步调整和是否建议改成更小机制。
 
 ## 文件
 
@@ -1255,6 +1591,10 @@ def render_handoff(design: dict, artifact_dir: Path) -> str:
     return f"""# {design["name"]} Handoff
 
 {intro}
+
+## {map_label}
+
+{render_change_map(design["change_map"], language)}
 
 ## {contract_label}
 
@@ -1305,7 +1645,7 @@ Return `DONE` when:
 
 {bullet(exits["done_when"])}
 
-Return for review when:
+Return to user when:
 
 {bullet(exits["needs_human_when"])}
 
@@ -1337,10 +1677,12 @@ human acceptance, next adjustment, and demotion recommendation in `STATE.json`.
 def render_run(design: dict) -> str:
     managed_loop = design["managed_loop"]
     exit_contract = managed_loop["loop_exit_contract"]
+    change_map = design["change_map"]
     language = design_language(design)
     if language == "zh":
         title = "运行协议"
         read_first = "先读"
+        map_label = "先更新改造图景"
         cycle = "循环步骤"
         exit_rule = "退出规则"
         continue_only_if = "继续下一轮的条件"
@@ -1351,20 +1693,22 @@ def render_run(design: dict) -> str:
         status_lines = [
             "`CONTINUE`：只有下一轮能产生新的验收证据时才继续。",
             "`DONE`：只有成功标准通过并留下证据时才完成。",
-            "`NEEDS_HUMAN`：需要审查、批准、缺失上下文或更高权限动作时返回。",
+            "`NEEDS_HUMAN`：决策包已包含选项、影响、回归路径和推荐后，或需要明确批准时返回。",
             "`BLOCKED`：同一失败重复两次、证据不再变化或验收器不可用时阻塞。",
             "`BUDGET_STOPPED`：事项、轮次、时间、token 或成本上限到达时停止。",
         ]
         read_steps = [
             "读 `GOAL.md`。",
             "读 `STATE.json`。",
+            "读并更新 Change Map：当前 X、目标 B、波及面、回归 / 兼容路径、推进波次。",
             "读 `VERIFY.md`。",
             f"本轮最多选择 `{managed_loop['max_items_per_cycle']}` 个事项。",
         ]
-        state_lines = ["选中的事项", "采取的动作", "验收证据", "证据变化", "失败签名（如有）", "最终状态", "下次位置或待用户确认事项"]
+        state_lines = ["改造图景变化", "选中的波次 / 事项", "采取的动作", "验收证据", "证据变化", "决策包（如有）", "失败签名（如有）", "最终状态", "下次位置或待用户确认事项"]
     else:
         title = "Run Protocol"
         read_first = "Read First"
+        map_label = "Refresh The Change Map First"
         cycle = "Cycle"
         exit_rule = "Exit Rule"
         continue_only_if = "Continue Only If"
@@ -1375,21 +1719,24 @@ def render_run(design: dict) -> str:
         status_lines = [
             "`CONTINUE`: only when the next cycle can produce new verifier evidence.",
             "`DONE`: only when success criteria pass with required evidence.",
-            "`NEEDS_HUMAN`: when review, approval, missing context, or higher-impact action is required.",
+            "`NEEDS_HUMAN`: after a decision packet is ready, or explicit approval / stronger authority is required.",
             "`BLOCKED`: when the same failure repeats twice, evidence stops changing, or the verifier is unavailable.",
             "`BUDGET_STOPPED`: when an item, iteration, time, token, or cost cap is reached.",
         ]
         read_steps = [
             "Read `GOAL.md`.",
             "Read `STATE.json`.",
+            "Read and update the Change Map: current X, target B, affected surfaces, regression / compatibility path, and rollout waves.",
             "Read `VERIFY.md`.",
             f"Choose at most `{managed_loop['max_items_per_cycle']}` item(s) for this cycle.",
         ]
         state_lines = [
-            "selected items",
+            "Change Map delta",
+            "selected wave / items",
             "action taken",
             "verifier evidence",
             "evidence_delta",
+            "decision packet when any",
             "failure signature when any",
             "final status",
             "next_cursor or human_queue",
@@ -1399,6 +1746,10 @@ def render_run(design: dict) -> str:
 ## {read_first}
 
 {numbered(read_steps)}
+
+## {map_label}
+
+{render_change_map(change_map, language)}
 
 ## {cycle}
 
@@ -1429,14 +1780,23 @@ def render_run(design: dict) -> str:
 def render_verify(design: dict) -> str:
     managed_loop = design["managed_loop"]
     contract = managed_loop["completion_contract"]
+    change_map = design["change_map"]
     language = design_language(design)
     if language == "zh":
         title = "验收协议"
+        map_label = "图景验收"
         success = "成功标准"
         verifier = "验收方式"
         pass_evidence = "必须留下的通过证据"
+        regression = "回归 / 兼容检查"
         failure = "失败分类"
-        review = "审查边界"
+        review = "返回点"
+        map_lines = [
+            "必须能说明当前 X 如何变成目标 B。",
+            "必须列出真实波及面；不知道的波及面要进入 research_questions。",
+            "每个执行波次必须有回归或兼容检查。",
+            "需要人工判断时，先给出选项、影响、回归路径和推荐。",
+        ]
         failure_lines = [
             "验收信号缺失或不可用",
             "同一失败重复两次",
@@ -1447,11 +1807,19 @@ def render_verify(design: dict) -> str:
         review_text = "审查可以拒绝风险、范围或判断；审查不能替代验收证据，也不能单独宣布 `DONE`。"
     else:
         title = "Verification Protocol"
+        map_label = "Change Map Verification"
         success = "Success Criteria"
         verifier = "Verifier"
         pass_evidence = "Required Pass Evidence"
+        regression = "Regression / Compatibility Checks"
         failure = "Failure Classes"
         review = "Review Boundary"
+        map_lines = [
+            "The packet explains how current X becomes target B.",
+            "Affected surfaces are listed; unknown surfaces move into research_questions.",
+            "Every execution wave has a regression or compatibility check.",
+            "Human judgment comes with options, impact, regression path, and recommendation.",
+        ]
         failure_lines = [
             "verifier missing or unavailable",
             "same failure repeated twice",
@@ -1461,6 +1829,10 @@ def render_verify(design: dict) -> str:
         ]
         review_text = "Review can reject risk, scope, or judgment. Review cannot replace verifier evidence or mark `DONE`."
     return f"""# {title}: {design["name"]}
+
+## {map_label}
+
+{bullet(map_lines)}
 
 ## {success}
 
@@ -1473,6 +1845,10 @@ def render_verify(design: dict) -> str:
 ## {pass_evidence}
 
 {bullet(start_card_items(contract["pass_evidence_required"], language))}
+
+## {regression}
+
+{bullet(start_card_items(change_map["regression_plan"] + change_map["rollback_or_compatibility"], language))}
 
 ## {failure}
 
@@ -1497,9 +1873,10 @@ def render_agents_snippet(design: dict) -> str:
 
 - 以 `{mode}` 运行（内部级别 `{design["adoption_level"]}`），协作方式为 `{design["team_mode"]}`。
 - 目标：{design["goal"]}
+- 每轮先更新 Change Map：当前 X、目标 B、波及面、回归 / 兼容路径和推进波次。
 - 每轮最多选择 {managed_loop["max_items_per_cycle"]} 个事项。
-- 达到 {managed_loop["max_iterations_per_run"]} 轮、重复无进展或触达审查边界时停止。
-- 返回前必须读取并更新 `STATE.json`。
+- 达到 {managed_loop["max_iterations_per_run"]} 轮、重复无进展或触达返回点时停止。
+- 返回前必须读取并更新 Change Map 与 `STATE.json`。
 - 需要先询问：{"、".join(start_card_items(design["safety"]["requires_approval_for"], language))}。
 """
     return f"""# Draft AGENTS.md Snippet: {design["name"]}
@@ -1510,9 +1887,10 @@ When the goal matches `{design["loop_id"]}`:
 
 - Run as `{mode}` (`{design["adoption_level"]}` internally) with `{design["team_mode"]}` team mode.
 - Objective: {design["goal"]}
+- Refresh the Change Map first each cycle: current X, target B, affected surfaces, regression / compatibility path, and rollout waves.
 - Select at most {managed_loop["max_items_per_cycle"]} item(s) per cycle.
-- Stop after {managed_loop["max_iterations_per_run"]} iteration(s), repeated no-progress, or a review boundary.
-- Read and update `STATE.json` before returning.
+- Stop after {managed_loop["max_iterations_per_run"]} iteration(s), repeated no-progress, or a return point.
+- Read and update the Change Map and `STATE.json` before returning.
 - Ask before: {", ".join(design["safety"]["requires_approval_for"])}.
 """
 

@@ -49,7 +49,7 @@ The six parts that usually realize those moves are:
 Classify the work before recommending a loop:
 
 - Process-shaped work: steps and order are known, results are predictable. Prefer a script, hook, or traditional automation.
-- Tool-assisted work: the goal is known but the path varies and the human still chooses direction. Prefer a skill, checklist, or approval gate.
+- Tool-assisted work: the goal is known but the path varies and the human still chooses direction often. Prefer a skill, checklist, or decision packet until the agent can keep the loop moving.
 - Goal-driven work: the user can define the objective, boundaries, checks, and escalation rules, while the agent can decide the next step. This is the real loop candidate.
 
 Do not recommend a managed loop just because a task repeats. Recommend it when the repeated work needs an agent to observe, decide, act, verify, and resume.
@@ -62,9 +62,9 @@ Before proposing a `loop`, verify the candidate passes all five checks:
 - Objective rejection: tests, type checks, builds, lint, screenshots, logs, assertions, or a tight rubric can reject bad output.
 - Reproduction environment: the agent can run the changed code, inspect failures, and get fresh evidence.
 - Hard stop: iteration, time, token, item, or cost cap is explicit.
-- Review gate: merge, deploy, dependency, credential, schema, data, payment, and production-impacting actions require the matching user-approved mode or human review.
+- Explicit return point: merge, deploy, dependency, credential, schema, data, payment, and production-impacting actions require the matching user-approved mode or human decision.
 
-If one check fails, keep the recommendation as a prompt, rule, skill, hook, checklist, or approval gate.
+If one check fails, keep the recommendation as a prompt, rule, skill, hook, checklist, or decision packet.
 
 Good first loops:
 
@@ -107,14 +107,14 @@ Order matters:
 
 1. Make one manual run reliable.
 2. Save the reusable instructions as a skill or checklist.
-3. Add loop mechanics: state, verifier, hard cap, and human gate.
+3. Add loop mechanics: state, verifier, hard cap, and explicit return points.
 4. Schedule only after reviewed outputs are consistently accepted.
 
-Use accepted change rate as the product metric. If fewer than half of outputs survive review, shrink the scope, improve the gate, or demote the loop.
+Use accepted change rate as the product metric. If fewer than half of outputs survive review, narrow the scope, improve the verifier, or turn the loop into a smaller mechanism until it earns loop status again.
 
 ## Start Mode Ladder
 
-Recommend the weakest useful mode:
+Recommend the strongest useful mode that is approved, reversible, and verifiable:
 
 - `read-only`: inspect, rank, and report only.
 - `low-risk edit`: make bounded local edits with direct evidence and focused verification.
@@ -124,7 +124,7 @@ Recommend the weakest useful mode:
 - `scheduled draft`: run unattended, draft changes inside agreed isolation, notify the human, and leave landing to review.
 - `human-approved action`: perform a high-impact action only when the user explicitly grants that action and scope.
 
-Do not frame high-impact work as impossible. Frame it as requiring a stronger mode, explicit approval, or review. A loop should still earn trust one rung at a time.
+Do not frame high-impact work as impossible. Frame it as requiring a stronger mode, explicit approval, or a decision packet. A loop should earn more autonomy through accepted, verified output.
 
 ## Practical Archetypes
 
@@ -150,9 +150,9 @@ Only recommend a managed loop when these gates are present:
 - State: each run records what was tried, what failed, and what should happen next.
 - Stop: success and failure exits are explicit.
 - Iteration cap: every run has a hard attempt limit.
-- Human checkpoint: at least one door remains open for the human to review, reject, or redirect.
+- Return point: high-impact or judgment-heavy work has a clear place to come back with evidence, options, impact, and a recommendation.
 
-If any gate is missing, prefer a prompt, rule, skill, checklist, or approval gate.
+If any gate is missing, prefer a prompt, rule, skill, checklist, or decision packet.
 
 ## Acceptance Contract
 
@@ -161,13 +161,13 @@ A managed loop must compile these gates into an acceptance contract:
 - Acceptance checks: observable conditions that can say DONE.
 - Verifier: deterministic commands first, read-only checker when commands cannot decide.
 - Pass evidence: command output, status, screenshot, schema result, or explicit verifier note.
-- Reject conditions: what makes the loop stop, downgrade, or ask for a human.
+- Reject conditions: what makes the loop stop, shrink to a smaller mechanism, or ask for a human.
 - State schema: what the loop writes before stopping so the next run can resume.
 - No-progress policy: how repeated failures or unchanged evidence stop the run.
-- Human checkpoint: actions that require a stronger mode, explicit approval, or review before they are finalized.
+- Return point: actions that require a stronger mode, explicit approval, or human judgment before they are finalized.
 
 Do not render a goal-ready loop artifact when the acceptance contract is missing. Render a rule,
-skill, checklist, approval gate, or rejection instead.
+skill, checklist, decision packet, or rejection instead.
 
 ## Loop Exit Contract
 
@@ -183,9 +183,9 @@ Every cycle must end with exactly one status:
 - `BUDGET_STOPPED`: item, iteration, time, token, or cost cap is reached.
 
 Read `loop-exit-contract.md` when rendering goal-ready artifacts. If a proposal cannot say when to
-continue and when to return to the human, downgrade it to a skill, checklist, or prompt.
+continue and when to return to the human, turn it into a skill, checklist, or prompt.
 
-## Minimum Safety Checklist
+## Minimum Loop Readiness
 
 Before recommending unattended execution or draft-producing autonomy, require:
 
@@ -194,7 +194,7 @@ Before recommending unattended execution or draft-producing autonomy, require:
 - Isolated branch, checkout, or worktree for edits.
 - Read-only checker, deterministic verifier, or both.
 - State file that is read first and updated before stopping.
-- Review gate for risky, irreversible, product, release, security, data, or cost decisions.
+- Return point for risky, irreversible, product, release, security, data, or cost decisions.
 - Logs or notifications so failures, blockers, and created artifacts are visible.
 
 If any item is missing, start lower on the mode ladder.
@@ -208,9 +208,9 @@ If any item is missing, start lower on the mode ladder.
 - Blind loop: discovery is skipped and the human still chooses every task.
 - Tangled loop: handoff or isolation is skipped and parallel agents collide.
 - Drift loop: long runs lose standing constraints unless they reread the goal, state, and project rules.
-- Permission-creep loop: a read-only loop gains write or production permissions without a stronger mode and explicit review boundary.
+- Permission-creep loop: a read-only loop gains write or production permissions without a stronger approved mode and explicit return point.
 
-Use these names when rejecting or downgrading a candidate. They are clearer than vague warnings like "needs more safety."
+Use these names when rejecting or shrinking a candidate. They are clearer than vague warnings like "needs more safety."
 
 ## Cost And Quality
 
@@ -262,7 +262,7 @@ Each cycle:
 1. PLAN: state the next smallest action.
 2. DO: produce or improve the result.
 3. VERIFY: score against every criterion and list weak points.
-4. DECIDE: stop only when every criterion passes; otherwise continue by fixing the weakest point.
+4. DECIDE: stop only when every criterion passes; otherwise continue by fixing the highest-leverage failing point.
 
 Rules:
 - Do not declare done before the criteria pass.

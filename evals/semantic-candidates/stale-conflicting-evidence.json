@@ -92,7 +92,7 @@
           "status_protocol": {
             "CONTINUE": "Only when another cycle can increase verified certainty.",
             "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
-            "NEEDS_HUMAN": "Return for review because human judgment or explicit approval is required.",
+            "NEEDS_HUMAN": "Return to user because human judgment or explicit approval is required.",
             "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
             "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
           }
