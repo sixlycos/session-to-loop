@@ -293,11 +293,19 @@ python skills/sixloops/scripts/design_goal_loop.py \
 不带 model design file 的 `--domain`、`--team-mode auto`、`--level auto` 只是
 demo 和宿主模型不可用时的 fallback scaffolding，不是 model-led 产品路径。
 
-输出目录会包含 `GOAL.md`、`TEAM.md`、`STATE.json`、`HANDOFF.md` 和
-`AGENTS-snippet.md`。
+输出目录会包含 `GOAL.md`、`TEAM.md`、`STATE.json`、`HANDOFF.md`、
+`AGENTS-snippet.md`，以及宿主原生启动面：
+
+- `HOST-START.md`：检测本机 Codex / Claude Code 可用性，并给出准确复制命令。
+- `CODEX-GOAL.md`：可完整粘贴到 Codex `/goal` 的执行包。
+- `CLAUDE-LOOP.md`：可完整粘贴到 Claude Code `/loop` 的执行包。
+- `host-start-packet.json`：机器可读的 target、复制命令和治理元数据。
 
 对直接目标，`GOAL.md` 会先展示改造图景，再展示执行合同。它应该说明 X 如何变成 B、
 波及哪些面、如何回归或兼容，以及 loop 会按哪些波次推进。
+
+SixLoops 不替代宿主 runtime。它生成 loop 策略、自动纠正规则、验收器、状态合同、
+回滚边界和返回点；Codex 或 Claude Code 在你复制对应 host packet 后负责实际运行。
 
 ![SixLoops can design a small agent team around one controlled loop](assets/readme/subagent-loop-table.png)
 

@@ -25,6 +25,8 @@ Use these structures when producing machine-readable artifacts. Markdown reports
 - `schemas/loop-progression-contract.schema.json`: machine-readable shape for the progression contract.
 - `managed_loop.autonomy_contract`: mandatory for model-led loops; defines how the model ranks plausible next actions, chooses the next bounded shot, starts/stops subagents, self-iterates, and returns only for real human judgment or stronger approval.
 - `schemas/loop-autonomy-contract.schema.json`: machine-readable shape for the autonomy contract.
+- `host_start_packet`: generated host-native execution surface with `HOST-START.md`, `CODEX-GOAL.md`, `CLAUDE-LOOP.md`, and `host-start-packet.json`; it bridges SixLoops policy into Codex `/goal` or Claude Code `/loop` without making SixLoops a runtime.
+- `schemas/host-start-packet.schema.json`: machine-readable shape for detected host availability, copy commands, host entrypoints, packet paths, and governance metadata.
 - `managed_loop.state_schema`: minimal durable state ledger the loop must update before stopping.
 - `managed_loop.status_protocol`: allowed statuses: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, and `BUDGET_STOPPED`.
 - `economics`: lightweight cost and acceptance estimate: trigger frequency, expected per-run cost, automatic rejection signals, human review load, demotion threshold, and budget caps.

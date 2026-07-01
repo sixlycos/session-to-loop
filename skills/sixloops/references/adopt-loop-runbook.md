@@ -26,6 +26,8 @@ progression fields, and state, and return one clear status: `DONE`,
    - Agent handoff: `claude-loops/<candidate-id>.md`.
    - Adoption packet: `GOAL.md`, `STATE.json`, `HANDOFF.md`, and optional
      `AGENTS-snippet.md`.
+   - Host-native packet surface: `HOST-START.md`, `CODEX-GOAL.md`,
+     `CLAUDE-LOOP.md`, and `host-start-packet.json` when generated.
 
 3. Create an adoption packet when stateful reuse is needed and none exists:
 
@@ -71,6 +73,11 @@ progression fields, and state, and return one clear status: `DONE`,
    - `BLOCKED`: reliable progress is not possible with current evidence, or the
      next cursor / expected evidence / verifier is vague.
    - `BUDGET_STOPPED`: item, iteration, time, token, or cost cap was reached.
+
+When returning generated artifacts, surface `HOST-START.md` before asking the
+user to copy raw harness files. The host packets should be pasted into Codex
+`/goal` or Claude Code `/loop`; SixLoops supplies the loop contract and does
+not replace the host runtime.
 
 ## Ask Before High-Impact Finalization
 

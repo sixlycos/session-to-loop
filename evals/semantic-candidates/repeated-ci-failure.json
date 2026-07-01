@@ -95,11 +95,11 @@
           "reject_conditions": ["Same failure repeats twice.", "Push or merge required."],
           "no_progress_policy": "Stop when the same failure repeats twice or no evidence changes across two iterations."
         },
-        "loop_exit_contract": {
-          "continue_only_if": [
-            "Objective is unchanged.",
-            "Next action stays inside approved scope.",
-            "A verifier can reject bad output.",
+	        "loop_exit_contract": {
+	          "continue_only_if": [
+	            "Objective is unchanged.",
+	            "Next action stays inside approved scope.",
+	            "A verifier can reject bad output.",
             "New evidence changed or is likely from the next verifier.",
             "Fewer than 3 item(s) are active in this cycle.",
             "Fewer than 8 iteration(s) have run."
@@ -113,10 +113,74 @@
             "DONE": "Acceptance checks passed with required evidence; return for acceptance.",
             "NEEDS_HUMAN": "Return to user because human judgment or explicit approval is required.",
             "BLOCKED": "Reliable progress is not possible with current evidence or verifier.",
-            "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
-          }
-        },
-        "change_policy": "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval.",
+	            "BUDGET_STOPPED": "Item, iteration, time, token, or cost cap was reached."
+	          }
+	        },
+	        "progression_contract": {
+	          "rhythm": [
+	            "Read `.sixloops/state/ci-babysitter.json`, the goal, Change Map, and verifier before choosing work.",
+	            "Turn prior blockers or unfinished CI waves into candidate work before adding new work.",
+	            "Choose at most 3 CI failures or verifier blockers that can change evidence.",
+	            "Act only on selected failures, then verify before choosing the next status.",
+	            "End by writing the state delta and exact next cursor."
+	          ],
+	          "state_updates_required": [
+	            "change_map_delta",
+	            "evidence_delta",
+	            "selected_items",
+	            "completed_items",
+	            "blocked_items",
+	            "next_cursor",
+	            "next_trigger",
+	            "next_expected_evidence",
+	            "next_verifier",
+	            "candidate_next_items",
+	            "blocking_human_queue",
+	            "human_friction_delta"
+	          ],
+	          "continue_requires": [
+	            "next_cursor names the exact failed job, log line, test, file, or decision packet.",
+	            "next_cursor names one selected path, not mutually exclusive alternatives.",
+	            "next_expected_evidence states what new verifier evidence the next cycle should produce.",
+	            "next_verifier can reject bad output for the next action.",
+	            "blocking_human_queue is empty, or the selected next_cursor is explicitly non-blocking.",
+	            "human_friction_delta records whether this cycle removed repeated CI triage work."
+	          ],
+	          "stop_instead_of_continue_when": [
+	            "The next action would repeat log inspection without new evidence.",
+	            "The next cursor is vague.",
+	            "The next cursor contains unresolved alternatives.",
+	            "No verifier can reject the next action.",
+	            "Push, merge, or human judgment blocks the selected next action."
+	          ],
+	          "handoff_rule": "Finish every cycle with what changed, what evidence was gained, what remains, the exact next cursor, the next expected evidence, and whether another CI cycle is justified."
+	        },
+	        "autonomy_contract": {
+	          "decision_policy": [
+	            "Rank plausible next CI actions by user value, verifier availability, reversibility, risk, and progress toward the Change Map.",
+	            "Choose the highest-ranked non-blocking action inside the approved mode; do not ask the user for ordinary CI triage prioritization.",
+	            "If push or merge blocks the best action, select the best non-blocking evidence or cleanup action instead.",
+	            "Return to the user only when all useful non-blocking actions are exhausted or stronger approval is required."
+	          ],
+	          "self_iteration_policy": [
+	            "Prefer a coherent sequence of bounded CI fixes over one oversized patch.",
+	            "After each shot, use verifier evidence to update candidate_next_items and choose the next shot.",
+	            "Do not repeat a shot unless the next attempt uses new evidence, a narrower hypothesis, or a different verifier.",
+	            "Treat model judgment as the selector for the next bounded shot and deterministic checks as rejection gates."
+	          ],
+	          "subagent_control": [
+	            "Use phased coordination by default; start only roles needed for the selected shot.",
+	            "Start checker or verifier roles when they can reject output independently.",
+	            "Start maker roles only inside explicit edit scope and stop them after verification or blocker evidence.",
+	            "Do not keep subagents running after their evidence, patch, review, or verifier output has been integrated into state."
+	          ],
+	          "human_return_policy": [
+	            "Ask the user only for push, merge, release, security, data, production, irreversible, or scope-expanding decisions.",
+	            "Before asking, package options, impact, regression path, recommendation, and the best non-blocking action already attempted or rejected.",
+	            "Do not ask for ordinary prioritization when the model can choose using CI evidence, verifier availability, risk, and approved mode."
+	          ]
+	        },
+	        "change_policy": "If a fix is low risk and directly evidenced, use an isolated branch or worktree when available. Do not push or merge without approval.",
         "deliverables": ["Status summary", "Patch or branch/PR draft when verification passes", "Updated state file"],
         "resume_policy": "On the next run, read the state file and continue unresolved failures before new ones.",
         "failure_policy": "If the same failure repeats twice or verification is inconclusive, record the blocker and stop."

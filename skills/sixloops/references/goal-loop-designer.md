@@ -160,6 +160,10 @@ The script writes:
 - `TEAM.md`
 - `HANDOFF.md`
 - `AGENTS-snippet.md`
+- `HOST-START.md`
+- `CODEX-GOAL.md`
+- `CLAUDE-LOOP.md`
+- `host-start-packet.json`
 - `goal-loop-design.json`
 - `manifest.json`
 
@@ -170,7 +174,11 @@ fixtures or host-model-unavailable mode, not a substitute for model judgment.
 Use `subagent-team` only when team decomposition is useful. Use `phased` when
 the same agent should run the roles sequentially.
 
-Before presenting the result, check `loop-exit-contract.md`. The generated loop must explain when another cycle will add verified certainty and when it must return to the human. It must also show the progression contract: the next cursor, next expected evidence, next verifier, and human friction delta that make the next cycle natural. It must show the autonomy contract: model-led next-shot selection, self-iteration, subagent start-stop, and human return boundaries. User-facing presentation should lead with the `GOAL.md` Change Map, then the execution contract and one recommended confirmation reply; `RUN.md`, `VERIFY.md`, and `STATE.json` are agent-facing harness files.
+Before presenting the result, check `loop-exit-contract.md`. The generated loop must explain when another cycle will add verified certainty and when it must return to the human. It must also show the progression contract: the next cursor, next expected evidence, next verifier, and human friction delta that make the next cycle natural. It must show the autonomy contract: model-led next-shot selection, self-iteration, subagent start-stop, and human return boundaries. User-facing presentation should lead with the `GOAL.md` Change Map, then the execution contract and host-native start surface. `HOST-START.md` must identify local Codex and Claude Code availability, give exact copy commands for `CODEX-GOAL.md` and `CLAUDE-LOOP.md`, and explain how to paste them into Codex `/goal` or Claude Code `/loop`; `RUN.md`, `VERIFY.md`, and `STATE.json` are agent-facing harness files.
+
+Do not turn SixLoops into a competing loop runtime. SixLoops emits the policy,
+state, verifier, rollback, autonomy, and exit contract; Codex or Claude Code
+executes the loop through its own runtime.
 
 ## Output First
 
@@ -189,6 +197,7 @@ Lead with the Change Map, then the Start Plan:
 11. Review boundary and selected mode.
 12. Progression rhythm and required state delta.
 13. Autonomy policy for model decision and role control.
-14. Generated artifact paths.
+14. Host start packet paths and copy commands when artifacts are generated.
+15. Generated artifact paths.
 
 Put evidence limitations after the loop design. In demand-driven mode, the source is the user's current goal, not historical transcript evidence.

@@ -64,6 +64,30 @@ def main() -> int:
     if "{{" in rendered or "}}" in rendered:
         failures.append("unrendered template placeholder found")
 
+    for filename in ("HOST-START.md", "CODEX-GOAL.md", "CLAUDE-LOOP.md", "host-start-packet.json"):
+        if not (packet / filename).exists():
+            failures.append(f"missing host packet artifact {filename}")
+    if (packet / "host-start-packet.json").exists():
+        host_manifest = load_json(packet / "host-start-packet.json")
+        targets = host_manifest.get("targets", []) if isinstance(host_manifest, dict) else []
+        host_entries = {(target.get("host"), target.get("entrypoint")) for target in targets if isinstance(target, dict)}
+        if ("codex", "/goal") not in host_entries:
+            failures.append("host-start-packet.json missing codex /goal target")
+        if ("claude", "/loop") not in host_entries:
+            failures.append("host-start-packet.json missing claude /loop target")
+        governance = host_manifest.get("governance", {}) if isinstance(host_manifest, dict) else {}
+        for key in ("owner", "review_cadence", "maturity_tier", "lifecycle_stage", "rollback_boundary", "output_contract"):
+            if not governance.get(key):
+                failures.append(f"host-start-packet.json missing governance.{key}")
+    host_rendered = "\n".join(
+        path.read_text(encoding="utf-8", errors="ignore")
+        for path in (packet / "HOST-START.md", packet / "CODEX-GOAL.md", packet / "CLAUDE-LOOP.md")
+        if path.exists()
+    )
+    for marker in ("/goal", "/loop", "Autocorrection Strategy", "Exit Contract"):
+        if marker not in host_rendered:
+            failures.append(f"host packets missing {marker!r}")
+
     for failure in failures:
         print(f"FAIL {failure}")
     if failures:

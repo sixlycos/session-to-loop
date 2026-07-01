@@ -308,12 +308,24 @@ python skills/sixloops/scripts/design_goal_loop.py \
 are fallback scaffolding for demos and host-AI-unavailable runs, not the
 model-led product path.
 
-The output folder contains `GOAL.md`, `TEAM.md`, `STATE.json`, `HANDOFF.md`, and
-`AGENTS-snippet.md`.
+The output folder contains `GOAL.md`, `TEAM.md`, `STATE.json`, `HANDOFF.md`,
+`AGENTS-snippet.md`, and a host-native start surface:
+
+- `HOST-START.md`: detected local Codex / Claude Code availability and exact
+  copy commands.
+- `CODEX-GOAL.md`: complete packet to paste into Codex `/goal`.
+- `CLAUDE-LOOP.md`: complete packet to paste into Claude Code `/loop`.
+- `host-start-packet.json`: machine-readable target, copy-command, and
+  governance metadata.
 
 For direct goals, `GOAL.md` starts with a Change Map before the execution
 contract. It should show how X becomes B, what the change touches, how it
 regresses or rolls back, and which waves the loop will run.
+
+SixLoops does not replace the host runtime. It generates the loop policy,
+autocorrection rules, verifier, state contract, rollback boundary, and return
+points; Codex or Claude Code executes the loop after you copy the matching host
+packet.
 
 ![SixLoops can design a small agent team around one controlled loop](assets/readme/subagent-loop-table.png)
 

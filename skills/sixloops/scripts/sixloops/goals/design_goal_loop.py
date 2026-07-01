@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sixloops.core.autonomy_contract import build_autonomy_contract
+from sixloops.core.host_packets import build_host_manifest, render_host_packet, render_host_start
 from sixloops.core.loop_contract import build_exit_contract
 from sixloops.core.mode_policy import level_to_mode
 from sixloops.core.progression_contract import build_progression_contract
@@ -1867,6 +1868,53 @@ When the goal matches `{design["loop_id"]}`:
 """
 
 
+def host_packet_spec(design: dict, artifact_dir: Path) -> dict:
+    managed_loop = design["managed_loop"]
+    contract = managed_loop["completion_contract"]
+    progression = managed_loop["progression_contract"]
+    language = design_language(design)
+    is_zh = language == "zh"
+    return {
+        "source_kind": "goal-design",
+        "language": language,
+        "loop_id": design["loop_id"],
+        "name": design["name"],
+        "objective": design["goal"],
+        "project_root": str(Path(design.get("project_root") or ".").resolve()),
+        "mode": level_to_mode(design["adoption_level"]),
+        "internal_level": design["adoption_level"],
+        "team_mode": design["team_mode"],
+        "state_file": str(artifact_dir / "STATE.json"),
+        "max_items": managed_loop["max_items_per_cycle"],
+        "max_iterations": managed_loop["max_iterations_per_run"],
+        "change_map": render_change_map(design["change_map"], language),
+        "first_cycle": first_cycle_card(design),
+        "cycle_steps": start_card_items(managed_loop["cycle_steps"], language) if is_zh else managed_loop["cycle_steps"],
+        "selection_policy": start_card_items(managed_loop["selection_policy"], language) if is_zh else managed_loop["selection_policy"],
+        "verification": start_card_items(contract["verifier_commands"], language) if is_zh else contract["verifier_commands"],
+        "pass_evidence": start_card_items(contract["pass_evidence_required"], language) if is_zh else contract["pass_evidence_required"],
+        "approval_boundary": start_card_items(design["safety"]["requires_approval_for"], language) if is_zh else design["safety"]["requires_approval_for"],
+        "rollback_policy": start_card_items(
+            [
+                managed_loop["change_policy"],
+                "Use the generated packet as host input; SixLoops does not directly execute the loop.",
+                "Keep patch or decision packet output reviewable before applying irreversible changes.",
+            ],
+            language,
+        )
+        if is_zh
+        else [
+            managed_loop["change_policy"],
+            "Use the generated packet as host input; SixLoops does not directly execute the loop.",
+            "Keep patch or decision packet output reviewable before applying irreversible changes.",
+        ],
+        "exit_contract": managed_loop["loop_exit_contract"],
+        "progression_contract": progression,
+        "autonomy_contract": managed_loop["autonomy_contract"],
+        "state_updates_required": start_card_items(progression["state_updates_required"], language) if is_zh else progression["state_updates_required"],
+    }
+
+
 def write_text(path: Path, content: str, overwrite: bool) -> None:
     if path.exists() and not overwrite:
         raise FileExistsError(f"{path} already exists. Pass --overwrite to replace it.")
@@ -1882,6 +1930,12 @@ def write_json(path: Path, content: dict, overwrite: bool) -> None:
 def write_artifacts(design: dict, out_root: Path, overwrite: bool) -> Path:
     artifact_dir = out_root / design["loop_id"]
     artifact_dir.mkdir(parents=True, exist_ok=True)
+    host_files = {
+        "host_start": artifact_dir / "HOST-START.md",
+        "codex_goal": artifact_dir / "CODEX-GOAL.md",
+        "claude_loop": artifact_dir / "CLAUDE-LOOP.md",
+        "host_manifest": artifact_dir / "host-start-packet.json",
+    }
     manifest = {
         "version": 1,
         "created_at": now_iso(),
@@ -1899,8 +1953,14 @@ def write_artifacts(design: dict, out_root: Path, overwrite: bool) -> Path:
             "design": str(artifact_dir / "goal-loop-design.json"),
             "handoff": str(artifact_dir / "HANDOFF.md"),
             "agents_snippet": str(artifact_dir / "AGENTS-snippet.md"),
+            "host_start": str(host_files["host_start"]),
+            "codex_goal": str(host_files["codex_goal"]),
+            "claude_loop": str(host_files["claude_loop"]),
+            "host_manifest": str(host_files["host_manifest"]),
         },
     }
+    spec = host_packet_spec(design, artifact_dir)
+    host_manifest = build_host_manifest(spec, host_files)
     write_json(artifact_dir / "goal-loop-design.json", design, overwrite)
     write_json(artifact_dir / "STATE.json", build_state(design), overwrite)
     write_text(artifact_dir / "GOAL.md", render_goal(design), overwrite)
@@ -1909,6 +1969,10 @@ def write_artifacts(design: dict, out_root: Path, overwrite: bool) -> Path:
     write_text(artifact_dir / "TEAM.md", render_team(design), overwrite)
     write_text(artifact_dir / "HANDOFF.md", render_handoff(design, artifact_dir), overwrite)
     write_text(artifact_dir / "AGENTS-snippet.md", render_agents_snippet(design), overwrite)
+    write_text(host_files["codex_goal"], render_host_packet(spec, "codex"), overwrite)
+    write_text(host_files["claude_loop"], render_host_packet(spec, "claude"), overwrite)
+    write_json(host_files["host_manifest"], host_manifest, overwrite)
+    write_text(host_files["host_start"], render_host_start(host_manifest, spec["language"]), overwrite)
     write_json(artifact_dir / "manifest.json", manifest, overwrite)
     return artifact_dir
 
@@ -1944,6 +2008,7 @@ def main() -> int:
     print(f"- {artifact_dir / 'VERIFY.md'}")
     print(f"- {artifact_dir / 'TEAM.md'}")
     print(f"- {artifact_dir / 'goal-loop-design.json'}")
+    print(f"- {artifact_dir / 'HOST-START.md'}")
     return 0
 
 

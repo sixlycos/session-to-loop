@@ -90,8 +90,8 @@ Use the bundled scripts only when they reduce mechanical work:
 - `scripts/sixloops.py --input <file-or-dir>` prepares scoped, redacted
   packets and an `analysis-run.json` handoff.
 - `scripts/design_goal_loop.py --goal "<goal>" --model-design-file <model-authored.json> --out-dir <dir>`
-  renders a direct goal loop packet from a model-authored Change Map, domain,
-  level, team mode, and rationale.
+  renders a direct goal loop packet and host-native start packets from a
+  model-authored Change Map, domain, level, team mode, and rationale.
 - `scripts/adopt_candidate.py --candidates <candidates.json> --candidate-id <id> --mode "<mode>" --out-dir <dir>`
   creates a stateful adoption packet when reuse is needed.
 
@@ -121,6 +121,10 @@ Every startable candidate must include:
 - Stop condition and return point.
 - Exact reply strings such as `start <candidate-id> as read-only`,
   `shrink <candidate-id> to skill`, or `reject <candidate-id>`.
+- Host-native packet surface when artifacts are generated: `HOST-START.md`,
+  `CODEX-GOAL.md`, `CLAUDE-LOOP.md`, and `host-start-packet.json`. These
+  packets are the bridge into Codex `/goal` or Claude Code `/loop`; SixLoops
+  owns the loop policy, while the host runtime owns execution.
 
 Put detailed state, cycle, acceptance, exit, and economics in the card or
 adoption packet after the user chooses.

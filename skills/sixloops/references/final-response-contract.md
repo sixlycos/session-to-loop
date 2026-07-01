@@ -81,6 +81,13 @@ When the user asks to design from a goal, generate the goal-design packet with
 harness files are `STATE.json`, `RUN.md`, `VERIFY.md`, `TEAM.md`, `HANDOFF.md`, and
 `goal-loop-design.json`.
 
+When artifact generation creates host-native packets, include the `HOST-START.md`
+surface in the answer. It should tell the user which host commands are available
+locally, the exact copy command for `CODEX-GOAL.md` or `CLAUDE-LOOP.md`, and the
+host entrypoint (`/goal` for Codex, `/loop` for Claude Code). Do not present
+SixLoops as the runtime; SixLoops supplies the loop policy and the host runtime
+executes it.
+
 When the user explicitly asks to start a team loop and subagent tools are available, state which
 roles will run this cycle, then use `TEAM.md` prompts for the needed subagents. Spawn maker roles
 only when the chosen mode includes edit scope.

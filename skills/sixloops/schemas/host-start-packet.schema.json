@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sixloops.local/schemas/host-start-packet.schema.json",
+  "title": "SixLoops Host Start Packet",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "version",
+    "generated_at",
+    "loop_id",
+    "name",
+    "source_kind",
+    "project_root",
+    "runtime_boundary",
+    "environment",
+    "targets",
+    "files",
+    "governance"
+  ],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "generated_at": { "type": "string", "minLength": 1 },
+    "loop_id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "source_kind": {
+      "type": "string",
+      "enum": ["goal-design", "candidate-adoption"]
+    },
+    "project_root": { "type": "string", "minLength": 1 },
+    "runtime_boundary": { "type": "string", "minLength": 1 },
+    "environment": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["os", "codex", "claude", "clipboard"],
+      "properties": {
+        "os": { "type": "string" },
+        "codex": { "type": ["string", "null"] },
+        "claude": { "type": ["string", "null"] },
+        "clipboard": { "type": ["string", "null"] }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "host",
+          "entrypoint",
+          "available",
+          "packet_file",
+          "instruction"
+        ],
+        "properties": {
+          "host": { "type": "string", "enum": ["codex", "claude"] },
+          "entrypoint": { "type": "string", "enum": ["/goal", "/loop"] },
+          "available": { "type": "boolean" },
+          "binary": { "type": ["string", "null"] },
+          "packet_file": { "type": "string", "minLength": 1 },
+          "copy_command": { "type": ["string", "null"] },
+          "launch_command": { "type": ["string", "null"] },
+          "instruction": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "host_start",
+        "codex_goal",
+        "claude_loop",
+        "host_manifest"
+      ],
+      "properties": {
+        "host_start": { "type": "string", "minLength": 1 },
+        "codex_goal": { "type": "string", "minLength": 1 },
+        "claude_loop": { "type": "string", "minLength": 1 },
+        "host_manifest": { "type": "string", "minLength": 1 }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "owner",
+        "review_cadence",
+        "maturity_tier",
+        "lifecycle_stage",
+        "rollback_boundary",
+        "output_contract"
+      ],
+      "properties": {
+        "owner": { "type": "string", "minLength": 1 },
+        "review_cadence": { "type": "string", "minLength": 1 },
+        "maturity_tier": { "type": "string", "minLength": 1 },
+        "lifecycle_stage": { "type": "string", "minLength": 1 },
+        "rollback_boundary": { "type": "string", "minLength": 1 },
+        "output_contract": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

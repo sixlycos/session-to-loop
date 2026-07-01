@@ -75,7 +75,8 @@ delegation is not justified.
    available; they are fallback scaffolding only.
 
 6. Read generated `GOAL.md`, `STATE.json`, `RUN.md`, `VERIFY.md`, `TEAM.md`,
-   `HANDOFF.md`, and `goal-loop-design.json`.
+   `HANDOFF.md`, `HOST-START.md`, `CODEX-GOAL.md`, `CLAUDE-LOOP.md`,
+   `host-start-packet.json`, and `goal-loop-design.json`.
 7. Present the Change Map first, then the start plan:
    - what X is,
    - what B is,
@@ -90,6 +91,7 @@ delegation is not justified.
    - stop condition and return point,
    - selected mode,
    - generated artifact paths.
+   - host-native copy commands and host entrypoints when packets are generated.
 
 ## Team Policy
 

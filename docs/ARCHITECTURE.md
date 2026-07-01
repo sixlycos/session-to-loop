@@ -107,6 +107,8 @@ design_goal_loop.py
   -> STATE.json
   -> HANDOFF.md
   -> AGENTS-snippet.md
+  -> HOST-START.md / CODEX-GOAL.md / CLAUDE-LOOP.md
+  -> host-start-packet.json
   -> goal-loop-design.json
 ```
 
@@ -116,7 +118,26 @@ design_goal_loop.py
 adopt_candidate.py
   -> stateful run packet
   -> GOAL.md / STATE.json / HANDOFF.md / AGENTS-snippet.md
+  -> HOST-START.md / CODEX-GOAL.md / CLAUDE-LOOP.md / host-start-packet.json
 ```
+
+### Host-Native Start Packets
+
+SixLoops does not implement a competing loop runtime. Generated host packets are
+the governance bridge into host runtimes:
+
+- `HOST-START.md`: local environment detection, exact copy commands, and host
+  entrypoint instructions.
+- `CODEX-GOAL.md`: complete packet for Codex `/goal`.
+- `CLAUDE-LOOP.md`: complete packet for Claude Code `/loop`.
+- `host-start-packet.json`: machine-readable target, copy-command, file, and
+  governance metadata.
+
+This layer belongs in `skills/sixloops/scripts/sixloops/core/host_packets.py`
+because both direct goal design and candidate adoption must render the same
+host contract. It may detect local command availability and clipboard tooling,
+but it must not launch Codex, launch Claude Code, install hooks, push, merge,
+deploy, or mutate production systems.
 
 ## Dependency Direction
 
@@ -149,6 +170,7 @@ Use this table when adding or moving project material.
 | JSON handoff envelope for model-authored output | `skills/sixloops/schemas/` |
 | Stable documented command path | `skills/sixloops/scripts/*.py` wrapper |
 | Shared contracts, modes, transcript adapters | `skills/sixloops/scripts/sixloops/core/` |
+| Host-native packet rendering for Codex `/goal` and Claude Code `/loop` | `skills/sixloops/scripts/sixloops/core/host_packets.py` |
 | Transcript discovery, redaction, packets, safety guardrails, rendering | `skills/sixloops/scripts/sixloops/pipeline/` |
 | Direct goal design or candidate adoption packets | `skills/sixloops/scripts/sixloops/goals/` |
 | Rendered markdown shells or localized artifact text | `skills/sixloops/assets/templates/` |

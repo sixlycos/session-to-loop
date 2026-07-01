@@ -191,6 +191,41 @@ def assert_case(case: dict, case_dir: Path) -> list[str]:
         if not (design_dir / filename).exists():
             failures.append(f"missing artifact {filename}")
 
+    host_files = ["HOST-START.md", "CODEX-GOAL.md", "CLAUDE-LOOP.md", "host-start-packet.json"]
+    for filename in host_files:
+        if not (design_dir / filename).exists():
+            failures.append(f"missing host packet artifact {filename}")
+    host_manifest_path = design_dir / "host-start-packet.json"
+    if host_manifest_path.exists():
+        host_manifest = load_json(host_manifest_path)
+        targets = host_manifest.get("targets", []) if isinstance(host_manifest, dict) else []
+        host_entries = {(target.get("host"), target.get("entrypoint")) for target in targets if isinstance(target, dict)}
+        if ("codex", "/goal") not in host_entries:
+            failures.append("host-start-packet.json missing codex /goal target")
+        if ("claude", "/loop") not in host_entries:
+            failures.append("host-start-packet.json missing claude /loop target")
+        governance = host_manifest.get("governance", {}) if isinstance(host_manifest, dict) else {}
+        for key in ("owner", "review_cadence", "maturity_tier", "lifecycle_stage", "rollback_boundary", "output_contract"):
+            if not governance.get(key):
+                failures.append(f"host-start-packet.json missing governance.{key}")
+    if (design_dir / "HOST-START.md").exists():
+        host_start = (design_dir / "HOST-START.md").read_text(encoding="utf-8", errors="ignore")
+        for marker in ("/goal", "/loop", "CODEX-GOAL.md", "CLAUDE-LOOP.md"):
+            if marker not in host_start:
+                failures.append(f"HOST-START.md missing {marker!r}")
+    if (design_dir / "CODEX-GOAL.md").exists():
+        codex_goal = (design_dir / "CODEX-GOAL.md").read_text(encoding="utf-8", errors="ignore")
+        for marker in ("/goal", "CONTINUE", "DONE", "BLOCKED"):
+            if marker not in codex_goal:
+                failures.append(f"CODEX-GOAL.md missing {marker!r}")
+        if "Autocorrection Strategy" not in codex_goal and "自动纠正策略" not in codex_goal:
+            failures.append("CODEX-GOAL.md missing autocorrection strategy")
+    if (design_dir / "CLAUDE-LOOP.md").exists():
+        claude_loop = (design_dir / "CLAUDE-LOOP.md").read_text(encoding="utf-8", errors="ignore")
+        for marker in ("/loop", "CONTINUE", "DONE", "BLOCKED"):
+            if marker not in claude_loop:
+                failures.append(f"CLAUDE-LOOP.md missing {marker!r}")
+
     if expected.get("require_handoff_exit_contract"):
         handoff = (design_dir / "HANDOFF.md").read_text(encoding="utf-8", errors="ignore")
         goal = (design_dir / "GOAL.md").read_text(encoding="utf-8", errors="ignore")

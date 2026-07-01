@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from sixloops.core.autonomy_contract import normalize_autonomy_contract
+from sixloops.core.host_packets import build_host_manifest, render_host_packet, render_host_start
 from sixloops.core.loop_contract import normalize_exit_contract
 from sixloops.core.mode_policy import INTERNAL_TO_MODE, level_to_mode, mode_to_level
 from sixloops.core.progression_contract import normalize_progression_contract
@@ -914,6 +915,67 @@ When `{candidate_id}` is triggered:
 """
 
 
+def host_packet_spec(candidate: dict, level: str, artifact_dir: Path) -> dict:
+    managed_loop, contract = candidate_contract(candidate)
+    language = language_for_candidate(candidate)
+    candidate_id = str(candidate.get("id"))
+    mode = level_to_mode(level)
+    change_map = change_map_for_candidate(candidate, managed_loop, contract, language)
+    exits = exit_contract(candidate)
+    progression = progression_contract_for(managed_loop, language)
+    autonomy = autonomy_contract_for(managed_loop, language)
+    safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
+    approval_boundary = strings(safety.get("requires_approval_for") or candidate.get("approval_boundaries"))
+    verifier = strings(contract.get("verifier_commands") or candidate.get("verification"))
+    pass_evidence = strings(contract.get("pass_evidence_required")) or ["Command output, status, screenshot, schema result, or explicit verifier note."]
+    max_items = managed_loop.get("max_items_per_cycle", 3)
+    max_iterations = managed_loop.get("max_iterations_per_run", 8)
+    if language == "zh":
+        first_cycle = (
+            f"1. 读取 `STATE.json`、改造图景、候选 `{candidate_id}` 和项目规则。\n"
+            f"2. 最多选择 {max_items} 个能产生验收证据或降低风险的事项。\n"
+            f"3. 只在 `{mode}` 范围内行动；需要判断或更高权限时先写决策包。\n"
+            f"4. 用验收器验证，更新状态；达到 {max_iterations} 轮、无进展或触达返回点时停止。"
+        )
+    else:
+        first_cycle = (
+            f"1. Read `STATE.json`, the Change Map, candidate `{candidate_id}`, and project rules.\n"
+            f"2. Choose at most {max_items} item(s) that produce verifier evidence or reduce risk.\n"
+            f"3. Act only inside `{mode}`; write a decision packet before judgment or stronger authority.\n"
+            f"4. Verify, update state, and stop after {max_iterations} iterations, no progress, or a return point."
+        )
+    return {
+        "source_kind": "candidate-adoption",
+        "language": language,
+        "loop_id": candidate_id,
+        "name": candidate.get("name", candidate_id),
+        "objective": managed_loop.get("objective") or candidate.get("summary", "Run the loop."),
+        "project_root": str(Path(".").resolve()),
+        "mode": mode,
+        "internal_level": level,
+        "team_mode": managed_loop.get("team_mode") or "phased",
+        "state_file": str(artifact_dir / "STATE.json"),
+        "max_items": max_items,
+        "max_iterations": max_iterations,
+        "change_map": render_change_map(change_map, language),
+        "first_cycle": first_cycle,
+        "cycle_steps": strings(managed_loop.get("cycle_steps") or candidate.get("actions")),
+        "selection_policy": strings(managed_loop.get("selection_policy")) or [f"Choose at most {max_items} high-value item(s) per cycle."],
+        "verification": verifier or strings(candidate.get("verification")) or ["Run the focused verifier named by the project."],
+        "pass_evidence": pass_evidence,
+        "approval_boundary": approval_boundary or ["push", "merge", "deploy", "production", "data mutation", "credentials", "billing", "irreversible changes", "scope expansion"],
+        "rollback_policy": [
+            managed_loop.get("change_policy") or "Keep fixes local and reversible; do not push, merge, deploy, or mutate production without approval.",
+            "Use the generated packet as host input; SixLoops does not directly execute the loop.",
+            "Keep patch or decision packet output reviewable before applying irreversible changes.",
+        ],
+        "exit_contract": exits,
+        "progression_contract": progression,
+        "autonomy_contract": autonomy,
+        "state_updates_required": strings(progression.get("state_updates_required")),
+    }
+
+
 def write_text(path: Path, content: str, overwrite: bool) -> None:
     if path.exists() and not overwrite:
         raise FileExistsError(f"{path} already exists. Pass --overwrite to replace it.")
@@ -957,6 +1019,12 @@ def main() -> int:
     handoff_path = artifact_dir / "HANDOFF.md"
     snippet_path = artifact_dir / "AGENTS-snippet.md"
     manifest_path = artifact_dir / "manifest.json"
+    host_files = {
+        "host_start": artifact_dir / "HOST-START.md",
+        "codex_goal": artifact_dir / "CODEX-GOAL.md",
+        "claude_loop": artifact_dir / "CLAUDE-LOOP.md",
+        "host_manifest": artifact_dir / "host-start-packet.json",
+    }
 
     state = build_state(candidate, level, artifact_dir)
     manifest = {
@@ -974,13 +1042,23 @@ def main() -> int:
             "goal": str(goal_path),
             "handoff": str(handoff_path),
             "agents_snippet": str(snippet_path),
+            "host_start": str(host_files["host_start"]),
+            "codex_goal": str(host_files["codex_goal"]),
+            "claude_loop": str(host_files["claude_loop"]),
+            "host_manifest": str(host_files["host_manifest"]),
         },
     }
+    spec = host_packet_spec(candidate, level, artifact_dir)
+    host_manifest = build_host_manifest(spec, host_files)
 
     write_json(state_path, state, args.overwrite)
     write_text(goal_path, render_goal(candidate, level), args.overwrite)
     write_text(handoff_path, render_handoff(candidate, level, artifact_dir), args.overwrite)
     write_text(snippet_path, render_agents_snippet(candidate, level), args.overwrite)
+    write_text(host_files["codex_goal"], render_host_packet(spec, "codex"), args.overwrite)
+    write_text(host_files["claude_loop"], render_host_packet(spec, "claude"), args.overwrite)
+    write_json(host_files["host_manifest"], host_manifest, args.overwrite)
+    write_text(host_files["host_start"], render_host_start(host_manifest, spec["language"]), args.overwrite)
     write_json(manifest_path, manifest, args.overwrite)
 
     print(f"Created adoption packet: {artifact_dir}")
@@ -988,6 +1066,7 @@ def main() -> int:
     print(f"- {state_path}")
     print(f"- {handoff_path}")
     print(f"- {snippet_path}")
+    print(f"- {host_files['host_start']}")
     return 0
 
 
