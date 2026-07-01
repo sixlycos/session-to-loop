@@ -61,7 +61,8 @@ Inside the collection:
   routeable skills with their own `SKILL.md`.
 - `sixloops/references/` stores model-led workflow references, long-lived reasoning
   policy, routing rules, safety boundaries, scoring rubrics, and prompts.
-- `sixloops/schemas/` stores machine-readable handoff envelopes. They are transport
+- `sixloops/schemas/` stores machine-readable handoff envelopes and loop
+  contract shapes. They are transport
   shapes for model-authored output, not the source of semantic decisions.
 - `sixloops/assets/templates/` stores reusable rendered output shells.
 - `sixloops/scripts/*.py` contains stable command wrappers for documented invocations.

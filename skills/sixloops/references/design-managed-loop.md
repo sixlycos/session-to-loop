@@ -19,6 +19,10 @@ delegation is not justified.
    - regression, recovery, or compatibility checks,
    - rollout waves,
    - decision packets needed before human review.
+   - progression fields required before `CONTINUE`: `next_cursor`,
+     `next_expected_evidence`, `next_verifier`, and `human_friction_delta`.
+   - autonomy policy: model chooses the next bounded shot, controls necessary
+     roles, and asks the user only for true human judgment or stronger approval.
 3. Decide whether the goal is loop-shaped:
    - continued or recurring work,
    - observable inputs,
@@ -77,6 +81,8 @@ delegation is not justified.
    - what waves the loop will execute,
    - why the user would start it,
    - first cycle,
+   - progression rhythm,
+   - autonomous decision and role-control policy,
    - verifier,
    - stop condition and return point,
    - selected mode,

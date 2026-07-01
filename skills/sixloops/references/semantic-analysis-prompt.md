@@ -69,6 +69,8 @@ For each candidate, decide:
 - Whether the loop has an acceptance contract: success criteria, verifier commands or checks,
   evaluator, required pass evidence, reject conditions, no-progress policy, state schema, and explicit return point.
 - Whether the loop has an exit contract: continue-only-if conditions, done conditions, needs-human boundaries, blocked conditions, and budget-stop conditions.
+- Whether the loop has a progression contract: each cycle records what changed, the one selected next cursor, non-selected candidate next items, what new evidence it expects, which verifier can reject it, whether a blocking human queue exists, and whether user friction was reduced or increased.
+- Whether the loop has an autonomy contract: the model ranks plausible next actions, chooses the best non-blocking bounded shot, controls subagent start/stop, and returns to the user only for real human judgment or stronger approval.
 - Whether the loop has a Change Map: current X, target B, user perception, affected product/technical surfaces, regression or compatibility path, rollout waves, and decision packet triggers.
 
 ## Loop Standard
@@ -78,12 +80,24 @@ explicit user approval. A loop must say how X becomes B, what the user perceives
 technical surfaces it touches, how it regresses or remains compatible, how the agent can keep going
 without repeated user prompts, what it should inspect each cycle, how it picks the 1-3 highest-value
 items, what it may attempt in the recommended mode, how it isolates changes, how it verifies, where
-it records state, how the next run resumes, the hard iteration limit for one run, when it must stop,
-which heartbeat should start it, and the strongest useful start mode justified by evidence, reversibility, verification, and approval.
+it records state, how the next run resumes, what exact single next cursor and expected evidence make the
+next cycle natural, where non-selected alternatives are stored, the hard iteration limit for one run, when it must stop, which heartbeat should
+start it, and the strongest useful start mode justified by evidence, reversibility, verification, and approval.
 
-If a candidate has repeated steps but no acceptance contract, state schema, resume policy,
-verification, stop condition, budget cap, or explicit return point, recommend `skill` or `checklist`
-instead of `loop`.
+Do not put mutually exclusive alternatives into `next_cursor`. If the next step could be "public
+API/UI decision or low-risk callsite cleanup", either choose the one path that is inside the current
+mode, or return review-needed with a decision packet. Store non-selected alternatives in
+`candidate_next_items`.
+
+Do not treat ordinary next-step selection as a reason to ask the user. The point of a loop is to use
+model judgment to choose the next bounded shot from evidence, verifier availability, reversibility,
+risk, and approved mode. Return to the user only when the remaining choice requires product,
+architecture, release, security, data, billing, permission, production, irreversible, or
+scope-expanding judgment, or when explicit approval is required.
+
+If a candidate has repeated steps but no acceptance contract, state schema, progression contract,
+resume policy, verification, stop condition, budget cap, or explicit return point, recommend `skill`
+or `checklist` instead of `loop`.
 
 If a candidate cannot say when to continue and when to return to the human, recommend a smaller mechanism. A loop is a controlled state machine, not a long prompt.
 
@@ -163,7 +177,7 @@ For each candidate include:
 - `verifier_habits`: checks the user expects before acceptance.
 - `approval_boundaries`: actions that need the user.
 - `why_this_loop`, `why_not_smaller`, `why_not_more_autonomous`, and `where_this_may_be_wrong`.
-- `managed_loop` only when the AI can specify objective, state, cycle, verifier, budget, stop/reject conditions, resume policy, explicit return point, start mode, and exit contract.
+- `managed_loop` only when the AI can specify objective, state, cycle, verifier, budget, stop/reject conditions, progression contract, resume policy, explicit return point, start mode, and exit contract.
 
 Use the dominant language of the user's instructions for user-facing candidate text such as `name`, `summary`, `user_semantics`, `why_this_loop`, `why_not_smaller`, `why_not_more_autonomous`, `where_this_may_be_wrong`, managed-loop objectives, cycle descriptions, acceptance criteria, and review explanations. Keep schema keys, ids, status codes, file paths, and exact confirmation strings in English.
 
@@ -245,6 +259,64 @@ Write only JSON:
           "Attempt only low-risk local fixes with direct evidence.",
           "Run focused verification and record the result."
         ],
+        "progression_contract": {
+          "rhythm": [
+            "Read the state file, prior CI failure signatures, current CI status, failed logs, and verifier before choosing work.",
+            "Convert unresolved failures or repeated user corrections into candidate work before adding new failures.",
+            "Choose at most 3 failures that can produce new verifier evidence.",
+            "End each cycle by writing exact next_cursor, next_expected_evidence, next_verifier, and human_friction_delta."
+          ],
+          "state_updates_required": [
+            "change_map_delta",
+            "evidence_delta",
+            "selected_items",
+            "completed_items",
+            "blocked_items",
+            "next_cursor",
+            "next_trigger",
+            "next_expected_evidence",
+            "next_verifier",
+            "candidate_next_items",
+            "blocking_human_queue",
+            "human_friction_delta"
+          ],
+          "continue_requires": [
+            "next_cursor names the exact failed job, test, file, or blocker.",
+            "next_cursor names one selected path, not mutually exclusive alternatives.",
+            "next_expected_evidence states which local check or CI signal should change next.",
+            "next_verifier can reject bad output for the next action.",
+            "blocking_human_queue is empty, or the selected next_cursor is explicitly non-blocking.",
+            "human_friction_delta records whether this cycle avoided repeated user correction."
+          ],
+          "stop_instead_of_continue_when": [
+            "The next action would reread the same logs without a new check or patch.",
+            "The next cursor contains unresolved alternatives instead of one selected path.",
+            "No focused verifier exists for the next action.",
+            "Push, merge, or release approval is required."
+          ],
+          "handoff_rule": "Finish every cycle with what changed, what evidence was gained, what remains, the exact next cursor, the next expected evidence, and whether another cycle is justified."
+        },
+        "autonomy_contract": {
+          "decision_policy": [
+            "Rank plausible next actions by user value, verifier availability, reversibility, risk, and progress toward the Change Map.",
+            "Choose the highest-ranked non-blocking action inside the approved mode; do not ask the user for ordinary engineering prioritization.",
+            "If the highest-value path needs human approval, select the best non-blocking evidence or cleanup action first."
+          ],
+          "self_iteration_policy": [
+            "Prefer a coherent sequence of bounded shots over a single oversized one-shot.",
+            "After each shot, update candidate_next_items and choose the next shot from verifier evidence.",
+            "Do not repeat a shot without new evidence, a narrower hypothesis, or a different verifier."
+          ],
+          "subagent_control": [
+            "Start planner/checker/verifier roles when they can reduce uncertainty or reject output independently.",
+            "Start maker roles only inside explicit edit scope and stop them after the selected shot is verified or blocked.",
+            "Integrate subagent outputs into state before continuing."
+          ],
+          "human_return_policy": [
+            "Ask the user only for product, architecture, release, security, data, billing, permission, production, irreversible, or scope-expanding decisions.",
+            "Before asking, package options, impact, regression path, recommendation, and the best non-blocking action already attempted or rejected."
+          ]
+        },
         "selection_policy": ["Prefer failures blocking merge.", "Ignore flakes without new evidence."],
         "max_items_per_cycle": 3,
         "max_iterations_per_run": 8,

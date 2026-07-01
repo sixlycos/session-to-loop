@@ -79,6 +79,8 @@ def build_exit_contract(
             "A verifier can reject bad output.",
             "The Change Map can be updated or the next action can produce evidence for it.",
             "New evidence changed or is likely from the next verifier.",
+            "next_cursor, next_expected_evidence, and next_verifier are concrete.",
+            "No blocking human_queue item prevents the selected next_cursor.",
             "Risk stays below the approved mode and explicit return points.",
             "The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.",
             f"Fewer than {max_items} item(s) are active in this cycle.",

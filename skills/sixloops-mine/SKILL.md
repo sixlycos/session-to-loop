@@ -19,8 +19,8 @@ downgrade unsafe candidates, and render model-authored output.
 4. Analyze packets with `../sixloops/references/semantic-analysis-prompt.md`.
    Use `../sixloops/schemas/semantic-candidates.schema.json` only as the
    handoff envelope.
-5. Present concrete Start Plans first: user value, verifier, stop/review
-   boundary, and exact reply strings.
+5. Present concrete Start Plans first: user value, progression rhythm, verifier,
+   stop/review boundary, and exact reply strings.
 
 ## Hard Rules
 

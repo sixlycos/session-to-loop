@@ -19,6 +19,17 @@ naming, judgment, and explanation through skill prompts. The Python pipeline is
 deliberately boring: discover narrow inputs, redact, packetize, apply
 deterministic checks, and render model-authored artifacts.
 
+A real loop also has to progress naturally. Before a cycle continues, SixLoops
+artifacts require the agent to write `next_cursor`, `next_expected_evidence`,
+`next_verifier`, and `human_friction_delta`: where the next cycle resumes, what
+new evidence it expects, what can reject it, and whether repeated human
+explanation was reduced. Otherwise the loop should stop, return, or shrink to a
+smaller mechanism.
+When several next actions are plausible, the model should rank them by value,
+risk, reversibility, and verifier path, choose the best bounded step, and
+control the necessary subagent roles. It should ask the user only when human
+judgment or stronger approval is genuinely required.
+
 The product and repository are `sixloops`; the installed package is a small
 skill collection: `sixloops`, `sixloops-mine`, `sixloops-design`, and
 `sixloops-adopt`.
@@ -73,6 +84,7 @@ plan explains:
 - what stays outside the current mode
 - how it verifies success
 - when it stops
+- how the next cycle resumes naturally instead of rerunning the same prompt
 - when it returns to the user
 - whether it should start, shrink, or be rejected
 

@@ -36,6 +36,8 @@ Every goal loop must include:
 - Success criteria and pass evidence.
 - Stop conditions and no-progress policy.
 - Loop exit contract with `CONTINUE`, `DONE`, review-needed, `BLOCKED`, and `BUDGET_STOPPED` boundaries. Internal JSON may still use `NEEDS_HUMAN`. `NEEDS_HUMAN` should mean that a decision packet or approval boundary is ready, not that the agent merely noticed uncertainty.
+- Progression contract: what each cycle must record, where the next cycle resumes, what new evidence the next cycle expects, which verifier can reject it, and how much repeated human correction was removed or introduced.
+- Autonomy contract: how the model chooses the next bounded shot from candidate next items, controls planner/maker/checker/verifier role start-stop, and avoids asking the user for ordinary engineering prioritization.
 - State file and resume policy.
 - Run protocol and verifier protocol.
 - Review boundary and the mode required for higher-impact actions.
@@ -45,11 +47,13 @@ If the goal is vague, design a read-only or planning loop first. If the user gra
 
 Before designing a managed loop, run the same fit test used for transcript-derived candidates:
 
-- The goal is likely to recur or continue across multiple cycles.
+- The goal is likely to recur or continue across multiple cycles, and each cycle can leave a concrete next cursor instead of restarting the same prompt.
 - Objective checks can reject bad output.
 - The agent can inspect or run the changed system.
 - The loop has explicit item, iteration, time, token, or cost caps.
 - High-impact actions require the matching user-approved mode or explicit approval before merge, deploy, dependency, credential, schema, data, payment, or production changes.
+- `CONTINUE` is justified only when the next cursor, expected evidence, and next verifier are concrete.
+- Review-needed is justified only after the model has selected or exhausted useful non-blocking actions inside the approved mode.
 
 If the fit test fails, return a Change Map, read-only loop, skill, checklist, decision packet, approval gate, or rejection instead of a delegated loop.
 
@@ -161,7 +165,7 @@ fixtures or host-model-unavailable mode, not a substitute for model judgment.
 Use `subagent-team` only when team decomposition is useful. Use `phased` when
 the same agent should run the roles sequentially.
 
-Before presenting the result, check `loop-exit-contract.md`. The generated loop must explain when another cycle will add verified certainty and when it must return to the human. User-facing presentation should lead with the `GOAL.md` Change Map, then the execution contract and one recommended confirmation reply; `RUN.md`, `VERIFY.md`, and `STATE.json` are agent-facing harness files.
+Before presenting the result, check `loop-exit-contract.md`. The generated loop must explain when another cycle will add verified certainty and when it must return to the human. It must also show the progression contract: the next cursor, next expected evidence, next verifier, and human friction delta that make the next cycle natural. It must show the autonomy contract: model-led next-shot selection, self-iteration, subagent start-stop, and human return boundaries. User-facing presentation should lead with the `GOAL.md` Change Map, then the execution contract and one recommended confirmation reply; `RUN.md`, `VERIFY.md`, and `STATE.json` are agent-facing harness files.
 
 ## Output First
 
@@ -178,6 +182,8 @@ Lead with the Change Map, then the Start Plan:
 9. Verifier.
 10. Stop condition.
 11. Review boundary and selected mode.
-12. Generated artifact paths.
+12. Progression rhythm and required state delta.
+13. Autonomy policy for model decision and role control.
+14. Generated artifact paths.
 
 Put evidence limitations after the loop design. In demand-driven mode, the source is the user's current goal, not historical transcript evidence.

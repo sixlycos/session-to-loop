@@ -84,7 +84,17 @@
           },
           "managed_loop": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": true,
+            "properties": {
+              "progression_contract": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "autonomy_contract": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
           },
           "safety": {
             "type": "object",

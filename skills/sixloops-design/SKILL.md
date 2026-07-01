@@ -19,6 +19,9 @@ packet, verify, preserve state, and stop without repeated user prompting.
    - affected product and technical surfaces,
    - regression or compatibility checks,
    - rollout waves and decision packet triggers.
+   - progression contract: next cursor, expected evidence, next verifier, and
+     human-friction delta required before `CONTINUE`; `next_cursor` must be one
+     selected path, with alternatives stored separately.
 3. Test whether the goal is actually loop-shaped: recurring or continuing
    work, observable inputs, objective rejection signal, bounded actions, hard
    stop, and explicit return points for high-impact actions.
@@ -27,8 +30,8 @@ packet, verify, preserve state, and stop without repeated user prompting.
    `../sixloops/scripts/design_goal_loop.py --goal "<goal>" --model-design-file <json> --out-dir .sixloops/goal-design`
    only when an artifact packet is useful.
 5. Present the Change Map first, then the start plan: why the user would start
-   it, first cycle, verifier, stop condition, return point, selected mode, and artifact
-   paths.
+   it, first cycle, progression rhythm, verifier, stop condition, return point,
+   selected mode, and artifact paths.
 
 ## Shrink Only When
 

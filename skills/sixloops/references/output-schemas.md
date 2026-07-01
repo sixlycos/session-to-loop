@@ -21,6 +21,10 @@ Use these structures when producing machine-readable artifacts. Markdown reports
 - `managed_loop.completion_contract`: mandatory for real loops; defines success criteria, verifier commands, evaluator, pass evidence, reject conditions, and no-progress policy.
 - `managed_loop.loop_exit_contract`: mandatory for goal-ready loops; defines when to continue, return done, ask a human, block, or stop by budget.
 - `schemas/loop-exit-contract.schema.json`: machine-readable shape for the mandatory exit contract.
+- `managed_loop.progression_contract`: mandatory for natural loops; defines per-cycle rhythm, required state deltas, one selected next cursor, concrete fields needed before `CONTINUE`, and when to stop instead of repeating the same prompt or hiding a human decision.
+- `schemas/loop-progression-contract.schema.json`: machine-readable shape for the progression contract.
+- `managed_loop.autonomy_contract`: mandatory for model-led loops; defines how the model ranks plausible next actions, chooses the next bounded shot, starts/stops subagents, self-iterates, and returns only for real human judgment or stronger approval.
+- `schemas/loop-autonomy-contract.schema.json`: machine-readable shape for the autonomy contract.
 - `managed_loop.state_schema`: minimal durable state ledger the loop must update before stopping.
 - `managed_loop.status_protocol`: allowed statuses: `DONE`, `CONTINUE`, `BLOCKED`, `NEEDS_HUMAN`, and `BUDGET_STOPPED`.
 - `economics`: lightweight cost and acceptance estimate: trigger frequency, expected per-run cost, automatic rejection signals, human review load, demotion threshold, and budget caps.
@@ -153,6 +157,51 @@ managed_loop:
       - "Same failure repeats twice."
       - "Push or merge is required."
     no_progress_policy: "Stop when the same failure repeats twice or no evidence changes across two iterations."
+  progression_contract:
+    rhythm:
+      - "Read the state file, goal, Change Map, and verifier before choosing work."
+      - "Turn prior blockers, repeated human corrections, or unfinished waves into candidate work before adding new work."
+      - "Choose at most 3 item(s) that can change evidence, narrow risk, or clarify a blocker."
+      - "End by writing the state delta and the next cursor before returning or continuing."
+    state_updates_required:
+      - "change_map_delta"
+      - "evidence_delta"
+      - "selected_items"
+      - "completed_items"
+      - "blocked_items"
+      - "next_cursor"
+      - "next_trigger"
+      - "next_expected_evidence"
+      - "next_verifier"
+      - "candidate_next_items"
+      - "blocking_human_queue"
+      - "human_friction_delta"
+    continue_requires:
+      - "next_cursor names the exact failed job, file, test, route, log, check, or decision packet."
+      - "next_cursor names one selected path, not mutually exclusive alternatives."
+      - "next_expected_evidence states what new verifier evidence the next cycle should produce."
+      - "next_verifier can reject bad output for the next action."
+      - "blocking_human_queue is empty, or the selected next_cursor is explicitly non-blocking."
+      - "human_friction_delta records whether this cycle removed or added repeated user work."
+    stop_instead_of_continue_when:
+      - "The next action would repeat the same observation without new evidence."
+      - "The next cursor is vague, such as 'continue later' or 'keep working'."
+      - "The next cursor contains unresolved alternatives instead of one selected path."
+      - "No verifier can reject the next action."
+    handoff_rule: "Finish every cycle with what changed, what evidence was gained, what remains, the exact next cursor, the next expected evidence, and whether another cycle is justified."
+  autonomy_contract:
+    decision_policy:
+      - "Rank plausible next actions by user value, verifier availability, reversibility, risk, and progress toward the Change Map."
+      - "Choose the highest-ranked non-blocking action inside the approved mode; do not ask the user for ordinary engineering prioritization."
+    self_iteration_policy:
+      - "Prefer a coherent sequence of bounded shots over a single oversized one-shot."
+      - "After each shot, update candidate_next_items and choose the next shot from verifier evidence."
+    subagent_control:
+      - "Start planner/checker/verifier roles when they can reduce uncertainty or reject output independently."
+      - "Start maker roles only inside explicit edit scope and stop them after the selected shot is verified or blocked."
+    human_return_policy:
+      - "Ask the user only for product, architecture, release, security, data, billing, permission, production, irreversible, or scope-expanding decisions."
+      - "Before asking, package options, impact, regression path, recommendation, and the best non-blocking action already attempted or rejected."
   loop_exit_contract:
     continue_only_if:
       - "Objective is unchanged."

@@ -9,7 +9,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from sixloops.core.autonomy_contract import build_autonomy_contract, validate_autonomy_contract
 from sixloops.core.loop_contract import build_exit_contract, validate_exit_contract
+from sixloops.core.progression_contract import build_progression_contract, validate_progression_contract
 
 
 DEFAULT_SIGNALS = Path(".sixloops/private/signals.json")
@@ -313,6 +315,13 @@ def default_state_schema() -> dict:
         "items": "Tracked work items with status: inbox, active, blocked, done.",
         "attempts": "Attempt log with action, verification result, and timestamp.",
         "failures": "Failure signatures, repeat count, and blocker reason.",
+        "progression_log": "Per-cycle deltas: what changed, what remains, and why continue or stop.",
+        "autonomy_log": "Per-cycle model decision: ranked candidate actions, selected shot, subagent starts/stops, and why no human prompt was needed.",
+        "next_trigger": "The next condition, event, or user reply that should resume this loop.",
+        "next_expected_evidence": "The new evidence the next cycle is expected to produce.",
+        "next_verifier": "The verifier that can reject the next cycle's output.",
+        "candidate_next_items": "Non-selected possible next steps; these are not the active cursor.",
+        "blocking_human_queue": "Human decisions or approvals that block the selected next cursor.",
         "next_cursor": "Where the next run should resume.",
         "human_decisions": "Approvals, rejections, or decisions that changed the loop boundary.",
     }
@@ -341,18 +350,30 @@ def enrich_profile(candidate_id: str, base_profile: dict) -> dict:
         return profile
     managed_loop = dict(base_profile["managed_loop"])
     managed_loop.setdefault("discovery_sources", profile.get("inputs", []) or profile.get("trigger", []))
+    managed_loop.setdefault("state_file", f".sixloops/state/{candidate_id}.json")
     managed_loop.setdefault("state_schema", default_state_schema())
     completion_contract = managed_loop.setdefault("completion_contract", default_completion_contract(profile))
+    max_items = managed_loop.get("max_items_per_cycle", 3)
+    max_iterations = managed_loop.get("max_iterations_per_run", 8)
     managed_loop.setdefault(
         "loop_exit_contract",
         build_exit_contract(
             success_criteria=completion_contract.get("success_criteria"),
             reject_conditions=completion_contract.get("reject_conditions") or profile.get("stop_conditions"),
             approval_boundary=profile.get("requires_approval_for"),
-            max_items=managed_loop.get("max_items_per_cycle", 3),
-            max_iterations=managed_loop.get("max_iterations_per_run", 8),
+            max_items=max_items,
+            max_iterations=max_iterations,
         ),
     )
+    managed_loop.setdefault(
+        "progression_contract",
+        build_progression_contract(
+            max_items=max_items,
+            max_iterations=max_iterations,
+            state_file=managed_loop["state_file"],
+        ),
+    )
+    managed_loop.setdefault("autonomy_contract", build_autonomy_contract(team_mode=str(profile.get("team_mode") or "phased")))
     managed_loop.setdefault(
         "promotion_criteria",
         ["Promote only after repeated runs pass verification and human review accepts the output."],
@@ -361,7 +382,6 @@ def enrich_profile(candidate_id: str, base_profile: dict) -> dict:
         "demotion_criteria",
         ["Demote when outputs are rejected, verification is inconclusive, cost grows, or human judgment is repeatedly required."],
     )
-    managed_loop.setdefault("state_file", f".sixloops/state/{candidate_id}.json")
     profile["managed_loop"] = managed_loop
     return profile
 
@@ -375,6 +395,8 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
     completion_contract = managed_loop.get("completion_contract", {})
     exit_contract = managed_loop.get("loop_exit_contract", {})
     exit_validation = validate_exit_contract(exit_contract)
+    progression_validation = validate_progression_contract(managed_loop.get("progression_contract"))
+    autonomy_validation = validate_autonomy_contract(managed_loop.get("autonomy_contract"))
     has_project_context_evidence = provider_counts.get("auxiliary", 0) > 0
     criteria = {
         "requested_loop_mechanism": "loop" in mechanisms,
@@ -409,6 +431,8 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_human_checkpoint": bool(profile.get("requires_approval_for")),
         "has_budget_cap": bool(managed_loop.get("max_iterations_per_run")),
         "has_loop_exit_contract": exit_validation["valid"],
+        "has_progression_contract": progression_validation["valid"],
+        "has_autonomy_contract": autonomy_validation["valid"],
         "has_all_exit_statuses": not exit_validation["missing_statuses"],
         "has_continue_gate": bool(exit_contract.get("continue_only_if")),
         "has_budget_stop": bool(exit_contract.get("budget_stopped_when")),
@@ -441,6 +465,8 @@ def loop_eligibility(signal: dict, mechanisms: list[str], profile: dict) -> dict
         "has_human_checkpoint",
         "has_budget_cap",
         "has_loop_exit_contract",
+        "has_progression_contract",
+        "has_autonomy_contract",
         "has_all_exit_statuses",
         "has_continue_gate",
         "has_budget_stop",

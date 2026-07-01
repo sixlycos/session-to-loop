@@ -35,6 +35,33 @@ Each operational turn has four beats:
 - Act: make the smallest bounded move that the current evidence supports.
 - Verify: run the independent check, record evidence, and decide whether to stop, continue, retry, or escalate.
 
+Each cycle also needs a progression handoff. Before returning `CONTINUE`, the agent must write:
+
+- What changed in the Change Map or verifier evidence.
+- The exact next cursor: wave, item, file, route, log, check, or decision packet.
+- Exactly one selected next cursor. Mutually exclusive alternatives belong in
+  `candidate_next_items` or a decision packet, not in `next_cursor`.
+- The next expected evidence.
+- The next verifier that can reject bad output.
+- Any blocking human decision or approval in `blocking_human_queue`.
+- Whether the cycle removed or added repeated human work.
+
+If the next cursor is vague, contains an unresolved "or" between paths, is
+blocked by human judgment, or the next verifier cannot reject the action, stop
+or return for review instead of continuing.
+
+Before stopping for review, the model must first exercise autonomous judgment:
+
+- Rank plausible next actions by user value, verifier availability,
+  reversibility, risk, and progress toward the Change Map.
+- Choose the best non-blocking action inside the approved mode instead of
+  asking the user for ordinary engineering prioritization.
+- Prefer a coherent sequence of bounded shots over one oversized one-shot.
+- Start planner, checker, verifier, or maker roles only when the selected shot
+  needs them; stop those roles after their output is integrated into state.
+- Return to the user only when the selected path needs human judgment, stronger
+  approval, or all useful non-blocking work is exhausted.
+
 The six parts that usually realize those moves are:
 
 - Automation: schedule or event trigger.
@@ -148,6 +175,10 @@ Only recommend a managed loop when these gates are present:
 - Completion: the agent can carry the work far enough without returning most of it to the user.
 - Objectivity: "done" can be checked by observable criteria.
 - State: each run records what was tried, what failed, and what should happen next.
+- Progression: each cycle records one selected next cursor, expected evidence,
+  verifier, blocking human queue, and human-friction delta before continuing.
+- Autonomy: the model selects the next bounded shot and controls role start/stop
+  until human judgment or stronger approval is genuinely required.
 - Stop: success and failure exits are explicit.
 - Iteration cap: every run has a hard attempt limit.
 - Return point: high-impact or judgment-heavy work has a clear place to come back with evidence, options, impact, and a recommendation.
@@ -163,6 +194,9 @@ A managed loop must compile these gates into an acceptance contract:
 - Pass evidence: command output, status, screenshot, schema result, or explicit verifier note.
 - Reject conditions: what makes the loop stop, shrink to a smaller mechanism, or ask for a human.
 - State schema: what the loop writes before stopping so the next run can resume.
+- Progression contract: what changed, where the next cycle resumes, what evidence it expects, and why continuing is justified.
+- Autonomy contract: how the model ranks options, chooses the next bounded shot,
+  starts/stops subagents, and avoids unnecessary human prompts.
 - No-progress policy: how repeated failures or unchanged evidence stop the run.
 - Return point: actions that require a stronger mode, explicit approval, or human judgment before they are finalized.
 
@@ -184,6 +218,9 @@ Every cycle must end with exactly one status:
 
 Read `loop-exit-contract.md` when rendering goal-ready artifacts. If a proposal cannot say when to
 continue and when to return to the human, turn it into a skill, checklist, or prompt.
+If it cannot name one selected next cursor, next expected evidence, and next
+verifier, do not continue the loop; update state and return `BLOCKED`,
+review-needed, or `BUDGET_STOPPED` as appropriate.
 
 ## Minimum Loop Readiness
 
@@ -194,6 +231,9 @@ Before recommending unattended execution or draft-producing autonomy, require:
 - Isolated branch, checkout, or worktree for edits.
 - Read-only checker, deterministic verifier, or both.
 - State file that is read first and updated before stopping.
+- Progression fields that are updated before continuing: `next_cursor`,
+  `candidate_next_items`, `next_expected_evidence`, `next_verifier`,
+  `blocking_human_queue`, and `human_friction_delta`.
 - Return point for risky, irreversible, product, release, security, data, or cost decisions.
 - Logs or notifications so failures, blockers, and created artifacts are visible.
 
@@ -208,6 +248,8 @@ If any item is missing, start lower on the mode ladder.
 - Blind loop: discovery is skipped and the human still chooses every task.
 - Tangled loop: handoff or isolation is skipped and parallel agents collide.
 - Drift loop: long runs lose standing constraints unless they reread the goal, state, and project rules.
+- Forked-cursor loop: `CONTINUE` points to multiple unresolved alternatives, so the next run chooses direction by vibe instead of state.
+- Hidden-human-gate loop: `CONTINUE` is returned even though a human decision blocks the selected next action.
 - Permission-creep loop: a read-only loop gains write or production permissions without a stronger approved mode and explicit return point.
 
 Use these names when rejecting or shrinking a candidate. They are clearer than vague warnings like "needs more safety."

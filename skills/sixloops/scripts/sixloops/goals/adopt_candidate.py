@@ -11,8 +11,10 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from sixloops.core.autonomy_contract import normalize_autonomy_contract
 from sixloops.core.loop_contract import normalize_exit_contract
 from sixloops.core.mode_policy import INTERNAL_TO_MODE, level_to_mode, mode_to_level
+from sixloops.core.progression_contract import normalize_progression_contract
 
 
 DEFAULT_CANDIDATES = Path(".sixloops/private/candidates.json")
@@ -115,9 +117,52 @@ ZH_TEXT = {
     "A verifier can reject bad output.": "验收器能够拒绝错误产出。",
     "The Change Map can be updated or the next action can produce evidence for it.": "Change Map 可以被更新，或下一步能为它产生证据。",
     "New evidence changed or is likely from the next verifier.": "已有新证据变化，或下一轮验收可能产生新证据。",
+    "next_cursor, next_expected_evidence, and next_verifier are concrete.": "`next_cursor`、`next_expected_evidence` 和 `next_verifier` 都是具体的。",
+    "No blocking human_queue item prevents the selected next_cursor.": "没有阻塞型 `human_queue` 事项阻止已选择的 `next_cursor`。",
     "Risk stays below the approved mode and explicit return points.": "风险仍低于当前批准模式和明确返回点。",
     "The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.": "上一轮改变了证据、收窄了范围、减少了失败，或明确了阻塞点。",
     "Token, time, cost, or tool budget is reached.": "token、时间、成本或工具预算达到上限。",
+    "End by writing the state delta and the next cursor before returning or continuing.": "返回或继续前，先写入状态变化和下一步位置。",
+    "Act only on the selected item(s), then verify before choosing the next status.": "只处理已选事项，并在选择下一状态前完成验证。",
+    "Turn prior blockers, repeated human corrections, or unfinished waves into candidate work before adding new work.": "新增事项前，先把上轮阻塞、重复人工纠正或未完成波次转成候选事项。",
+    "change_map_delta": "`change_map_delta`",
+    "evidence_delta": "`evidence_delta`",
+    "selected_items": "`selected_items`",
+    "completed_items": "`completed_items`",
+    "blocked_items": "`blocked_items`",
+    "next_cursor": "`next_cursor`",
+    "next_trigger": "`next_trigger`",
+    "next_expected_evidence": "`next_expected_evidence`",
+    "next_verifier": "`next_verifier`",
+    "candidate_next_items": "`candidate_next_items`",
+    "blocking_human_queue": "`blocking_human_queue`",
+    "human_friction_delta": "`human_friction_delta`",
+    "next_cursor names the exact unfinished wave, item, file, route, log, check, or decision packet.": "`next_cursor` 必须指出具体未完成波次、事项、文件、路由、日志、检查或决策包。",
+    "next_cursor names one selected path, not mutually exclusive alternatives.": "`next_cursor` 必须是一个已选择路径，不能是互斥备选项列表。",
+    "next_expected_evidence states what new verifier evidence the next cycle should produce.": "`next_expected_evidence` 必须说明下一轮应产生什么新的验收证据。",
+    "next_verifier can reject bad output for the next action.": "`next_verifier` 必须能拒绝下一步的错误产出。",
+    "blocking_human_queue is empty, or the selected next_cursor is explicitly non-blocking.": "`blocking_human_queue` 必须为空，或已选择的 `next_cursor` 明确不受其阻塞。",
+    "human_friction_delta records whether this cycle removed or added repeated user work.": "`human_friction_delta` 必须记录本轮减少还是增加了重复人工解释。",
+    "The next action would repeat the same observation without new evidence.": "下一步只是重复观察，不能产生新证据。",
+    "The next cursor is vague, such as 'continue later' or 'keep working'.": "下一步位置含糊，例如“稍后继续”或“继续做”。",
+    "The next cursor contains unresolved alternatives instead of one selected path.": "下一步位置包含未解决的备选分支，而不是一个已选择路径。",
+    "No verifier can reject the next action.": "没有验收器能拒绝下一步动作。",
+    "Human judgment or a stronger approval mode blocks the selected next action.": "人工判断或更高批准模式正在阻塞已选择的下一步。",
+    "Finish every cycle with: what changed, what evidence was gained, what remains, the exact next cursor, the next expected evidence, and whether another cycle is justified.": "每轮结束时写清：发生了什么变化、得到什么证据、还剩什么、精确下一步位置、下一轮预期证据，以及下一轮是否值得继续。",
+    "When multiple next actions are plausible, rank them by user value, verifier availability, reversibility, risk, and progress toward the Change Map.": "存在多个可行下一步时，按用户价值、验收可用性、可回退性、风险和对 Change Map 的推进程度排序。",
+    "Choose the highest-ranked action that is inside the approved mode and has a verifier; do not ask the user to choose ordinary engineering next steps.": "选择已批准模式内、且有验收器的最高排序动作；不要让用户替模型选择普通工程下一步。",
+    "If the highest-value action is blocked by human approval or product judgment, select the best non-blocking evidence or cleanup action instead.": "如果最高价值动作被人工批准或产品判断阻塞，就改选最佳的非阻塞证据扫描或清理动作。",
+    "Return to the user only when all useful non-blocking actions are exhausted or the selected action requires human judgment or stronger approval.": "只有所有有用的非阻塞动作都耗尽，或已选择动作需要人工判断/更高授权时，才交还用户。",
+    "Prefer a coherent sequence of bounded shots over a single oversized one-shot.": "优先用连贯的多个有边界步骤，而不是一个过大的 one-shot。",
+    "After each shot, use verifier evidence to update candidate_next_items, choose the next shot, and continue while risk and budget remain in scope.": "每一步后，用验收证据更新 `candidate_next_items`，选择下一步；只要风险和预算仍在范围内就继续。",
+    "Do not repeat a shot unless the next attempt uses new evidence, a narrower hypothesis, or a different verifier.": "不要重复同一步，除非下一次使用了新证据、更窄假设或不同验收器。",
+    "Treat model judgment as the selector for the next bounded shot; treat deterministic checks as rejection gates.": "把模型判断作为下一步有边界动作的选择器，把确定性检查作为拒绝门。",
+    "Start planner/checker/verifier roles when they can reduce uncertainty or reject output independently.": "当规划者、检查者或验收者能降低不确定性或独立拒绝产出时启动它们。",
+    "Start maker roles only inside explicit edit scope and stop them after the selected shot is verified or blocked.": "执行角色只在明确编辑范围内启动，并在已选步骤被验证或阻塞后停止。",
+    "Do not keep subagents running after their evidence, patch, review, or verifier output has been integrated into state.": "子角色的证据、补丁、审查或验收输出整合进状态后，不要继续保留其运行。",
+    "Ask the user only for product, architecture, release, security, data, billing, permission, production, irreversible, or scope-expanding decisions.": "只在产品、架构、发布、安全、数据、计费、权限、生产、不可逆或扩范围决策时询问用户。",
+    "Before asking, package options, impact, regression path, recommendation, and the best non-blocking action already attempted or rejected.": "询问前，先打包选项、影响、回归路径、推荐，以及已尝试或已拒绝的最佳非阻塞动作。",
+    "Do not ask for ordinary prioritization when the model can choose using evidence, verifier availability, risk, and approved mode.": "当模型能根据证据、验收可用性、风险和批准模式选择时，不要把普通优先级问题交给用户。",
 }
 
 
@@ -126,6 +171,15 @@ def zh_text(value: str) -> str:
         return ZH_TEXT[value]
     if value.startswith("Start as "):
         return "先从当前批准模式启动；只有在验收证据和明确批准点稳定后，才升级到更高自动化。"
+    match = re.fullmatch(r"Use `(.+)` coordination by default; spawn or emulate only the roles needed for the selected shot\.", value)
+    if match:
+        return f"默认使用 `{match.group(1)}` 协作；只启动或模拟已选择步骤所需的角色。"
+    match = re.fullmatch(r"Read `(.+)`, the goal, the Change Map, and the verifier before choosing work\.", value)
+    if match:
+        return f"选择事项前，读取 `{match.group(1)}`、目标、Change Map 和验收器。"
+    match = re.fullmatch(r"Choose at most (\d+) item\(s\) that can change evidence, narrow risk, or clarify a blocker\.", value)
+    if match:
+        return f"最多选择 {match.group(1)} 个能改变证据、收窄风险或澄清阻塞的事项。"
     match = re.fullmatch(r"Approval required for (.+) after options, impact, and regression evidence are recorded\.", value)
     if match:
         return f"需要批准：{match.group(1)}。批准前必须已记录选项、影响和回归证据。"
@@ -254,6 +308,102 @@ Decision packet triggers:
 """
 
 
+def progression_contract_for(managed_loop: dict, language: str) -> dict:
+    return normalize_progression_contract(
+        managed_loop.get("progression_contract"),
+        max_items=managed_loop.get("max_items_per_cycle", 3),
+        max_iterations=managed_loop.get("max_iterations_per_run", 8),
+        state_file="STATE.json",
+    )
+
+
+def render_progression_contract(contract: dict, language: str) -> str:
+    if language == "zh":
+        return f"""推进节奏：
+
+{bullet(zh_items(contract["rhythm"]), language)}
+
+每轮必须写入：
+
+{bullet(zh_items(contract["state_updates_required"]), language)}
+
+继续下一轮前必须具备：
+
+{bullet(zh_items(contract["continue_requires"]), language)}
+
+遇到这些情况不要继续，改为停止或交还：
+
+{bullet(zh_items(contract["stop_instead_of_continue_when"]), language)}
+
+交接规则：
+
+- {zh_text(contract["handoff_rule"])}
+"""
+    return f"""Rhythm:
+
+{bullet(contract["rhythm"], language)}
+
+State updates required every cycle:
+
+{bullet(contract["state_updates_required"], language)}
+
+Continue only after recording:
+
+{bullet(contract["continue_requires"], language)}
+
+Stop instead of continuing when:
+
+{bullet(contract["stop_instead_of_continue_when"], language)}
+
+Handoff rule:
+
+- {contract["handoff_rule"]}
+"""
+
+
+def autonomy_contract_for(managed_loop: dict, language: str) -> dict:
+    return normalize_autonomy_contract(
+        managed_loop.get("autonomy_contract"),
+        team_mode=str(managed_loop.get("team_mode") or "phased"),
+    )
+
+
+def render_autonomy_contract(contract: dict, language: str) -> str:
+    if language == "zh":
+        return f"""自主决策：
+
+{bullet(zh_items(contract["decision_policy"]), language)}
+
+自我迭代：
+
+{bullet(zh_items(contract["self_iteration_policy"]), language)}
+
+子角色启停：
+
+{bullet(zh_items(contract["subagent_control"]), language)}
+
+交还用户：
+
+{bullet(zh_items(contract["human_return_policy"]), language)}
+"""
+    return f"""Autonomous decision:
+
+{bullet(contract["decision_policy"], language)}
+
+Self-iteration:
+
+{bullet(contract["self_iteration_policy"], language)}
+
+Subagent control:
+
+{bullet(contract["subagent_control"], language)}
+
+Return to human:
+
+{bullet(contract["human_return_policy"], language)}
+"""
+
+
 def exit_contract(candidate: dict) -> dict:
     managed_loop, contract = candidate_contract(candidate)
     safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
@@ -302,6 +452,8 @@ def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
     managed_loop, contract = candidate_contract(candidate)
     safety = candidate.get("safety") if isinstance(candidate.get("safety"), dict) else {}
     change_map = change_map_for_candidate(candidate, managed_loop, contract, language_for_candidate(candidate))
+    progression_contract = progression_contract_for(managed_loop, language_for_candidate(candidate))
+    autonomy_contract = autonomy_contract_for(managed_loop, language_for_candidate(candidate))
     return {
         "version": 1,
         "loop_id": candidate.get("id"),
@@ -317,15 +469,24 @@ def build_state(candidate: dict, level: str, artifact_dir: Path) -> dict:
         "success_criteria": strings(contract.get("success_criteria") or candidate.get("verification")),
         "reject_conditions": strings(contract.get("reject_conditions") or candidate.get("stop_conditions")),
         "loop_exit_contract": exit_contract(candidate),
+        "progression_contract": progression_contract,
+        "autonomy_contract": autonomy_contract,
         "approval_boundary": strings(safety.get("requires_approval_for")),
         "budget_caps": strings(safety.get("budget_caps")),
         "items": [],
         "attempts": [],
         "active_wave": None,
         "decision_packets": [],
+        "progression_log": [],
+        "autonomy_log": [],
         "failure_signatures": [],
         "progress_metrics": [],
         "human_queue": [],
+        "next_trigger": None,
+        "next_expected_evidence": None,
+        "next_verifier": None,
+        "candidate_next_items": [],
+        "blocking_human_queue": [],
         "next_cursor": None,
         "last_status": None,
         "last_exit_status": None,
@@ -360,6 +521,8 @@ def render_goal(candidate: dict, level: str) -> str:
     max_iterations = managed_loop.get("max_iterations_per_run", 8)
     mode = level_to_mode(level)
     reasons = rationale(candidate, managed_loop, level)
+    progression_contract = progression_contract_for(managed_loop, language)
+    autonomy_contract = autonomy_contract_for(managed_loop, language)
     if language == "zh":
         return f"""# {candidate.get("name", candidate_id)} 执行包
 
@@ -393,6 +556,14 @@ def render_goal(candidate: dict, level: str) -> str:
 ## 循环步骤
 
 {numbered(cycle_steps, language)}
+
+## 推进节奏
+
+{render_progression_contract(progression_contract, language)}
+
+## 自主决策
+
+{render_autonomy_contract(autonomy_contract, language)}
 
 ## 选择规则
 
@@ -477,6 +648,14 @@ Use this after the user starts `{candidate_id}` as `{mode}`.
 
 {numbered(cycle_steps)}
 
+## Progression Contract
+
+{render_progression_contract(progression_contract, language)}
+
+## Autonomy Contract
+
+{render_autonomy_contract(autonomy_contract, language)}
+
 ## Selection Policy
 
 {bullet(selection_policy or [f"Choose at most {max_items} high-value item(s) per cycle."])}
@@ -547,6 +726,8 @@ def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
     candidate_id = str(candidate.get("id"))
     mode = level_to_mode(level)
     reasons = rationale(candidate, managed_loop, level)
+    progression_contract = progression_contract_for(managed_loop, language)
+    autonomy_contract = autonomy_contract_for(managed_loop, language)
     if language == "zh":
         return f"""# {candidate.get("name", candidate_id)} 交接说明
 
@@ -591,6 +772,14 @@ def render_handoff(candidate: dict, level: str, artifact_dir: Path) -> str:
 返回 `BUDGET_STOPPED` 的条件：
 
 {bullet(zh_items(exits["budget_stopped_when"]), language)}
+
+## 推进节奏
+
+{render_progression_contract(progression_contract, language)}
+
+## 自主决策
+
+{render_autonomy_contract(autonomy_contract, language)}
 
 ## 复盘记录
 
@@ -647,6 +836,14 @@ Return `BUDGET_STOPPED` when:
 
 {bullet(exits["budget_stopped_when"])}
 
+## Progression Contract
+
+{render_progression_contract(progression_contract, language)}
+
+## Autonomy Contract
+
+{render_autonomy_contract(autonomy_contract, language)}
+
 ## Learning Check
 
 After the first run, record saved corrections, false positives, human acceptance, next adjustment,
@@ -680,6 +877,10 @@ def render_agents_snippet(candidate: dict, level: str) -> str:
 - 每轮先更新改造图景：当前 X、目标 B、波及面、回归 / 兼容路径和推进波次。
 - 停止前必须读取并更新 Change Map 与 loop 状态。
 - 每轮最多处理 {managed_loop.get("max_items_per_cycle", 3)} 个事项。
+- 每轮结束前必须写入 `next_cursor`、`next_expected_evidence`、`next_verifier` 和 `human_friction_delta`。
+- 存在多个可行下一步时，先由模型按用户价值、验收可用性、可回退性、风险和批准模式选择一个最高价值的非阻塞步骤。
+- 普通工程优先级不要询问用户；只有产品、架构、发布、安全、数据、计费、权限、生产、不可逆或扩范围决策才交还。
+- 只有下一轮能产生新的验收证据时才能返回 `CONTINUE`。
 - 达到 {managed_loop.get("max_iterations_per_run", 8)} 轮、重复失败、没有进展或触达返回点时停止。
 - 验证方式：{join_items(verifier, language) if verifier else "运行聚焦项目验证"}。
 - 需要先询问：{join_items(strings(safety.get("requires_approval_for")), language) or "不可逆、发布、数据或产品边界变更"}。
@@ -695,6 +896,10 @@ When `{candidate_id}` is triggered:
 - Refresh the Change Map first each cycle: current X, target B, affected surfaces, regression / compatibility path, and rollout waves.
 - Read and update the Change Map and loop state before stopping.
 - Handle at most {managed_loop.get("max_items_per_cycle", 3)} item(s) per cycle.
+- Before ending each cycle, write `next_cursor`, `next_expected_evidence`, `next_verifier`, and `human_friction_delta`.
+- When multiple next actions are plausible, the model must choose the highest-value non-blocking step using user value, verifier availability, reversibility, risk, and approved mode.
+- Do not ask the user for ordinary engineering prioritization; return only for product, architecture, release, security, data, billing, permission, production, irreversible, or scope-expanding decisions.
+- Return `CONTINUE` only when the next cycle can produce new verifier evidence.
 - Stop after {managed_loop.get("max_iterations_per_run", 8)} iteration(s), repeated failure, no progress, or a return point.
 - Verify with: {", ".join(verifier) if verifier else "the focused project verifier"}.
 - Ask before: {", ".join(strings(safety.get("requires_approval_for"))) or "irreversible, release, data, or product-boundary changes"}.

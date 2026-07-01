@@ -1110,6 +1110,149 @@ def autopilot_contract(candidate: dict, managed_loop: dict, contract: dict, lang
     )
 
 
+def localized_progression_item(item: object, language: str) -> str:
+    text = str(item or "").strip()
+    if language != "zh":
+        return text
+    exact = {
+        "Turn prior blockers, repeated human corrections, or unfinished waves into candidate work before adding new work.": "新增事项前，先把上轮阻塞、重复人工纠正或未完成波次转成候选事项。",
+        "Act only on the selected item(s), then verify before choosing the next status.": "只处理已选事项，并在选择下一状态前完成验证。",
+        "End by writing the state delta and the next cursor before returning or continuing.": "返回或继续前，先写入状态变化和下一步位置。",
+        "change_map_delta": "`change_map_delta`",
+        "evidence_delta": "`evidence_delta`",
+        "selected_items": "`selected_items`",
+        "completed_items": "`completed_items`",
+        "blocked_items": "`blocked_items`",
+        "next_cursor": "`next_cursor`",
+        "next_trigger": "`next_trigger`",
+        "next_expected_evidence": "`next_expected_evidence`",
+        "next_verifier": "`next_verifier`",
+        "candidate_next_items": "`candidate_next_items`",
+        "blocking_human_queue": "`blocking_human_queue`",
+        "human_friction_delta": "`human_friction_delta`",
+        "next_cursor names the exact unfinished wave, item, file, route, log, check, or decision packet.": "`next_cursor` 必须指出具体未完成波次、事项、文件、路由、日志、检查或决策包。",
+        "next_cursor names one selected path, not mutually exclusive alternatives.": "`next_cursor` 必须是一个已选择路径，不能是互斥备选项列表。",
+        "next_expected_evidence states what new verifier evidence the next cycle should produce.": "`next_expected_evidence` 必须说明下一轮应产生什么新的验收证据。",
+        "next_verifier can reject bad output for the next action.": "`next_verifier` 必须能拒绝下一步的错误产出。",
+        "blocking_human_queue is empty, or the selected next_cursor is explicitly non-blocking.": "`blocking_human_queue` 必须为空，或已选择的 `next_cursor` 明确不受其阻塞。",
+        "human_friction_delta records whether this cycle removed or added repeated user work.": "`human_friction_delta` 必须记录本轮减少还是增加了重复人工解释。",
+        "The next action would repeat the same observation without new evidence.": "下一步只是重复观察，不能产生新证据。",
+        "The next cursor is vague, such as 'continue later' or 'keep working'.": "下一步位置含糊，例如“稍后继续”或“继续做”。",
+        "The next cursor contains unresolved alternatives instead of one selected path.": "下一步位置包含未解决的备选分支，而不是一个已选择路径。",
+        "No verifier can reject the next action.": "没有验收器能拒绝下一步动作。",
+        "Human judgment or a stronger approval mode blocks the selected next action.": "人工判断或更高批准模式正在阻塞已选择的下一步。",
+        "Finish every cycle with: what changed, what evidence was gained, what remains, the exact next cursor, the next expected evidence, and whether another cycle is justified.": "每轮结束时写清：发生了什么变化、得到什么证据、还剩什么、精确下一步位置、下一轮预期证据，以及下一轮是否值得继续。",
+        "When multiple next actions are plausible, rank them by user value, verifier availability, reversibility, risk, and progress toward the Change Map.": "存在多个可行下一步时，按用户价值、验收可用性、可回退性、风险和对 Change Map 的推进程度排序。",
+        "Choose the highest-ranked action that is inside the approved mode and has a verifier; do not ask the user to choose ordinary engineering next steps.": "选择已批准模式内、且有验收器的最高排序动作；不要让用户替模型选择普通工程下一步。",
+        "If the highest-value action is blocked by human approval or product judgment, select the best non-blocking evidence or cleanup action instead.": "如果最高价值动作被人工批准或产品判断阻塞，就改选最佳的非阻塞证据扫描或清理动作。",
+        "Return to the user only when all useful non-blocking actions are exhausted or the selected action requires human judgment or stronger approval.": "只有所有有用的非阻塞动作都耗尽，或已选择动作需要人工判断/更高授权时，才交还用户。",
+        "Prefer a coherent sequence of bounded shots over a single oversized one-shot.": "优先用连贯的多个有边界步骤，而不是一个过大的 one-shot。",
+        "After each shot, use verifier evidence to update candidate_next_items, choose the next shot, and continue while risk and budget remain in scope.": "每一步后，用验收证据更新 `candidate_next_items`，选择下一步；只要风险和预算仍在范围内就继续。",
+        "Do not repeat a shot unless the next attempt uses new evidence, a narrower hypothesis, or a different verifier.": "不要重复同一步，除非下一次使用了新证据、更窄假设或不同验收器。",
+        "Treat model judgment as the selector for the next bounded shot; treat deterministic checks as rejection gates.": "把模型判断作为下一步有边界动作的选择器，把确定性检查作为拒绝门。",
+        "Start planner/checker/verifier roles when they can reduce uncertainty or reject output independently.": "当规划者、检查者或验收者能降低不确定性或独立拒绝产出时启动它们。",
+        "Start maker roles only inside explicit edit scope and stop them after the selected shot is verified or blocked.": "执行角色只在明确编辑范围内启动，并在已选步骤被验证或阻塞后停止。",
+        "Do not keep subagents running after their evidence, patch, review, or verifier output has been integrated into state.": "子角色的证据、补丁、审查或验收输出整合进状态后，不要继续保留其运行。",
+        "Ask the user only for product, architecture, release, security, data, billing, permission, production, irreversible, or scope-expanding decisions.": "只在产品、架构、发布、安全、数据、计费、权限、生产、不可逆或扩范围决策时询问用户。",
+        "Before asking, package options, impact, regression path, recommendation, and the best non-blocking action already attempted or rejected.": "询问前，先打包选项、影响、回归路径、推荐，以及已尝试或已拒绝的最佳非阻塞动作。",
+        "Do not ask for ordinary prioritization when the model can choose using evidence, verifier availability, risk, and approved mode.": "当模型能根据证据、验收可用性、风险和批准模式选择时，不要把普通优先级问题交给用户。",
+    }
+    if text in exact:
+        return exact[text]
+    match = re.fullmatch(r"Use `(.+)` coordination by default; spawn or emulate only the roles needed for the selected shot\.", text)
+    if match:
+        return f"默认使用 `{match.group(1)}` 协作；只启动或模拟已选择步骤所需的角色。"
+    match = re.fullmatch(r"Read `(.+)`, the goal, the Change Map, and the verifier before choosing work\.", text)
+    if match:
+        return f"选择事项前，读取 `{match.group(1)}`、目标、Change Map 和验收器。"
+    match = re.fullmatch(r"Choose at most (\d+) item\(s\) that can change evidence, narrow risk, or clarify a blocker\.", text)
+    if match:
+        return f"最多选择 {match.group(1)} 个能改变证据、收窄风险或澄清阻塞的事项。"
+    match = re.fullmatch(r"Fewer than (\d+) iteration\(s\) have run\.", text)
+    if match:
+        return f"已运行轮数少于 {match.group(1)} 轮。"
+    return text
+
+
+def localized_progression_items(items: object, language: str, zh_fallback: list[str], en_fallback: list[str] | None = None) -> list[str]:
+    values = as_list(items)
+    if language != "zh":
+        return values or (en_fallback or [])
+    return [localized_progression_item(item, language) for item in values] or zh_fallback
+
+
+def progression_contract_values(managed_loop: dict, language: str = "en") -> dict:
+    progression = managed_loop.get("progression_contract") if isinstance(managed_loop.get("progression_contract"), dict) else {}
+    rhythm = localized_progression_items(
+        progression.get("rhythm", []),
+        language,
+        ["先读状态、目标、Change Map 和验收器，再选择本轮事项。"],
+    )
+    state_updates = localized_progression_items(
+        progression.get("state_updates_required", []),
+        language,
+        ["change_map_delta", "evidence_delta", "next_cursor", "next_expected_evidence", "next_verifier"],
+    )
+    continue_requires = localized_progression_items(
+        progression.get("continue_requires", []),
+        language,
+        ["下一轮必须能产生新的验收证据，并且下一步位置足够具体。"],
+    )
+    stop_instead = localized_progression_items(
+        progression.get("stop_instead_of_continue_when", []),
+        language,
+        ["下一步只是在重复观察、下一步位置含糊，或没有验收器能拒绝下一步动作。"],
+    )
+    raw_handoff = progression.get("handoff_rule")
+    handoff_rule = (
+        localized_progression_item(raw_handoff, language)
+        if raw_handoff
+        else localized_text(
+            raw_handoff,
+            language,
+            "每轮结束时写清发生了什么、得到什么证据、还剩什么、精确下一步位置、下一轮预期证据，以及下一轮是否值得继续。",
+            "Finish every cycle with what changed, what evidence was gained, what remains, the exact next cursor, the next expected evidence, and whether another cycle is justified.",
+        )
+    )
+    return {
+        "managed_progression_rhythm": bullet_block(rhythm, language),
+        "managed_progression_state_updates": bullet_block(state_updates, language),
+        "managed_progression_continue_requires": bullet_block(continue_requires, language),
+        "managed_progression_stop_instead": bullet_block(stop_instead, language),
+        "managed_progression_handoff_rule": handoff_rule,
+    }
+
+
+def autonomy_contract_values(managed_loop: dict, language: str = "en") -> dict:
+    autonomy = managed_loop.get("autonomy_contract") if isinstance(managed_loop.get("autonomy_contract"), dict) else {}
+    decision_policy = localized_progression_items(
+        autonomy.get("decision_policy", []),
+        language,
+        ["存在多个可行下一步时，模型先按价值、验收、风险和批准模式自主选择。"],
+    )
+    self_iteration = localized_progression_items(
+        autonomy.get("self_iteration_policy", []),
+        language,
+        ["优先用连贯的多个有边界步骤，而不是一个过大的 one-shot。"],
+    )
+    subagent_control = localized_progression_items(
+        autonomy.get("subagent_control", []),
+        language,
+        ["只启动当前步骤需要的角色，并在证据整合进状态后停止。"],
+    )
+    human_return = localized_progression_items(
+        autonomy.get("human_return_policy", []),
+        language,
+        ["只有真正需要人类判断或更高授权时才交还用户。"],
+    )
+    return {
+        "managed_autonomy_decision_policy": bullet_block(decision_policy, language),
+        "managed_autonomy_self_iteration": bullet_block(self_iteration, language),
+        "managed_autonomy_subagent_control": bullet_block(subagent_control, language),
+        "managed_autonomy_human_return": bullet_block(human_return, language),
+    }
+
+
 def safe_autopilot_summary(candidate: dict, language: str = "en") -> dict:
     card = decision_card(candidate)
     managed_loop = candidate.get("managed_loop", {}) if isinstance(candidate.get("managed_loop"), dict) else {}
@@ -1579,6 +1722,8 @@ def candidate_card(candidate: dict, scope: dict | None = None, language: str = "
             localized_items(managed_loop.get("selection_policy", []), language, ["优先处理影响明确、证据充分、验证路径清楚的事项。"]),
             language,
         ),
+        **progression_contract_values(managed_loop, language),
+        **autonomy_contract_values(managed_loop, language),
         "managed_max_items_per_cycle": str(managed_loop.get("max_items_per_cycle", 3)),
         "managed_max_iterations_per_run": str(managed_loop.get("max_iterations_per_run", 8)),
         "contract_success_criteria": bullet_block(
@@ -1677,6 +1822,8 @@ def claude_loop(candidate: dict, language: str = "en") -> str:
         **exit_contract_values(exits, language),
         "cycle_steps": bullet_block(cycle_steps(candidate, managed_loop, language), language),
         "selection_policy": bullet_block(localized_items(managed_loop.get("selection_policy", []), language, ["优先处理影响明确、证据充分、验证路径清楚的事项。"]), language),
+        **progression_contract_values(managed_loop, language),
+        **autonomy_contract_values(managed_loop, language),
         "max_items_per_cycle": str(managed_loop.get("max_items_per_cycle", 3)),
         "max_iterations_per_run": str(managed_loop.get("max_iterations_per_run", 8)),
         "change_policy": localized_text(managed_loop.get("change_policy"), language, "只在有直接证据时做低风险修改；改文件时使用隔离分支或 worktree。", "Only make low-risk changes with direct evidence. Use an isolated branch or worktree when modifying files."),

@@ -23,11 +23,11 @@ Start with:
 - "What it does for the user" should come from the AI-written `user_value` when present. It should read like a natural product promise, not a list of loop internals.
 - Recommended start: `start <candidate-id> as <mode>`, `shrink <candidate-id> to skill`, or `reject <candidate-id>`.
 - A short explanation of the top recommendation: why this one first, and why the others are not first.
-- A compact candidate summary: what it does, how it verifies, when it stops or returns for review.
+- A compact candidate summary: what it does, how it chooses the next bounded shot, how it naturally resumes, how it verifies, when it stops or returns for review.
 
 Do not expand Observe / Decide / Act / Verify / State for every candidate on the first screen. Put that execution protocol in the individual card or adoption packet after the user chooses a plan.
 
-For demand-driven goal design, lead with the generated Change Map before the start plan: current X, target B, user perception, affected surfaces, regression or compatibility path, rollout waves, first cycle, team shape, verifier, stop condition, return point, and artifact paths. Make clear that the source is the user's current objective rather than historical transcript evidence.
+For demand-driven goal design, lead with the generated Change Map before the start plan: current X, target B, user perception, affected surfaces, regression or compatibility path, rollout waves, first cycle, autonomous next-shot policy, progression rhythm, team shape, verifier, stop condition, return point, and artifact paths. Make clear that the source is the user's current objective rather than historical transcript evidence.
 
 For each proposal in the first screen, include only:
 
@@ -37,9 +37,9 @@ For each proposal in the first screen, include only:
 - Run card: can start now, can confirm, can delegate, and next action.
 - Objective: what the loop improves for this project.
 - Recommended mode: read-only, low-risk edit, worktree draft, PR draft, scheduled read-only, or scheduled draft.
-- Verifier, stop condition or return point, and the path to the full card.
+- Autonomous decision summary, progression summary, verifier, stop condition or return point, and the path to the full card.
 
-Put the full first-cycle packet, mechanism decision, heartbeat, trigger, cycle steps, verifier box, iteration cap, acceptance contract, exit contract, explicit return points, and loop economics in the individual card or adoption packet. Do not make the user read those before choosing.
+Put the full first-cycle packet, mechanism decision, heartbeat, trigger, cycle steps, autonomy contract, progression contract, verifier box, iteration cap, acceptance contract, exit contract, explicit return points, and loop economics in the individual card or adoption packet. Do not make the user read those before choosing.
 
 ## Confirmation Shape
 

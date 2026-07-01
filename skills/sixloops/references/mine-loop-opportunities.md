@@ -29,7 +29,8 @@ to: "What repeated work should I stop manually re-explaining to agents?"
    - Treat user packets as primary evidence and tool packets as support.
    - Write `semantic-candidates.json` as model-authored output.
    - Include `user_value`, `summary`, `why_this_loop`, concrete cycle steps,
-     verifier, stop condition, return point, and source limitations.
+     progression contract, verifier, stop condition, return point, and source
+     limitations.
    - Use `schemas/semantic-candidates.schema.json` only as the handoff
      envelope.
 

@@ -116,6 +116,50 @@ Stop after {{max_iterations_per_run}} iteration(s) in one run unless verificatio
 
 {{cycle_steps}}
 
+## Progression Contract
+
+Each cycle must naturally prepare the next one instead of restarting the same prompt.
+
+Rhythm:
+
+{{managed_progression_rhythm}}
+
+State updates required every cycle:
+
+{{managed_progression_state_updates}}
+
+Continue only after recording:
+
+{{managed_progression_continue_requires}}
+
+Stop instead of continuing when:
+
+{{managed_progression_stop_instead}}
+
+Handoff rule:
+
+{{managed_progression_handoff_rule}}
+
+## Autonomy Contract
+
+Use model judgment to choose the next bounded shot. Do not ask the user for ordinary engineering prioritization.
+
+Autonomous decision policy:
+
+{{managed_autonomy_decision_policy}}
+
+Self-iteration policy:
+
+{{managed_autonomy_self_iteration}}
+
+Subagent control:
+
+{{managed_autonomy_subagent_control}}
+
+Human return policy:
+
+{{managed_autonomy_human_return}}
+
 ## Change Policy
 
 {{change_policy}}

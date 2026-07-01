@@ -94,6 +94,12 @@ Every startable candidate must include:
 - For goal design: `change_map` with current X, target B, user perception,
   affected surfaces, regression or compatibility checks, rollout waves, and
   decision packet triggers.
+- Progression contract: each cycle records `next_cursor`,
+  `next_expected_evidence`, `next_verifier`, and `human_friction_delta` before
+  returning `CONTINUE`.
+- Autonomy contract: the model ranks plausible next actions, chooses the best
+  non-blocking bounded shot, controls needed subagent roles, and asks the user
+  only for real human judgment or stronger approval.
 - Verifier or acceptance signal.
 - Stop condition and return point.
 - Exact reply strings such as `start <candidate-id> as read-only`,

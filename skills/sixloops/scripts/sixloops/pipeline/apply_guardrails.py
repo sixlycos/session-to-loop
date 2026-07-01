@@ -11,7 +11,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sixloops.core.autonomy_contract import normalize_autonomy_contract, validate_autonomy_contract
 from sixloops.core.loop_contract import normalize_exit_contract, validate_exit_contract
+from sixloops.core.progression_contract import normalize_progression_contract, validate_progression_contract
 
 
 DEFAULT_SEMANTIC = Path(".sixloops/private/semantic-candidates.json")
@@ -183,6 +185,8 @@ def normalize_render_fields(raw: dict, normalized: dict) -> dict:
         "raw_had_managed_loop": bool(source),
         "raw_had_completion_contract": bool(raw_completion_contract(raw)),
         "raw_had_loop_exit_contract": isinstance(source.get("loop_exit_contract"), dict),
+        "raw_had_progression_contract": isinstance(source.get("progression_contract"), dict),
+        "raw_had_autonomy_contract": isinstance(source.get("autonomy_contract"), dict),
         "raw_had_state": bool(source.get("state_file") or source.get("state_schema")),
         "raw_had_budget": bool(source.get("max_items_per_cycle") or source.get("max_iterations_per_run") or raw_safety(raw).get("budget_caps")),
         "rendered_managed_loop": normalized.get("managed_loop", {}),
@@ -196,6 +200,8 @@ def delegation_gate(raw: dict, normalized: dict) -> dict:
     safety = raw_safety(raw)
     raw_exit_contract = managed_loop.get("loop_exit_contract")
     exit_validation = validate_exit_contract(raw_exit_contract)
+    progression_validation = validate_progression_contract(managed_loop.get("progression_contract"))
+    autonomy_validation = validate_autonomy_contract(managed_loop.get("autonomy_contract"))
     high_impact = has_high_impact_action(raw)
     stale_or_conflicting = has_stale_or_conflicting_evidence(raw)
     has_human_gate = bool(strings(safety.get("requires_approval_for")) or strings(safety.get("human_checkpoint")))
@@ -218,10 +224,12 @@ def delegation_gate(raw: dict, normalized: dict) -> dict:
         "has_change_map": has_model_change_map(raw),
         "has_human_gate": has_human_gate,
         "has_loop_exit_contract": exit_validation["valid"],
+        "has_progression_contract": progression_validation["valid"],
+        "has_autonomy_contract": autonomy_validation["valid"],
         "high_impact_has_approval": (not high_impact) or has_human_gate,
         "evidence_not_stale_or_conflicting": not stale_or_conflicting,
     }
-    required = list(criteria)
+    required = [key for key in criteria if key not in {"has_progression_contract", "has_autonomy_contract"}]
     missing = [key for key in required if not criteria[key]]
     return {
         "eligible": not missing,
@@ -230,6 +238,8 @@ def delegation_gate(raw: dict, normalized: dict) -> dict:
         "high_impact_action": high_impact,
         "stale_or_conflicting_evidence": stale_or_conflicting,
         "exit_contract_validation": exit_validation,
+        "progression_contract_validation": progression_validation,
+        "autonomy_contract_validation": autonomy_validation,
         "basis": "raw-ai-claims-only",
     }
 
@@ -241,6 +251,13 @@ def normalize_state_schema(value: Any) -> dict:
         "items": "Tracked work items with status: inbox, active, blocked, done.",
         "attempts": "Attempt log with action, verification result, and timestamp.",
         "failures": "Failure signatures, repeat count, and blocker reason.",
+        "progression_log": "Per-cycle deltas: what changed, what remains, and why continue or stop.",
+        "autonomy_log": "Per-cycle model decision: ranked candidate actions, selected shot, subagent starts/stops, and why no human prompt was needed.",
+        "next_trigger": "The next condition, event, or user reply that should resume this loop.",
+        "next_expected_evidence": "The new evidence the next cycle is expected to produce.",
+        "next_verifier": "The verifier that can reject the next cycle's output.",
+        "candidate_next_items": "Non-selected possible next steps; these are not the active cursor.",
+        "blocking_human_queue": "Human decisions or approvals that block the selected next cursor.",
         "next_cursor": "Where the next run should resume.",
         "human_decisions": "Approvals, rejections, or decisions that changed the loop boundary.",
     }
@@ -322,6 +339,16 @@ def normalize_managed_loop(
             approval_boundary=approval_boundary,
             max_items=max_items,
             max_iterations=max_iterations,
+        ),
+        "progression_contract": normalize_progression_contract(
+            source.get("progression_contract"),
+            max_items=max_items,
+            max_iterations=max_iterations,
+            state_file=state_file,
+        ),
+        "autonomy_contract": normalize_autonomy_contract(
+            source.get("autonomy_contract"),
+            team_mode=str(source.get("team_mode") or raw.get("team_mode") or "phased"),
         ),
         "change_policy": str(
             source.get("change_policy")
@@ -477,6 +504,8 @@ def loop_eligibility(candidate: dict) -> dict:
     safety = candidate.get("safety", {})
     exit_contract = managed_loop.get("loop_exit_contract", {})
     exit_validation = validate_exit_contract(exit_contract)
+    progression_validation = validate_progression_contract(managed_loop.get("progression_contract"))
+    autonomy_validation = validate_autonomy_contract(managed_loop.get("autonomy_contract"))
     risky = any(
         word in " ".join(candidate.get("mechanisms", []) + candidate.get("trigger", []) + candidate.get("actions", [])).lower()
         for word in ("deploy", "production", "migration", "delete", "permission", "payment")
@@ -510,6 +539,8 @@ def loop_eligibility(candidate: dict) -> dict:
         "has_human_checkpoint": bool(safety.get("human_checkpoint") or safety.get("requires_approval_for")),
         "has_budget_cap": bool(safety.get("budget_caps") or managed_loop.get("max_iterations_per_run")),
         "has_loop_exit_contract": exit_validation["valid"],
+        "has_progression_contract": progression_validation["valid"],
+        "has_autonomy_contract": autonomy_validation["valid"],
         "has_all_exit_statuses": not exit_validation["missing_statuses"],
         "has_continue_gate": bool(exit_contract.get("continue_only_if")),
         "has_budget_stop": bool(exit_contract.get("budget_stopped_when")),

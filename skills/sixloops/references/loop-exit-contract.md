@@ -25,6 +25,9 @@ Continue only when all are true:
 - A verifier can reject bad output.
 - Risk remains below the approved mode and explicit return points.
 - The last cycle changed evidence, narrowed scope, reduced failures, or clarified the blocker.
+- `next_cursor`, `next_expected_evidence`, and `next_verifier` are concrete enough for the next cycle to resume naturally.
+- `next_cursor` names one selected path; mutually exclusive alternatives are recorded in `candidate_next_items` or a decision packet.
+- No blocking `human_queue` item prevents the selected next cursor.
 - Iteration, item, time, token, and cost budgets remain.
 
 If the next round only adds effort without adding verifiable information, stop.
@@ -39,6 +42,7 @@ Return to the human when:
 - The verifier is missing, unavailable, flaky, ambiguous, or cannot explain the result. Status: `BLOCKED` or `NEEDS_HUMAN`.
 - The same failure repeats twice. Status: `BLOCKED`.
 - No evidence changes across two iterations. Status: `BLOCKED`.
+- The next cursor is vague, contains unresolved alternatives, the next expected evidence is missing, or the next verifier cannot reject the next action. Status: `BLOCKED`.
 - The fix expands scope beyond the approved loop. Status: `NEEDS_HUMAN`.
 - The budget cap is reached. Status: `BUDGET_STOPPED`.
 
@@ -54,6 +58,9 @@ loop_exit_contract:
     - "A verifier can reject bad output."
     - "The Change Map can be updated or the next action can produce evidence for it."
     - "New evidence changed or is likely from the next verifier."
+    - "next_cursor, next_expected_evidence, and next_verifier are concrete."
+    - "next_cursor names one selected path."
+    - "No blocking human_queue item prevents the selected next_cursor."
     - "Risk stays below the approved mode and explicit return points."
     - "Iteration and item budgets remain."
   done_when:
@@ -64,6 +71,7 @@ loop_exit_contract:
   blocked_when:
     - "Same failure repeats twice."
     - "No evidence changes across two iterations."
+    - "The next cursor, expected evidence, verifier, or selected path is vague."
     - "Verifier is unavailable or ambiguous."
   budget_stopped_when:
     - "Iteration, item, time, token, or cost cap is reached."

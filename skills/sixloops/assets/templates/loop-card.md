@@ -228,6 +228,42 @@ Cycle steps:
 
 {{managed_cycle_steps}}
 
+Progression rhythm:
+
+{{managed_progression_rhythm}}
+
+State updates required every cycle:
+
+{{managed_progression_state_updates}}
+
+Continue only after recording:
+
+{{managed_progression_continue_requires}}
+
+Stop instead of continuing when:
+
+{{managed_progression_stop_instead}}
+
+Progression handoff:
+
+{{managed_progression_handoff_rule}}
+
+Autonomous decision policy:
+
+{{managed_autonomy_decision_policy}}
+
+Self-iteration policy:
+
+{{managed_autonomy_self_iteration}}
+
+Subagent control:
+
+{{managed_autonomy_subagent_control}}
+
+Human return policy:
+
+{{managed_autonomy_human_return}}
+
 Selection policy:
 
 {{managed_selection_policy}}

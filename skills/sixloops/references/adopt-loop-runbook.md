@@ -5,9 +5,9 @@ Use this workflow when the user replies with `start ...`, `continue ...`,
 
 ## Goal
 
-Run the next useful cycle inside the approved mode, update the Change Map and
-state, and return one clear status: `DONE`, `CONTINUE`, review-needed,
-`BLOCKED`, or `BUDGET_STOPPED`.
+Run the next useful cycle inside the approved mode, update the Change Map,
+progression fields, and state, and return one clear status: `DONE`,
+`CONTINUE`, review-needed, `BLOCKED`, or `BUDGET_STOPPED`.
 
 ## Workflow
 
@@ -45,15 +45,27 @@ state, and return one clear status: `DONE`, `CONTINUE`, review-needed,
      needed, write a decision packet with options, impact, regression path, and
      recommendation before returning for review.
    - Verify with the listed verifier.
+   - Before returning `CONTINUE`, record the exact `next_cursor`,
+     `next_expected_evidence`, `next_verifier`, and `human_friction_delta`.
+   - `next_cursor` must be one selected, non-blocked path. Put other plausible
+     next steps in `candidate_next_items`. If a human decision blocks the
+     selected path, return review-needed instead of `CONTINUE`.
+   - When multiple next actions are plausible, rank them by value, verifier,
+     reversibility, risk, and approved mode; choose the best non-blocking shot
+     before asking the user.
+   - Start only the subagent roles needed for that shot, and stop them after
+     their evidence or output is integrated into state.
    - Update state before stopping.
 
 5. Return status.
    - `DONE`: acceptance checks passed with evidence.
    - `CONTINUE`: another cycle can improve the Change Map, verified certainty,
-     or regression evidence and budget remains.
+     or regression evidence; `next_cursor`, `next_expected_evidence`, and
+     `next_verifier` are concrete; and budget remains.
    - review-needed: human judgment or explicit approval is required after the
      decision packet or approval evidence is ready.
-   - `BLOCKED`: reliable progress is not possible with current evidence.
+   - `BLOCKED`: reliable progress is not possible with current evidence, or the
+     next cursor / expected evidence / verifier is vague.
    - `BUDGET_STOPPED`: item, iteration, time, token, or cost cap was reached.
 
 ## Ask Before High-Impact Finalization
